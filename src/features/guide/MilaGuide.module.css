@@ -1,0 +1,73 @@
+.layout {
+  --guide-width: 44rem;
+  --guide-inset: clamp(16px, 4vw, 28px);
+  --chat-message-gap: var(--space-5);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100svh;
+  height: 100dvh;
+  background: var(--canvas);
+}
+
+.scrollport {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scroll-padding-block: 20px;
+  scroll-padding-block-end: calc(20px + var(--composer-height, 0px));
+  scrollbar-width: thin;
+}
+
+.toolbar {
+  display: flex;
+  padding: max(var(--space-2), env(safe-area-inset-top))
+    max(var(--space-3), env(safe-area-inset-left)) var(--space-2);
+}
+
+.scrollport:focus-visible {
+  outline-offset: -3px;
+}
+
+.thread,
+.dock {
+  width: min(100%, calc(var(--guide-width) + 2 * var(--guide-inset)));
+  padding-inline: var(--guide-inset);
+  margin-inline: auto;
+}
+
+.thread {
+  display: grid;
+  flex: none;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--chat-message-gap);
+  padding-block: clamp(
+      var(--space-2),
+      calc(17dvh - var(--control-touch-size) - 2 * var(--space-2)),
+      100px
+    )
+    var(--space-6);
+}
+
+.footer {
+  position: sticky;
+  z-index: 1;
+  bottom: 0;
+  flex: none;
+  padding-block: var(--space-2) max(var(--space-3), env(safe-area-inset-bottom));
+  margin-block-start: auto;
+  pointer-events: none;
+}
+
+@media (min-width: 768px) {
+  .scrollport {
+    scrollbar-gutter: stable both-edges;
+  }
+}
+
+@media (max-width: 600px) {
+  .thread {
+    padding-top: var(--space-3);
+  }
+}

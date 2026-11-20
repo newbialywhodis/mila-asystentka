@@ -1,0 +1,20 @@
+import type { Metadata, Viewport } from "next";
+import type { ReactNode } from "react";
+import "./globals.css";
+
+export const metadata: Metadata = {
+  title: "Mila — przewodnik po ciąży i rodzicielstwie",
+  description: "Ułóż swój plan świadczeń, terminów i formalności z Milą.",
+};
+
+export const viewport: Viewport = {
+  interactiveWidget: "resizes-content",
+};
+
+export default function RootLayout({ children }: { children: ReactNode }) {
+  return (
+    <html lang="pl">
+      <body>{children}</body>
+    </html>
+  );
+}

@@ -1,0 +1,104 @@
+{
+  "sickness100": {
+    "value": 100,
+    "unit": "percent-base",
+    "label": "100% podstawy wymiaru przy niezdolności przypadającej w ciąży",
+    "sources": ["benefitsLaw", "sickness"]
+  },
+  "maternity100": {
+    "value": 100,
+    "unit": "percent-base",
+    "label": "100% podstawy za okres macierzyński",
+    "sources": ["benefitsLaw"]
+  },
+  "parental70": {
+    "value": 70,
+    "unit": "percent-base",
+    "label": "Zasadniczo 70% podstawy za okres rodzicielski",
+    "sources": ["benefitsLaw"]
+  },
+  "averaged815": {
+    "value": 81.5,
+    "unit": "percent-base",
+    "label": "81,5% podstawy po odpowiednim wniosku do 21 dni od porodu. Nieprzenoszalne 9 tygodni drugiego rodzica jest rozliczane według stawki 70%.",
+    "sources": ["benefitsLaw", "maternityDocs"]
+  },
+  "child800": {
+    "value": 800,
+    "unit": "monthly",
+    "label": "800 zł miesięcznie na dziecko. Przy opiece naprzemiennej i niepełnym miesiącu obowiązują zasady proporcji.",
+    "sources": ["childLaw", "child800"],
+    "validity": {
+      "from": "2024-01-01"
+    }
+  },
+  "parentalBenefit": {
+    "value": 1000,
+    "unit": "monthly",
+    "label": "1000 zł miesięcznie",
+    "sources": ["familyLaw", "parentalBenefit"]
+  },
+  "becikowe": {
+    "value": 1000,
+    "unit": "once",
+    "label": "1000 zł jednorazowo",
+    "sources": ["familyLaw", "becikowe"]
+  },
+  "work": {
+    "value": 1500,
+    "unit": "monthly",
+    "label": "1500 zł miesięcznie w wariancie podstawowym",
+    "sources": ["activeLaw", "work"],
+    "validity": {
+      "from": "2024-10-01"
+    }
+  },
+  "workHigher": {
+    "value": 1900,
+    "unit": "monthly",
+    "label": "1900 zł miesięcznie przy orzeczeniu z wymaganymi wskazaniami",
+    "sources": ["activeLaw", "work"],
+    "validity": {
+      "from": "2024-10-01"
+    },
+    "when": ["active-disability"]
+  },
+  "nursery": {
+    "value": 1500,
+    "unit": "monthly-ceiling",
+    "label": "Do 1500 zł miesięcznie w wariancie podstawowym, do wysokości opłaty za pobyt bez wyżywienia",
+    "sources": ["activeLaw", "nursery"],
+    "validity": {
+      "from": "2024-10-01"
+    }
+  },
+  "nurseryHigher": {
+    "value": 1900,
+    "unit": "monthly-ceiling",
+    "label": "Do 1900 zł miesięcznie przy orzeczeniu z wymaganymi wskazaniami, do wysokości opłaty za pobyt bez wyżywienia",
+    "sources": ["activeLaw", "nursery"],
+    "validity": {
+      "from": "2024-10-01"
+    },
+    "when": ["active-disability"]
+  },
+  "nurseryFee": {
+    "value": 2200,
+    "unit": "monthly-ceiling",
+    "label": "2200 zł to górny limit opłaty za pobyt od 1 kwietnia 2026 r. do 31 marca 2027 r.",
+    "sources": ["nursery"],
+    "validity": {
+      "from": "2026-04-01",
+      "through": "2027-03-31"
+    }
+  },
+  "home": {
+    "value": 500,
+    "unit": "monthly",
+    "label": "500 zł miesięcznie",
+    "sources": ["activeLaw", "home"],
+    "validity": {
+      "from": "2024-10-01"
+    }
+  }
+}

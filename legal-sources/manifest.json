@@ -1,0 +1,172 @@
+{
+  "activeForms": {
+    "url": "https://www.zus.pl/portal/pomoc/kub0048.html",
+    "file": "activeForms.html",
+    "sha256": "fc3ebdcdb89c1f73b0f25e5241f976a28539f0992f68ca35a0223a3b02580941"
+  },
+  "activeLaw": {
+    "url": "https://eli.gov.pl/api/acts/DU/2026/532/text/I/D20260532.pdf",
+    "file": "activeLaw.pdf",
+    "sha256": "3078b3197e6dc1403fbd7ebd56dc01e656420e4f5fa814a91181256526b0b8b8"
+  },
+  "becikowe": {
+    "url": "https://www.gov.pl/web/gov/uzyskaj-becikowe",
+    "file": "becikowe.html",
+    "sha256": "cfbb9ae8f3540f832724b741a95333557ff5f524b9383666d78a19ea632baac5"
+  },
+  "benefitsLaw": {
+    "url": "https://eli.gov.pl/api/acts/DU/2026/854/text/I/D20260854.pdf",
+    "file": "benefitsLaw.pdf",
+    "sha256": "6f2eb63e55fd7f88d815e237b69249e77c996f3a70701e082a7ef92a8519fdd9"
+  },
+  "birth": {
+    "url": "https://www.gov.pl/web/gov/zglos-urodzenie-dziecka",
+    "file": "birth.html",
+    "sha256": "58497033879a6acaa996ddab2bad34800f4b274ade716b7c576e1efd58a35ebc"
+  },
+  "care": {
+    "url": "https://www.zus.pl/swiadczenia/zasilki/zasilek-opiekunczy/niezbedne-dokumenty",
+    "file": "care.html",
+    "sha256": "5f6e969c7184ebff3e895d3bdb2a0a0279224d95f334ed0d5de37fcba3e7dba8"
+  },
+  "child800": {
+    "url": "https://www.zus.pl/pl/swiadczenia/swiadczenia-dla-rodzin/swiadczenie-wychowawcze-800-plus",
+    "file": "child800.html",
+    "sha256": "73834640d51c8abb1f8b049ff8859c9bcc56cdb3426f58956bf7954b28b77c92"
+  },
+  "childcare": {
+    "url": "https://www.gov.pl/web/rodzina/urlop-wychowawczy",
+    "file": "childcare.html",
+    "sha256": "53e2ff30a15bc64bbfc563b94127d25eaf366dde2981881601c06d6991561d4d"
+  },
+  "childLaw": {
+    "url": "https://eli.gov.pl/api/acts/DU/2026/508/text/I/D20260508.pdf",
+    "file": "childLaw.pdf",
+    "sha256": "af5e19f5fc01e6590e99f679a6f0d9768f3f7c74d908b8bc49ab74c8fd4148a7"
+  },
+  "civilLaw": {
+    "url": "https://eli.gov.pl/api/acts/DU/2026/393/text/I/D20260393.pdf",
+    "file": "civilLaw.pdf",
+    "sha256": "a9e5469bd32bc2d89c2c2294dd5001f09455193ead2ed04a8866377424c45d51"
+  },
+  "family": {
+    "url": "https://www.gov.pl/web/gov/uzyskaj-zasilek-rodzinny-wraz-z-dodatkami",
+    "file": "family.html",
+    "sha256": "5920c434b58132802d30dabb1c4eb0988f1f548fb9f9e62e6286f13dcf338369"
+  },
+  "familyLaw": {
+    "url": "https://eli.gov.pl/api/acts/DU/2026/1240/text/I/D20261240.pdf",
+    "file": "familyLaw.pdf",
+    "sha256": "7baf4796e663e1453ea17e0b80ebe93721ca32f1930878214001a74513ee9afc"
+  },
+  "health": {
+    "url": "https://pacjent.gov.pl/aktualnosc/zglos-dziecko-do-ubezpieczenia",
+    "file": "health.html",
+    "sha256": "455c9b788b1127c420d194ea0dbe478a5dc1ea1684c544ede60a74df27f1a71b"
+  },
+  "healthLaw": {
+    "url": "https://eli.gov.pl/api/acts/DU/2025/1461/text/I/D20251461.pdf",
+    "file": "healthLaw.pdf",
+    "sha256": "6b1219883e69636dd4c7c7d1a864297af574db11c9a1ea1adc58f6b330b652d3"
+  },
+  "home": {
+    "url": "https://www.gov.pl/web/gov/uzyskaj-swiadczenie-aktywnie-w-domu",
+    "file": "home.html",
+    "sha256": "02d03d03199ff9eab55ab5ce4040234bbb3bb4edefaa6c76b4f37a198faf3220"
+  },
+  "laborLaw": {
+    "url": "https://eli.gov.pl/api/acts/DU/2026/1245/text/I/D20261245.pdf",
+    "file": "laborLaw.pdf",
+    "sha256": "5e1722965c4ed8f234cef18f8fad6fc11e8672969fe7f04e89f4000d10f36517"
+  },
+  "maternity": {
+    "url": "https://www.gov.pl/web/rodzina/urlop-macierzynski",
+    "file": "maternity.html",
+    "sha256": "1f4113578b8bcf9d7c7e6aa0fb626b6d0806cb31ed63e02fda3f168e2fdcceac"
+  },
+  "maternityDocs": {
+    "url": "https://www.zus.pl/swiadczenia/zasilki/zasilek-macierzynski/niezbedne-dokumenty",
+    "file": "maternityDocs.html",
+    "sha256": "35094b27cd21f5884d6d5850e803858b9c477aa7e5ec1836f5c63a3ee35ba72c"
+  },
+  "nursery": {
+    "url": "https://www.gov.pl/web/gov/uzyskaj-swiadczenie-aktywnie-w-zlobku",
+    "file": "nursery.html",
+    "sha256": "dc809beba9440be41aa0cbb7201d9a2745836c0899071a4c4c6fddaa97e96335"
+  },
+  "parental": {
+    "url": "https://www.gov.pl/web/rodzina/urlop-rodzicielski",
+    "file": "parental.html",
+    "sha256": "40a798cd764c0b5db42f31449eaae594bd49ecca2e889e28ba4a17a8cd9b6d1e"
+  },
+  "parentalBenefit": {
+    "url": "https://www.gov.pl/web/gov/uzyskaj-swiadczenie-rodzicielskie",
+    "file": "parentalBenefit.html",
+    "sha256": "aea222c433e32ecde2d5414dcbc3d70aed6700cc8a6d8cca303e00a1120be3eb"
+  },
+  "paternity": {
+    "url": "https://www.gov.pl/web/rodzina/urlop-ojcowski",
+    "file": "paternity.html",
+    "sha256": "dc1db271ab01246c3b1b1142c59256665a5215ef65684290f424cdc55d221595"
+  },
+  "pregnancy": {
+    "url": "https://www.pip.gov.pl/dla-pracodawcow/porady-prawne/rodzicielstwo",
+    "file": "pregnancy.html",
+    "sha256": "08fd45120baa9c40ae87de37320fbe036d11de5ec7013c19c619ff8de2ca0f5d"
+  },
+  "sickness": {
+    "url": "https://www.zus.pl/pl/swiadczenia/zasilki/zasilek-chorobowy/z-ubezpieczenia-chorobowego/prawo-do-zasilku-i-okres-przyslugiwania",
+    "file": "sickness.html",
+    "sha256": "255b2cc901825c1b00b023fec63860e5e489bd8a8c7d31cc5d10243691cc0057"
+  },
+  "sicknessDocs": {
+    "url": "https://www.zus.pl/swiadczenia/zasilki/zasilek-chorobowy/z-ubezpieczenia-chorobowego/niezbedne-dokumenty",
+    "file": "sicknessDocs.html",
+    "sha256": "0a04efeb976664a17c7e227d8ec0f4137a7437b2fc83756b87f25f3c308a3be3"
+  },
+  "supplement": {
+    "url": "https://www.gov.pl/web/rodzina/uzupelniajacy-urlop-macierzynski",
+    "file": "supplement.html",
+    "sha256": "f6b3d9c991453d975de6005736676674c1080d7f150d6220e703fef1a514b908"
+  },
+  "tax": {
+    "url": "https://podatki.gov.pl/ulgi-i-odliczenia/ulga-na-dziecko-pit",
+    "file": "tax.html",
+    "sha256": "92913a60f469fe13bd5ecc2c69b4212bf35f791eef7eabd461808ebbbed468da"
+  },
+  "taxLaw": {
+    "url": "https://eli.gov.pl/api/acts/DU/2026/592/text/I/D20260592.pdf",
+    "file": "taxLaw.pdf",
+    "sha256": "d26b883de6c8665244be50852d35a3b34400c0fa58606ab03563da0d74dc1dd2"
+  },
+  "work": {
+    "url": "https://www.gov.pl/web/gov/uzyskaj-swiadczenie-aktywni-rodzice-w-pracy",
+    "file": "work.html",
+    "sha256": "beddc2846a91c62967346d7f36888e91c9029976b2ac1717c5abca42c264a95b"
+  },
+  "z15": {
+    "url": "https://bip.zus.pl/documents/10182/788036/Z-15_do%2Bwype%C5%82niena%2Bi%2Bwydruku.pdf/4014ad88-e3fd-4217-ab6c-8aa9cb034c82",
+    "file": "z15.pdf",
+    "sha256": "c95838a4262a823b8d36dc3a289332c42fbcaf4e41266d17d1427038d60f56f0"
+  },
+  "z3": {
+    "url": "https://www.zus.pl/documents/10182/12636166/Z-3_do%2Bdruku.pdf/388eed46-ea41-6a75-cb21-739c5f83aac7?t=1792762617844",
+    "file": "z3.pdf",
+    "sha256": "6be222cddbea638b0544265bd65a8ef813b9baf2c108b85eabfdef71dbdaf703"
+  },
+  "z3a": {
+    "url": "https://www.zus.pl/documents/10182/4223950/Z-3a_wypelnij_i_wydrukuj_edytowalny.pdf/f901f37f-d46b-c38c-ee08-b27302b62c86?t=1682431306662",
+    "file": "z3a.pdf",
+    "sha256": "4cde7bd3fd9cece28e29abe571cf3e7fe461129825f85fcacc6b0531ba1433ef"
+  },
+  "zam": {
+    "url": "https://www.zus.pl/documents/10182/4223950/ZAM_wypelnij_i_wydrukuj.pdf/4e4534c6-e7cd-b934-9c5e-aab4d64f3f20?t=1674206753058",
+    "file": "zam.pdf",
+    "sha256": "4c242de9e30c670c6e4e447d4e615179a77b7aa8fe007a8301fe1e405384cd67"
+  },
+  "zcna": {
+    "url": "https://www.zus.pl/-/zgloszenie-zus-zcna",
+    "file": "zcna.html",
+    "sha256": "9d6a67ae372da918b03e6d2b0757d46fca70d098bf0e60a5f42d16d46f8fb58e"
+  }
+}

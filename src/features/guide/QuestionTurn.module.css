@@ -1,0 +1,62 @@
+.turn {
+  min-width: 0;
+}
+
+.turn p {
+  text-wrap: pretty;
+}
+
+.controls,
+.panel {
+  display: grid;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+
+.quickControls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.quickControls .actions {
+  margin: 0;
+}
+
+.panel {
+  width: fit-content;
+  max-width: 100%;
+  padding: var(--space-3);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.hint {
+  margin-top: var(--space-1);
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-1);
+  margin: 0 calc(-1 * var(--space-2)) calc(-1 * var(--space-2));
+}
+
+.actions button {
+  min-height: var(--control-touch-size);
+  padding: var(--space-1) var(--space-2);
+  color: var(--muted);
+  font-size: 0.8125rem;
+  font-weight: 400;
+  text-align: start;
+}
+
+.actions button svg {
+  flex: 0 0 auto;
+  color: var(--primary);
+}

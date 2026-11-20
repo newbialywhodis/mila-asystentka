@@ -1,0 +1,99 @@
+.mila,
+.user {
+  position: relative;
+}
+
+.mila {
+  min-width: 0;
+  font-size: 1rem;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.user {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  width: fit-content;
+  max-width: 88%;
+  min-width: 0;
+  margin-inline-start: auto;
+}
+
+.author,
+.fullText {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.pending {
+  visibility: hidden;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .followUp {
+    animation: rise-in 220ms ease-out;
+  }
+
+  .bubble {
+    animation: rise-in 180ms ease-out;
+  }
+
+  [data-chat-scroll]:has(.preview) .followUp,
+  [data-chat]:has([data-chat-plan] .preview) .planShortcut {
+    visibility: hidden;
+    animation: none;
+  }
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fullText {
+    all: unset;
+  }
+
+  .preview {
+    display: none;
+  }
+}
+
+.bubble {
+  min-width: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md) var(--radius-md) 6px var(--radius-md);
+  background: var(--accent-surface);
+  font-size: 0.9375rem;
+  overflow-wrap: anywhere;
+}
+
+.edit {
+  order: -1;
+  color: var(--quiet);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .user:not(:hover, :focus-within) .edit {
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+.edit:hover,
+.edit:focus-visible {
+  color: var(--primary);
+}

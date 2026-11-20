@@ -1,0 +1,50 @@
+:root {
+  color-scheme: light;
+  --ink: #292927;
+  --muted: #56534e;
+  --quiet: #68645e;
+  --surface: #fff;
+  --surface-muted: #f0eeeb;
+  --canvas: #fcfbfa;
+  --line: #dfdcd7;
+  --line-strong: #827e78;
+  --focus: #965174;
+  --danger: #973b28;
+  --primary: #883e5f;
+  --primary-foreground: #fff;
+  --primary-hover: #71314f;
+  --primary-pressed: #602941;
+  --accent-surface: #f8eaf0;
+  --accent-surface-hover: #fdf5f8;
+  --accent-border: #e8dfe2;
+  --accent-border-hover: #bc86a0;
+  --backdrop: #29282365;
+  --shadow-composer: 0 2px 12px #5c314411;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --radius-sm: 12px;
+  --radius-md: 18px;
+  --radius-lg: 28px;
+  --radius-pill: 999px;
+  --control-hover: #0000000a;
+  --control-pressed: #00000026;
+  --icon-size-sm: 16px;
+  --icon-size-md: 20px;
+  --control-face-sm: 24px;
+  --control-face-md: 40px;
+  --control-target-sm: var(--control-touch-size);
+  --control-touch-size: 44px;
+  --shadow-overlay: 0 12px 44px #26231e20;
+  --ease: 180ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  :root {
+    --control-target-sm: 32px;
+  }
+}

@@ -1,0 +1,57 @@
+export type ActiveComponent = "work" | "nursery" | "home";
+export type Employment = "employee" | "contract" | "business" | "other";
+export type HospitalStay = { from: string; through: string };
+
+export interface Profile {
+  stage?: "pregnant" | "born";
+  dueDate?: string;
+  birthDate?: string;
+  childrenBorn?: number;
+  employment?: Employment;
+  otherParentEmployment?: Employment;
+  sicknessInsurance?: boolean;
+  sicknessQualifyingPeriod?: boolean;
+  sicknessLeave?: boolean;
+  pregnancyCertificate?: boolean;
+  insuredAtBirth?: boolean;
+  zusPays?: boolean;
+  livesInPoland?: boolean;
+  standardResidence?: boolean;
+  birthRegistered?: boolean;
+  birthCardDate?: string;
+  healthRegistered?: boolean;
+  healthTitle?: boolean;
+  healthRegistrationTrigger?: string;
+  maternityEnd?: string;
+  parentalStart?: string;
+  paternityStart?: string;
+  childcareLeaveStart?: string;
+  employedSixMonths?: boolean;
+  hospitalized?: boolean;
+  gestationalWeeks?: number;
+  birthWeightGrams?: number;
+  hospitalStays?: HospitalStay[];
+  receivesMaternity?: boolean;
+  activeComponent?: ActiveComponent | "none";
+  legacyRko?: boolean;
+  nursery?: boolean;
+  nurseryRegistered?: boolean;
+  nurseryFee?: number;
+  nurseryStart?: string;
+  singleParent?: boolean;
+  workActive?: boolean;
+  otherWorkActive?: boolean;
+  contributionPercent?: number;
+  otherContributionPercent?: number;
+  preferentialContributions?: boolean;
+  otherPreferentialContributions?: boolean;
+  familyIncomePerPerson?: number;
+  medicalCareWeek10?: boolean;
+  familyChildDisability?: boolean;
+  careNeeded?: boolean;
+  parentUsesTaxScale?: boolean;
+  activeDisabilityCertificate?: boolean;
+  zaZyciemCertificate?: boolean;
+}
+
+export type Field = keyof Profile;

@@ -1,0 +1,144 @@
+.composer {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.plan {
+  justify-self: end;
+  min-height: 36px;
+  padding: 4px 10px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  pointer-events: auto;
+}
+
+.form {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: "mascot field send";
+  min-width: 0;
+  min-height: 64px;
+  align-items: center;
+  column-gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-composer);
+  pointer-events: auto;
+}
+
+.form[data-expanded="true"] {
+  grid-template-areas:
+    "field field field"
+    "mascot . send";
+}
+
+.form:focus-within {
+  border-color: var(--focus);
+  box-shadow: 0 0 0 1px var(--focus);
+}
+
+.mascot {
+  grid-area: mascot;
+}
+
+.inputWrap {
+  grid-area: field;
+  position: relative;
+  min-width: 0;
+}
+
+.form[data-expanded="true"] .inputWrap {
+  margin-inline: var(--space-2);
+}
+
+.inputWrap::after {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 12px;
+  background: linear-gradient(to bottom, transparent, var(--surface));
+  content: "";
+  pointer-events: none;
+}
+
+.form[data-expanded="true"] .inputWrap::after {
+  height: 20px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    color-mix(in srgb, var(--surface) 30%, transparent) 50%,
+    var(--surface)
+  );
+}
+
+.inputWrap textarea {
+  scrollbar-width: thin;
+}
+
+.form textarea {
+  display: block;
+  field-sizing: content;
+  width: 100%;
+  min-height: var(--control-touch-size);
+  max-height: calc(6.5lh + 20px);
+  padding: 10px 0;
+  border: 0;
+  background: transparent;
+  resize: none;
+  color: inherit;
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.form textarea::placeholder {
+  color: var(--quiet);
+  opacity: 1;
+}
+
+.form textarea:focus {
+  outline: none;
+}
+
+/* Measure the compact column even while the visible field spans all three columns. */
+.form .compactMeasure {
+  position: absolute;
+  grid-area: 1 / 2 / 2 / 3;
+  inset: 0 0 auto;
+  max-height: calc(2lh + 20px);
+  overflow: hidden;
+  visibility: hidden;
+}
+
+.send {
+  grid-area: send;
+}
+
+.note {
+  color: var(--quiet);
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+@media (max-width: 480px) {
+  .plan {
+    padding-inline: var(--space-2);
+    font-size: 0.78125rem;
+  }
+
+  .form {
+    min-height: 58px;
+    padding-inline: 6px;
+  }
+}
+
+@media (forced-colors: active) {
+  .form textarea:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+}

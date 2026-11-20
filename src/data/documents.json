@@ -1,0 +1,151 @@
+{
+  "eZLA": {
+    "title": "e-ZLA",
+    "kind": "medical-certificate",
+    "actor": "Lekarz",
+    "source": "sicknessDocs",
+    "code": "e-ZLA"
+  },
+  "pregnancy": {
+    "title": "Zaświadczenie lekarskie potwierdzające ciążę",
+    "kind": "medical-certificate",
+    "actor": "Lekarz",
+    "source": "sicknessDocs"
+  },
+  "birthOnline": {
+    "title": "Zgłoszenie urodzenia przez gov.pl",
+    "kind": "online-wizard",
+    "actor": "Rodzic",
+    "source": "birth"
+  },
+  "zcna": {
+    "title": "Zgłoszenie członka rodziny do ubezpieczenia zdrowotnego",
+    "kind": "payer-document",
+    "actor": "Płatnik składek",
+    "source": "zcna",
+    "code": "ZUS ZCNA"
+  },
+  "ZAM": {
+    "title": "Wniosek o zasiłek macierzyński",
+    "kind": "pdf-form",
+    "actor": "Ubezpieczona",
+    "source": "zam",
+    "code": "ZAM",
+    "validity": {
+      "from": "2026-10-24"
+    }
+  },
+  "Z-3": {
+    "title": "Zaświadczenie płatnika składek dla pracownika",
+    "kind": "payer-document",
+    "actor": "Płatnik składek",
+    "source": "z3",
+    "code": "Z-3"
+  },
+  "Z-3a": {
+    "title": "Zaświadczenie płatnika dla ubezpieczonych m.in. na zleceniu",
+    "kind": "payer-document",
+    "actor": "Płatnik składek",
+    "source": "z3a",
+    "code": "Z-3a"
+  },
+  "Z-15": {
+    "title": "Wniosek o zasiłek opiekuńczy",
+    "kind": "pdf-form",
+    "actor": "Ubezpieczona",
+    "source": "z15",
+    "code": "Z-15",
+    "validity": {
+      "from": "2026-10-26"
+    }
+  },
+  "hospital": {
+    "title": "Zaświadczenie szpitala o hospitalizacji, tygodniu ciąży i masie urodzeniowej",
+    "kind": "medical-certificate",
+    "actor": "Szpital",
+    "source": "supplement"
+  },
+  "supplement": {
+    "title": "Wniosek o uzupełniający urlop macierzyński",
+    "kind": "employer-document",
+    "actor": "Pracownik",
+    "source": "supplement"
+  },
+  "parental": {
+    "title": "Wniosek o urlop rodzicielski",
+    "kind": "employer-document",
+    "actor": "Pracownik",
+    "source": "parental"
+  },
+  "paternity": {
+    "title": "Wniosek o urlop ojcowski i wymagane załączniki",
+    "kind": "employer-document",
+    "actor": "Pracownik",
+    "source": "paternity"
+  },
+  "childcare": {
+    "title": "Wniosek o urlop wychowawczy",
+    "kind": "employer-document",
+    "actor": "Pracownik",
+    "source": "childcare"
+  },
+  "SW-R": {
+    "title": "Wniosek rodzica o świadczenie wychowawcze",
+    "kind": "online-wizard",
+    "actor": "Rodzic",
+    "source": "child800",
+    "code": "SW-R"
+  },
+  "AWP": {
+    "title": "Wniosek Aktywni rodzice w pracy",
+    "kind": "online-wizard",
+    "actor": "Rodzic",
+    "source": "activeForms",
+    "code": "AWP"
+  },
+  "AWZ": {
+    "title": "Wniosek Aktywnie w żłobku",
+    "kind": "online-wizard",
+    "actor": "Rodzic",
+    "source": "activeForms",
+    "code": "AWZ"
+  },
+  "AWD": {
+    "title": "Wniosek Aktywnie w domu",
+    "kind": "online-wizard",
+    "actor": "Rodzic",
+    "source": "activeForms",
+    "code": "AWD"
+  },
+  "parentalBenefit": {
+    "title": "Wniosek o świadczenie rodzicielskie",
+    "kind": "pdf-form",
+    "actor": "Osoba składająca wniosek",
+    "source": "parentalBenefit"
+  },
+  "becikowe": {
+    "title": "Wniosek o jednorazową zapomogę",
+    "kind": "pdf-form",
+    "actor": "Osoba składająca wniosek",
+    "source": "becikowe"
+  },
+  "birthMedical": {
+    "title": "Zaświadczenie lekarza lub położnej o opiece w ciąży",
+    "kind": "medical-certificate",
+    "actor": "Lekarz lub położna",
+    "source": "becikowe"
+  },
+  "family": {
+    "title": "Wniosek o zasiłek rodzinny oraz dodatki",
+    "kind": "pdf-form",
+    "actor": "Osoba składająca wniosek",
+    "source": "family"
+  },
+  "pitO": {
+    "title": "Załącznik do zeznania PIT-36 lub PIT-37",
+    "kind": "pdf-form",
+    "actor": "Podatnik",
+    "source": "tax",
+    "code": "PIT/O"
+  }
+}

@@ -1,0 +1,25 @@
+.exchange {
+  display: grid;
+  gap: var(--chat-message-gap);
+  min-width: 0;
+}
+
+.reply {
+  display: block;
+}
+
+.source {
+  display: block;
+  width: fit-content;
+  margin-top: var(--space-2);
+  color: var(--primary);
+  font-size: 0.875rem;
+}
+
+.resume {
+  min-height: var(--control-touch-size);
+  margin-inline-start: calc(-1 * var(--space-2));
+  padding-inline: var(--space-2);
+  color: var(--primary);
+  font-size: 0.875rem;
+}

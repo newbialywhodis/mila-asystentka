@@ -1,0 +1,142 @@
+.choices,
+.quickReplies {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.choices button,
+.quickReplies button,
+.multi label {
+  min-height: var(--control-touch-size);
+  justify-content: flex-start;
+  padding: 7px 12px;
+  border: 1px solid var(--accent-border);
+  border-radius: 11px;
+  background: var(--surface);
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.4;
+  text-align: start;
+}
+
+.quickReplies button {
+  min-width: 3.5rem;
+  justify-content: center;
+  border-radius: var(--radius-pill);
+  color: var(--primary);
+}
+
+.choices svg {
+  flex: 0 0 auto;
+  color: var(--primary);
+}
+
+.optionText {
+  display: grid;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.optionText span {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+
+.choices button:hover,
+.quickReplies button:hover,
+.multi label:hover {
+  border-color: var(--accent-border-hover);
+  background: var(--accent-surface-hover);
+}
+
+.choices button[aria-pressed="true"],
+.quickReplies button[aria-pressed="true"],
+.multi label:has(:checked) {
+  border-color: var(--accent-border-hover);
+  background: var(--accent-surface);
+}
+
+.multiForm,
+.dateForm {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+}
+
+.multi {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  gap: var(--space-2);
+  padding: 0;
+  border: 0;
+  margin: 0;
+}
+
+.multi label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+}
+
+.multi input {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+  margin: 0;
+  accent-color: var(--primary);
+}
+
+.multiForm button,
+.dateForm button {
+  min-height: var(--control-touch-size);
+  padding: 7px 12px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.dateRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.dateForm input {
+  min-height: var(--control-touch-size);
+  min-width: 0;
+  max-width: 100%;
+  padding: 6px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 11px;
+  background: var(--surface);
+}
+
+.dateForm p {
+  color: var(--danger);
+  font-size: 0.875rem;
+}
+
+@media (min-width: 540px) {
+  .multi {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .choices:has(> :nth-child(4)) {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .choices:has(> :nth-child(4)) button {
+    width: 100%;
+    height: 100%;
+    padding-inline: var(--space-2);
+  }
+}

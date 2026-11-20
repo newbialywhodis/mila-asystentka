@@ -1,0 +1,130 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  border: 1px solid transparent;
+  font-weight: 650;
+  transition:
+    background-color var(--ease),
+    border-color var(--ease);
+  min-height: 48px;
+  padding: 10px var(--space-4);
+  border-radius: var(--radius-sm);
+  font-size: 0.9375rem;
+}
+
+.primary {
+  color: var(--primary-foreground);
+  background: var(--primary);
+  border-radius: var(--radius-pill);
+}
+
+.primary:hover {
+  background: var(--primary-hover);
+}
+
+.primary:active {
+  background: var(--primary-pressed);
+}
+.secondary {
+  border-color: var(--line);
+  background: var(--surface);
+}
+.secondary:hover {
+  border-color: var(--line-strong);
+  background: var(--surface-muted);
+}
+.outline {
+  border-color: var(--accent-border);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--primary);
+}
+.outline:hover:enabled {
+  border-color: var(--accent-border-hover);
+  background: var(--accent-surface-hover);
+}
+.outline:active:enabled {
+  background: var(--accent-surface);
+}
+.quiet {
+  background: transparent;
+  color: var(--ink);
+}
+.quiet:hover {
+  background: var(--control-hover);
+}
+
+.quiet:active {
+  background: var(--control-pressed);
+}
+
+.iconButton {
+  --icon-button-hover: var(--control-hover);
+  --icon-button-pressed: var(--control-pressed);
+  display: inline-grid;
+  inline-size: var(--control-touch-size);
+  block-size: var(--control-touch-size);
+  flex: 0 0 auto;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  color: var(--muted);
+  background: transparent;
+}
+
+.iconButton[data-size="sm"] {
+  inline-size: var(--control-target-sm);
+  block-size: var(--control-target-sm);
+}
+
+.iconButton[data-variant="primary"] {
+  --icon-button-fill: var(--primary);
+  --icon-button-hover: var(--primary-hover);
+  --icon-button-pressed: var(--primary-pressed);
+  color: var(--primary-foreground);
+}
+
+.button:disabled {
+  background: var(--surface-muted);
+  color: var(--quiet);
+  cursor: default;
+}
+
+.iconButton:disabled {
+  --icon-button-fill: var(--surface-muted);
+  color: var(--quiet);
+  cursor: default;
+}
+
+.iconButtonFace {
+  display: grid;
+  place-items: center;
+  inline-size: var(--control-face-sm);
+  block-size: var(--control-face-sm);
+  border-radius: inherit;
+  background: var(--icon-button-fill, transparent);
+}
+
+.iconButton[data-size="md"] .iconButtonFace {
+  inline-size: var(--control-face-md);
+  block-size: var(--control-face-md);
+}
+
+@media (hover: hover) {
+  .iconButton:hover:enabled:not([aria-disabled="true"]) .iconButtonFace {
+    background: var(--icon-button-hover);
+  }
+}
+
+.iconButton:active:enabled:not([aria-disabled="true"]) .iconButtonFace {
+  background: var(--icon-button-pressed);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .iconButtonFace {
+    transition: background-color var(--ease);
+  }
+}

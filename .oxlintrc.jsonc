@@ -1,0 +1,107 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "unicorn", "oxc", "react", "jsx-a11y", "nextjs"],
+  "options": {
+    "typeAware": true,
+  },
+  "ignorePatterns": [".next/**", "out/**", "next-env.d.ts", "test css/**"],
+  "rules": {
+    "typescript/no-explicit-any": "error",
+    "typescript/consistent-type-imports": "error",
+    "typescript/no-deprecated": "error",
+    "react/rules-of-hooks": "error",
+    "react/exhaustive-deps": "error",
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          {
+            "regex": "^(?:tailwindcss|tailwind-merge|tailwind-variants|@tailwindcss/[^/]+|shadcn(?:-ui)?|@shadcn/[^/]+|styled-jsx)(?:/|$)",
+            "message": "Use CSS Modules and Mila's own components.",
+          },
+        ],
+      },
+    ],
+  },
+  "overrides": [
+    {
+      "files": ["tests/**/*.test.ts"],
+      "rules": {
+        "typescript/no-floating-promises": [
+          "warn",
+          {
+            "allowForKnownSafeCalls": [
+              { "from": "package", "name": "test", "package": "node:test" },
+            ],
+          },
+        ],
+      },
+    },
+    {
+      "files": [
+        "src/components/**/*",
+        "src/engine/**/*",
+        "src/data/**/*",
+        "src/types/**/*",
+        "src/lib/**/*",
+      ],
+      "rules": {
+        // Overrides replace rule options, so keep the styling restriction here too.
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "regex": "^(?:tailwindcss|tailwind-merge|tailwind-variants|@tailwindcss/[^/]+|shadcn(?:-ui)?|@shadcn/[^/]+|styled-jsx)(?:/|$)",
+                "message": "Use CSS Modules and Mila's own components.",
+              },
+              {
+                "regex": "^(?:@/|(?:\\.\\.?/)+)(?:src/)?(?:app|features)(?:/|$)",
+                "message": "Shared code may not depend on routes or product features.",
+              },
+              {
+                "group": ["*.css", "!*.module.css"],
+                "message": "Import component styles from a colocated .module.css file.",
+              },
+            ],
+          },
+        ],
+      },
+    },
+    {
+      "files": ["src/features/**/*"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "regex": "^(?:tailwindcss|tailwind-merge|tailwind-variants|@tailwindcss/[^/]+|shadcn(?:-ui)?|@shadcn/[^/]+|styled-jsx)(?:/|$)",
+                "message": "Use CSS Modules and Mila's own components.",
+              },
+              {
+                "regex": "^(?:@/|(?:\\.\\.?/)+)(?:src/)?app(?:/|$)",
+                "message": "Product features may not depend on routes.",
+              },
+              {
+                "group": ["*.css", "!*.module.css"],
+                "message": "Import component styles from a colocated .module.css file.",
+              },
+            ],
+          },
+        ],
+      },
+    },
+    {
+      "files": ["src/app/**/*.tsx", "src/features/**/screens/**/*.tsx"],
+      "rules": {
+        "react/forbid-dom-props": [
+          "error",
+          {
+            "forbid": [{ "propName": "style", "message": "Move screen styles to CSS Modules." }],
+          },
+        ],
+      },
+    },
+  ],
+}

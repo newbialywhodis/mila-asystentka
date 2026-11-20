@@ -1,0 +1,9 @@
+node_modules/
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+legal-sources/snapshots/
+playwright-report/
+test-results/
+.env*.local

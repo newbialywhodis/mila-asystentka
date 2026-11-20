@@ -1,0 +1,27 @@
+.navigation {
+  display: grid;
+  grid-template-columns: 1fr 1.24fr 1fr;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  margin: var(--space-4) 0 var(--space-5);
+  background: var(--surface-muted);
+  border-radius: var(--radius-sm);
+}
+.navigation button {
+  min-height: 44px;
+  padding: var(--space-2) 2px;
+  color: var(--muted);
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  font-size: 0.8125rem;
+  font-weight: 630;
+}
+.navigation button:hover {
+  color: var(--ink);
+}
+.navigation button[aria-pressed="true"] {
+  border-color: var(--line);
+  color: var(--ink);
+  background: var(--surface);
+}
