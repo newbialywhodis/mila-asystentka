@@ -19,10 +19,13 @@
   },
   "dependencies": {
     "@base-ui/react": "1.9.0",
+    "@daypicker/react": "^10.0.2",
+    "ai": "7.0.178",
     "mascotz": "1.3.0",
     "next": "16.4.6",
     "react": "latest",
-    "react-dom": "latest"
+    "react-dom": "latest",
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@types/node": "latest",

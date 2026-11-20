@@ -3,15 +3,6 @@
   gap: var(--space-2);
 }
 
-.plan {
-  justify-self: end;
-  min-height: 36px;
-  padding: 4px 10px;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  pointer-events: auto;
-}
-
 .form {
   position: relative;
   display: grid;
@@ -125,11 +116,6 @@
 }
 
 @media (max-width: 480px) {
-  .plan {
-    padding-inline: var(--space-2);
-    font-size: 0.78125rem;
-  }
-
   .form {
     min-height: 58px;
     padding-inline: 6px;

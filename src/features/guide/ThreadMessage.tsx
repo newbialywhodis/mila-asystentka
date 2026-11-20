@@ -15,9 +15,11 @@ let stopActiveReading: (() => void) | null = null;
 export function MilaMessageActions({
   text,
   speechText = text,
+  leadingActions,
 }: {
   text: string;
   speechText?: string;
+  leadingActions?: ReactNode;
 }) {
   const stopReading = useRef<((updateState?: boolean) => void) | null>(null);
   const [reading, setReading] = useState(false);
@@ -96,8 +98,9 @@ export function MilaMessageActions({
   }
 
   return (
-    <div className={styles.followUp}>
-      <CopyButton label="Kopiuj wiadomość Mili" text={text}>
+    <div className={`${styles.followUp} ${styles.messageActions}`}>
+      {leadingActions}
+      <CopyButton label="Kopiuj wiadomość Mili" text={text} className={styles.messageCopy}>
         <IconButton
           icon="speaker"
           label={reading ? "Zatrzymaj odczytywanie" : "Odczytaj wiadomość Mili"}
@@ -116,17 +119,24 @@ export function MilaMessage({
   children,
   copyText,
   speechText,
+  leadingActions,
 }: {
   children: ReactNode;
   copyText?: string;
   speechText?: string;
+  leadingActions?: ReactNode;
 }) {
   return (
     <div className={styles.mila}>
       <span className={styles.author}>Mila</span>
       {children}
       {copyText ? (
-        <MilaMessageActions key={speechText ?? copyText} text={copyText} speechText={speechText} />
+        <MilaMessageActions
+          key={speechText ?? copyText}
+          text={copyText}
+          speechText={speechText}
+          leadingActions={leadingActions}
+        />
       ) : null}
     </div>
   );
@@ -201,15 +211,17 @@ export function UserMessage({
     <div className={styles.user} tabIndex={onEdit ? -1 : undefined}>
       <span className={styles.author}>Twoja wiadomość</span>
       <p className={styles.bubble}>{children}</p>
-      {onEdit ? (
-        <IconButton
-          icon="pencil"
-          className={styles.edit}
-          label={`Zmień odpowiedź „${children}” na pytanie „${question}”`}
-          tooltip="Zmień odpowiedź"
-          onClick={onEdit}
-        />
-      ) : null}
+      <CopyButton label="Kopiuj swoją wiadomość" text={children} className={styles.userActions}>
+        {onEdit ? (
+          <IconButton
+            icon="pencil"
+            size="icon-xs"
+            label={`Zmień odpowiedź „${children}” na pytanie „${question}”`}
+            tooltip="Zmień odpowiedź"
+            onClick={onEdit}
+          />
+        ) : null}
+      </CopyButton>
     </div>
   );
 }

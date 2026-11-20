@@ -1,0 +1,71 @@
+.root {
+  flex: 1;
+  min-block-size: 0;
+  min-inline-size: 0;
+}
+
+.viewport {
+  block-size: 100%;
+  overscroll-behavior: contain;
+}
+
+.viewport:focus-visible {
+  outline-offset: -3px;
+}
+
+.scrollbar {
+  z-index: var(--scrollbar-z-index, 1);
+  inline-size: 12px;
+  padding-inline: 3px;
+  margin-inline-end: env(safe-area-inset-right);
+  opacity: var(--scrollbar-opacity, 0);
+  pointer-events: var(--scrollbar-pointer-events, none);
+}
+
+.root:has(> .viewport:focus-visible) > .scrollbar,
+.scrollbar:active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.thumb {
+  border-radius: var(--radius-pill);
+  background: var(--scroll-thumb);
+}
+
+.thumb:is(:hover, :active) {
+  background: var(--scroll-thumb-active);
+}
+
+@media (hover: hover) {
+  .root:hover > .scrollbar {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+@media (hover: none) {
+  .scrollbar[data-scrolling] {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .scrollbar {
+    transition: opacity var(--ease);
+  }
+}
+
+@media (forced-colors: active) {
+  .scrollbar {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .thumb,
+  .thumb:is(:hover, :active) {
+    background: CanvasText;
+    forced-color-adjust: none;
+  }
+}

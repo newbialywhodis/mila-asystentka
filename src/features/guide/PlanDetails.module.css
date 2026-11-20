@@ -1,198 +1,106 @@
-.details {
-  color: var(--muted);
-  font-size: 0.875rem;
-}
-.details h2 {
-  margin-bottom: var(--space-3);
-  color: var(--ink);
-  font-size: 1.15rem;
-  letter-spacing: -0.025em;
-}
-.details h3 {
-  color: var(--ink);
-  font-size: 0.96rem;
-  line-height: 1.4;
-}
-.details p {
-  margin-block: var(--space-1);
-}
-.details a {
-  overflow-wrap: anywhere;
-}
-.meta {
-  display: block;
-  color: var(--quiet);
-  font-size: 0.75rem;
-  font-weight: 550;
-}
-.date {
-  color: var(--ink);
-  font-weight: 650;
-}
 .notice,
-.preparation,
-.empty {
+.preparation {
   padding: var(--space-3);
-  background: var(--surface-muted);
-  border-radius: var(--radius-sm);
+  margin-block: var(--space-2);
+  background: var(--canvas);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xs);
 }
-.notice {
-  margin-bottom: var(--space-4) !important;
-}
+
 .preparation {
   display: flex;
   align-items: flex-start;
   gap: var(--space-3);
 }
+
 .preparation svg {
-  color: var(--muted);
-  flex: 0 0 auto;
+  flex: none;
+  color: var(--primary);
 }
 
-.timeline {
-  margin: var(--space-4) 0 0 5px;
-  padding: 0;
-  list-style: none;
-  border-left: 1px solid var(--line-strong);
-}
-.timeline > li {
-  position: relative;
-  padding: 0 0 var(--space-5) var(--space-4);
-}
-.timeline > li:last-child {
-  padding-bottom: 0;
-}
-.timeline > li::before {
-  content: "";
-  position: absolute;
-  top: 5px;
-  left: -5px;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  border: 2px solid var(--canvas);
-  background: var(--ink);
-}
-.timeline a {
-  display: inline-block;
+.preparation p,
+.taskStep {
   margin-top: var(--space-1);
 }
 
-.benefit,
-.tasks li {
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
+.deadline {
+  display: grid;
+  gap: var(--space-1);
+  padding-block: var(--space-3);
 }
-.benefit + .benefit {
-  margin-top: var(--space-2);
+
+.deadline p {
+  margin: 0;
 }
+
+.date {
+  color: var(--primary);
+  font-size: 0.8125rem;
+  font-weight: 650;
+}
+
+.date[data-expired="true"] {
+  color: var(--danger);
+}
+
+.empty {
+  padding-block: var(--space-3);
+}
+
 .benefit summary {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
-  min-height: 52px;
-  padding: var(--space-3);
+  min-height: var(--control-touch-size);
+  padding-block: var(--space-3);
   list-style: none;
-  border-radius: inherit;
   cursor: pointer;
 }
+
 .benefit summary::-webkit-details-marker {
   display: none;
 }
-.benefit summary:hover {
-  background: var(--surface-muted);
+
+.benefit summary:hover strong {
+  color: var(--primary);
 }
-.benefit summary strong,
-.tasks strong {
-  display: block;
-  color: var(--ink);
-  font-weight: 650;
+
+.benefit summary:focus-visible {
+  border-radius: var(--radius-xs);
 }
+
 .benefit summary svg {
-  flex: 0 0 auto;
-  transition: transform var(--ease);
+  flex: none;
 }
+
 .benefit[open] summary svg {
   transform: rotate(90deg);
 }
+
 .detail {
-  border-top: 1px solid var(--line);
-  padding: var(--space-3);
+  display: grid;
+  gap: var(--space-2);
+  padding-bottom: var(--space-4);
 }
+
 .detail h3 {
-  margin-top: var(--space-3);
+  margin-top: var(--space-2);
+  color: var(--ink);
+  font-size: inherit;
+  font-weight: 650;
 }
+
 .detail ul,
 .detail ol {
-  margin: var(--space-1) 0 0;
-  padding-left: var(--space-5);
+  margin: 0;
+  padding-inline-start: var(--space-5);
 }
+
 .detail li + li {
   margin-top: var(--space-1);
 }
 
-.tasks {
-  display: grid;
-  gap: var(--space-2);
-  padding: 0;
-  margin: 0;
-  list-style: none;
-}
-.tasks label {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
-  padding: var(--space-3);
-  cursor: pointer;
-  border-radius: inherit;
-}
-.tasks label:hover {
-  background: var(--surface-muted);
-}
-.tasks input {
-  width: 18px;
-  height: 18px;
-  margin: 2px 0 0;
-  flex: 0 0 auto;
-  accent-color: var(--ink);
-}
-.tasks input:checked + span strong {
-  text-decoration: line-through;
-  color: var(--muted);
-}
-.tasks .meta {
-  margin: 1px 0 var(--space-1);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .benefit summary svg {
-    transition: none;
-  }
-}
-.preview:not(:empty) {
-  display: grid;
-  gap: var(--space-2);
-  margin-top: var(--space-3);
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--line);
-  color: var(--muted);
-  font-size: 0.875rem;
-}
-
-.preview h3 {
-  color: var(--ink);
-  font-size: 0.875rem;
-}
-
-.preview ul {
-  display: grid;
-  gap: var(--space-2);
-  padding-left: 1.1rem;
-  margin: 0;
-}
-
-.preview time {
+.taskStep {
   display: block;
 }

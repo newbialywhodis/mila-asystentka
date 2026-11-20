@@ -1,4 +1,4 @@
-import { addDays, isoDate, parseDate } from "../../engine/dates";
+import { addDays, isoDate, normalizeNumericDate, parseDate } from "../../engine/dates";
 import { canSkipQuestion, getDateBounds, guideQuestions, isGuideDate } from "./flow";
 import type { Answer, QuestionId } from "./flow";
 
@@ -164,9 +164,8 @@ function readDate(text: string, asOf: string): string | undefined {
     return isoDate(addDays(today, value === "wczoraj" ? -1 : -2));
   }
   if (today && (value === "dzisiaj" || value === "dzis")) return asOf;
-  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
-  const numeric = value.match(/^(\d{1,2})([./-])(\d{1,2})\2(\d{4})$/);
-  if (numeric) return `${numeric[4]}-${numeric[3].padStart(2, "0")}-${numeric[1].padStart(2, "0")}`;
+  const numeric = normalizeNumericDate(value);
+  if (numeric) return numeric;
   const named = value.match(/^(\d{1,2}) ([a-z]+) (\d{4})$/);
   if (named) {
     const month = months.indexOf(named[2]) + 1;

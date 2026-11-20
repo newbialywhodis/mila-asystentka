@@ -1,27 +1,22 @@
+import { Tabs } from "@base-ui/react/tabs";
 import styles from "./PlanNavigation.module.css";
 
-export type PlanSection = "timeline" | "benefits" | "tasks";
-
-const sections = [
+export const planSections = [
   { id: "timeline", title: "Terminy" },
   { id: "benefits", title: "Świadczenia" },
   { id: "tasks", title: "Zadania" },
-] satisfies { id: PlanSection; title: string }[];
+] as const;
 
-export function PlanNavigation({
-  section,
-  onChange,
-}: {
-  section: PlanSection;
-  onChange: (section: PlanSection) => void;
-}) {
+export type PlanSection = (typeof planSections)[number]["id"];
+
+export function PlanNavigation() {
   return (
-    <nav aria-label="Części planu" className={styles.navigation}>
-      {sections.map(({ id, title }) => (
-        <button key={id} type="button" aria-pressed={section === id} onClick={() => onChange(id)}>
+    <Tabs.List aria-label="Części raportu" className={styles.navigation} activateOnFocus>
+      {planSections.map(({ id, title }) => (
+        <Tabs.Tab key={id} value={id}>
           {title}
-        </button>
+        </Tabs.Tab>
       ))}
-    </nav>
+    </Tabs.List>
   );
 }

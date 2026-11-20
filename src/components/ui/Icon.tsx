@@ -32,6 +32,7 @@ const paths = {
     </>
   ),
   arrow: <path d="M4 12h15m-6-6 6 6-6 6" />,
+  arrowUpRight: <path d="M6 18 18 6M9 6h9v9" />,
   send: <path d="M12 20V5m-6 6 6-6 6 6" />,
   back: <path d="M20 12H5m6-6-6 6 6 6" />,
   chevron: <path d="m9 6 6 6-6 6" />,

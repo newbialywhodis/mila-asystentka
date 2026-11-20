@@ -6,20 +6,33 @@
 
 .reply {
   display: block;
+  white-space: pre-line;
 }
 
-.source {
-  display: block;
-  width: fit-content;
-  margin-top: var(--space-2);
-  color: var(--primary);
+.thinking {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--muted);
   font-size: 0.875rem;
 }
 
-.resume {
-  min-height: var(--control-touch-size);
-  margin-inline-start: calc(-1 * var(--space-2));
-  padding-inline: var(--space-2);
-  color: var(--primary);
-  font-size: 0.875rem;
+.spinner {
+  width: 0.875rem;
+  height: 0.875rem;
+  border: 2px solid var(--line);
+  border-block-start-color: currentColor;
+  border-radius: 50%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .spinner {
+    animation: spin 850ms linear infinite;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(1turn);
+  }
 }

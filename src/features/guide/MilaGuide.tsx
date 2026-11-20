@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { ScrollArea } from "../../components/ui/ScrollArea";
 import { warsawToday } from "../../engine/dates";
 import { ChatComposer } from "./ChatComposer";
 import {
@@ -16,10 +17,11 @@ import { getPeriod, getProfile, guideQuestions } from "./flow";
 import type { Answer, QuestionId } from "./flow";
 import { GuideHelpReply } from "./GuideHelp";
 import { GuideLayout } from "./GuideLayout";
-import { findHelpAnswer, missingHelpAnswer } from "./helpAnswers";
+import { findHelpAnswer, unavailableHelpAnswer } from "./helpAnswers";
 import type { HelpAnswer } from "./helpAnswers";
 import type { MascotReaction } from "./MilaMascot";
 import type { PlanSection } from "./PlanNavigation";
+import { PlanReport } from "./PlanReport";
 import { PlanTurn } from "./PlanTurn";
 import { QuestionTurn } from "./QuestionTurn";
 import { readTextAnswer } from "./textInput";
@@ -31,7 +33,7 @@ type MessageLocation = { key: string; scrollOnly?: boolean };
 export function MilaGuide() {
   const [conversation, setConversation] = useState(initialConversation);
   const [asOf, setAsOf] = useState("");
-  const [section, setSection] = useState<PlanSection>();
+  const [section, setSection] = useState<PlanSection>("timeline");
   const [checked, setChecked] = useState<string[]>([]);
   const [reaction, setReaction] = useState<MascotReaction>();
   const scrollport = useRef<HTMLElement>(null);
@@ -43,7 +45,7 @@ export function MilaGuide() {
   const activeIndex = revision ?? prompt;
   const active = messages[activeIndex];
   const context = active.kind === "question" ? active.question : undefined;
-  const ready = active.kind === "plan";
+  const plan = messages[prompt];
   const profile = useMemo(() => getProfile(answers), [answers]);
   const period = getPeriod(answers.pregnancyTiming);
   const editable = getEditableAnswers(conversation);
@@ -77,11 +79,7 @@ export function MilaGuide() {
     const location = nextLocation.current;
     nextLocation.current = undefined;
     if (location) moveToMessage(scrollport.current, location);
-  }, [conversation, section]);
-
-  function continueConversation() {
-    moveToMessage(scrollport.current, { key: "continue" });
-  }
+  }, [conversation]);
 
   function answer(index: number, value: Answer, text?: string, date = asOf || warsawToday()) {
     const updated = submitAnswer(conversation, index, value, text);
@@ -89,7 +87,7 @@ export function MilaGuide() {
     nextLocation.current = { key: "continue", scrollOnly: text !== undefined };
     if (!asOf) setAsOf(date);
     if (updated.answers.stage !== answers.stage) setChecked([]);
-    setSection(undefined);
+    setSection("timeline");
     setConversation((previous) =>
       previous === conversation ? updated : submitAnswer(previous, index, value, text),
     );
@@ -122,6 +120,9 @@ export function MilaGuide() {
   async function ask(question: string, clarification?: HelpAnswer) {
     const id = nextHelpId.current++;
     const known = clarification ?? findHelpAnswer(question, context);
+    const previous = messages.at(-1);
+    const previousSourceIds =
+      previous?.kind === "help" ? previous.exchange.answer?.sourceIds : undefined;
     const key = `help-${id}`;
     nextLocation.current = { key, scrollOnly: true };
     setConversation((previous) => appendHelp(previous, { id, question, answer: known }));
@@ -131,18 +132,15 @@ export function MilaGuide() {
     }
     setReaction(undefined);
 
-    let reply: HelpAnswer = missingHelpAnswer;
-    try {
-      const response = await fetch("/api/guide-help", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question, context }),
-        signal: AbortSignal.timeout(7500),
-      });
-      if (response.ok) reply = await response.json();
-    } catch {
-      reply = { text: "Nie mogę teraz sprawdzić odpowiedzi. Spróbuj wysłać pytanie ponownie." };
-    }
+    const response = await fetch("/api/guide-help", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question, context, previousSourceIds }),
+      signal: AbortSignal.timeout(15_000),
+    }).catch(() => null);
+    const reply: HelpAnswer = response?.ok
+      ? await response.json().catch(() => unavailableHelpAnswer)
+      : unavailableHelpAnswer;
     const region = scrollport.current;
     if (
       region &&
@@ -155,21 +153,6 @@ export function MilaGuide() {
     setConversation((previous) => resolveHelp(previous, id, reply));
   }
 
-  function openPlan() {
-    const location = { key: "plan" };
-    if (section) {
-      moveToMessage(scrollport.current, location);
-    } else {
-      nextLocation.current = location;
-      setSection("timeline");
-    }
-  }
-
-  function closePlan() {
-    nextLocation.current = { key: "plan-trigger" };
-    setSection(undefined);
-  }
-
   function toggleTask(id: string) {
     setChecked((previous) =>
       previous.includes(id) ? previous.filter((task) => task !== id) : [...previous, id],
@@ -177,13 +160,36 @@ export function MilaGuide() {
   }
 
   return (
-    <GuideLayout>
-      <section
-        ref={scrollport}
+    <GuideLayout
+      report={
+        plan.kind === "plan" ? (
+          <PlanReport
+            stage={plan.stage}
+            profile={profile}
+            period={period}
+            asOf={asOf}
+            interests={answers.planInterests}
+            section={section}
+            checked={checked}
+            onSectionChange={setSection}
+            onToggle={toggleTask}
+          />
+        ) : (
+          <ScrollArea renderViewport={<section />} aria-label="Stan raportu">
+            <p className={styles.reportEmpty}>
+              Twój raport pojawi się tutaj po zakończeniu pytań Mili.
+            </p>
+          </ScrollArea>
+        )
+      }
+    >
+      <ScrollArea
+        rootClassName={styles.chatScrollArea}
+        renderViewport={<section ref={scrollport} />}
         className={styles.scrollport}
+        contentClassName={styles.scrollContent}
         aria-label="Rozmowa z Milą"
         data-chat
-        // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Region przewijany klawiaturą.
         tabIndex={0}
       >
         <div className={styles.thread} role="log" aria-label="Wiadomości">
@@ -219,35 +225,14 @@ export function MilaGuide() {
                 );
               case "help":
                 return (
-                  <GuideHelpReply
-                    key={`help-${message.exchange.id}`}
-                    exchange={message.exchange}
-                    onContinue={
-                      context && index === messages.length - 1 ? continueConversation : undefined
-                    }
-                  />
+                  <GuideHelpReply key={`help-${message.exchange.id}`} exchange={message.exchange} />
                 );
               case "plan":
                 return (
                   <PlanTurn
                     key={`plan-${index}`}
                     stage={message.stage}
-                    profile={profile}
-                    period={period}
-                    asOf={asOf}
-                    interests={answers.planInterests}
-                    controls={
-                      index === activeIndex
-                        ? {
-                            section,
-                            checked,
-                            onOpen: openPlan,
-                            onClose: closePlan,
-                            onSectionChange: setSection,
-                            onToggle: toggleTask,
-                          }
-                        : undefined
-                    }
+                    active={index === activeIndex}
                   />
                 );
             }
@@ -260,11 +245,10 @@ export function MilaGuide() {
               thinking={thinking}
               onSend={send}
               awaitingAnswer={Boolean(context)}
-              onOpenPlan={ready ? openPlan : undefined}
             />
           </div>
         </footer>
-      </section>
+      </ScrollArea>
     </GuideLayout>
   );
 }
@@ -273,10 +257,6 @@ function moveToMessage(region: HTMLElement | null, { key, scrollOnly }: MessageL
   const target = region?.querySelector<HTMLElement>(`[data-chat-focus="${key}"]`);
   if (!target || !region) return;
   if (!scrollOnly) target.focus({ preventScroll: true });
-  if (key === "plan") {
-    target.scrollIntoView({ block: "start" });
-    return;
-  }
   const turn = target.closest<HTMLElement>("[data-chat-scroll]");
   const { scrollPaddingBlockStart, scrollPaddingBlockEnd } = getComputedStyle(region);
   const availableHeight =

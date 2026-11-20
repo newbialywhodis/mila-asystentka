@@ -1,7 +1,9 @@
-import { sources } from "../../data/sources";
+import { ScrollArea } from "../../components/ui/ScrollArea";
 import { planInterests } from "./flow";
 import type { Answer, PlanInterest } from "./flow";
+import reportStyles from "./PlanReport.module.css";
 import styles from "./PlanningPlan.module.css";
+import { ReportSourceLink } from "./ReportSourceLink";
 
 const steps: Record<PlanInterest, { title: string; text: string; source: string }> = {
   benefits: {
@@ -37,29 +39,39 @@ export function PlanningPlan({
 }) {
   const selected = typeof interests === "object" && interests !== null ? interests : undefined;
   return (
-    <ul className={styles.steps} aria-label="Sprawy do sprawdzenia">
-      {planInterests
-        .filter(({ value }) => !selected || selected.includes(value))
-        .map(({ value, label }) => {
-          const { title, text, source } = steps[value];
-          return (
-            <li key={value}>
-              <div className={styles.label}>{label}</div>
-              <label className={styles.task}>
-                <input
-                  type="checkbox"
-                  checked={checked.includes(value)}
-                  onChange={() => onToggle(value)}
-                />
-                <strong>{title}</strong>
-              </label>
-              <p>{text}</p>
-              <a href={sources[source].url} target="_blank" rel="noreferrer">
-                {sources[source].authority} · {sources[source].title}
-              </a>
-            </li>
-          );
-        })}
-    </ul>
+    <ScrollArea
+      contentClassName={reportStyles.content}
+      renderViewport={<section />}
+      aria-label="Plan przygotowań"
+    >
+      <ul className={reportStyles.items} aria-label="Sprawy do sprawdzenia">
+        {planInterests
+          .filter(({ value }) => !selected || selected.includes(value))
+          .map(({ value, label }) => {
+            const { title, text, source } = steps[value];
+            return (
+              <li key={value} className={reportStyles.row}>
+                <label className={reportStyles.check}>
+                  <input
+                    type="checkbox"
+                    aria-labelledby={`planning-title-${value}`}
+                    checked={checked.includes(value)}
+                    onChange={() => onToggle(value)}
+                  />
+                  <span>
+                    <strong id={`planning-title-${value}`} className={reportStyles.title}>
+                      {title}
+                    </strong>
+                    <span className={reportStyles.meta}>{label}</span>
+                  </span>
+                </label>
+                <p className={styles.detail}>
+                  {text} <ReportSourceLink sourceId={source} />
+                </p>
+              </li>
+            );
+          })}
+      </ul>
+    </ScrollArea>
   );
 }

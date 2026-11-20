@@ -4,7 +4,7 @@ Mila prowadzi krótką rozmowę i układa plan przygotowań, świadczeń oraz fo
 
 ## Instalacja i kontrole
 
-Używaj wersji Bun wskazanej w polu `packageManager` w `package.json`.
+Używaj Node.js 22 lub nowszego i wersji Bun wskazanej w polu `packageManager` w `package.json`.
 
 ```sh
 bun install --frozen-lockfile
@@ -14,7 +14,13 @@ bun run check
 
 `bun run dev` uruchamia aplikację pod adresem `http://localhost:3000`. `bun run check` sprawdza formatowanie, uruchamia Oxlint, sprawdza typy, wykonuje testy i waliduje katalog. Do automatycznych poprawek użyj `bun run lint:fix` i `bun run format`. Aby uruchomić wersję produkcyjną lokalnie, wykonaj `bun run build`, a następnie `bun run start`.
 
-Wpisane pytania Mila dopasowuje do odpowiedzi ze źródłami. Ustaw serwerowy `OPENAI_API_KEY` (lokalnie w `.env.local`), aby włączyć dopasowanie przez AI dla pytań, których nie rozpoznaje lokalnie. Opcjonalnie ustaw `OPENAI_HELP_MODEL`, aby zmienić domyślny model `gpt-4.1-mini`. Do API trafia tylko wpisane pytanie, treść bieżącego pytania Mili oraz lista możliwych odpowiedzi.
+## Odpowiedzi AI
+
+Dodaj `AI_GATEWAY_API_KEY` do `.env.local` i uruchom ponownie serwer deweloperski. Na Vercel dodaj ten klucz w **Settings → Environment Variables** dla wybranego środowiska i wykonaj nowe wdrożenie. Domyślny model to `openai/gpt-5-mini`, dostępny w ramach darmowych kredytów AI Gateway. Aby go zastąpić, ustaw `MILA_AI_MODEL` na identyfikator modelu obsługującego odpowiedzi według JSON Schema i wykluczenie trenowania na promptach. [Uwierzytelnianie AI Gateway](https://vercel.com/docs/ai-gateway/authentication-and-byok)
+
+Mila dołącza do pytania aktualne dla danej daty procedury, warunki, formularze, kwoty i identyfikatory źródeł z `src/data`. Z tych danych model układa odpowiedź, a aplikacja zamienia identyfikatory na linki z katalogu. Aby poszerzyć zakres wiedzy, dodaj zweryfikowane dane do katalogu i uruchom `bun run validate:data`. Plan, kwalifikację i terminy dla konkretnej osoby oblicza silnik w `src/engine`.
+
+Poza katalogiem Gateway otrzymuje wpisane pytanie, etykietę bieżącego kroku i ewentualne identyfikatory źródeł z poprzedniej odpowiedzi. Wybrane odpowiedzi, profil i raport pozostają w aplikacji. Stałe odpowiedzi na krótkie pytania o przewodnik i FAQ działają lokalnie. Endpoint `POST /api/guide-help` wymaga JSON i ogranicza długość pytania, odpowiedzi oraz czas wywołania. Dla publicznego wdrożenia ustaw limit żądań na tym endpoincie i budżet klucza. [Vercel WAF Rate Limiting](https://vercel.com/docs/vercel-firewall/vercel-waf/rate-limiting) · [Budżety AI Gateway](https://vercel.com/docs/ai-gateway/observability-and-spend/budgets)
 
 ## Nagrania Mili
 

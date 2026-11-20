@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Button } from "./Button";
 import { Icon } from "./Icon";
 import type { IconName } from "./Icon";
 import styles from "./ItemRow.module.css";
@@ -36,9 +37,9 @@ export function ItemRow({
   );
 
   return onClick ? (
-    <button type="button" className={styles.action} aria-pressed={selected} onClick={onClick}>
+    <Button variant="outline" className={styles.action} aria-pressed={selected} onClick={onClick}>
       {content}
-    </button>
+    </Button>
   ) : (
     <div className={styles.row}>{content}</div>
   );

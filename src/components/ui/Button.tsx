@@ -1,11 +1,24 @@
-import type { ComponentPropsWithoutRef, ComponentPropsWithRef } from "react";
+import type { ComponentPropsWithRef } from "react";
 import { Icon } from "./Icon";
 import type { IconName } from "./Icon";
 import { Tooltip } from "./Tooltip";
 import styles from "./Button.module.css";
 
-type ButtonProps = ComponentPropsWithoutRef<"button"> & {
-  variant?: "primary" | "secondary" | "quiet" | "outline";
+type ButtonVariant =
+  | "default"
+  | "outline"
+  | "secondary"
+  | "ghost"
+  | "destructive"
+  | "link"
+  | "brand";
+type IconButtonSize = "icon-xs" | "icon-sm" | "icon" | "icon-lg";
+type ButtonSize = "xs" | "sm" | "default" | "lg" | IconButtonSize;
+
+type ButtonProps = ComponentPropsWithRef<"button"> & {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  rounded?: boolean;
   icon?: IconName;
 };
 
@@ -13,19 +26,47 @@ export function Button({
   children,
   type = "button",
   className,
-  variant = "primary",
+  variant = "default",
+  size = "default",
+  rounded,
   icon,
   ...props
 }: ButtonProps) {
   return (
     <button
       type={type}
-      className={[styles.button, styles[variant], className].filter(Boolean).join(" ")}
+      data-variant={variant}
+      data-size={size}
+      data-rounded={rounded || undefined}
+      className={[styles.button, className].filter(Boolean).join(" ")}
       {...props}
     >
       {children}
-      {icon ? <Icon name={icon} size="sm" /> : null}
+      {icon ? <Icon name={icon} /> : null}
     </button>
+  );
+}
+
+export function ButtonLink({
+  children,
+  className,
+  variant = "secondary",
+  size = "default",
+  ...props
+}: ComponentPropsWithRef<"a"> & {
+  href: string;
+  variant?: ButtonVariant;
+  size?: Exclude<ButtonSize, IconButtonSize>;
+}) {
+  return (
+    <a
+      data-variant={variant}
+      data-size={size}
+      className={[styles.button, className].filter(Boolean).join(" ")}
+      {...props}
+    >
+      {children}
+    </a>
   );
 }
 
@@ -34,33 +75,21 @@ export function IconButton({
   label,
   tooltip = label,
   size = "icon-sm",
-  shape = "circle",
-  variant = "quiet",
-  className,
+  variant = "ghost",
   ...props
-}: Omit<ComponentPropsWithRef<"button">, "title"> & {
+}: Omit<ButtonProps, "children" | "icon" | "size" | "title"> & {
   icon: IconName;
   label: string;
   tooltip?: string;
-  size?: "icon-xs" | "icon-sm" | "icon" | "icon-lg";
-  shape?: "rounded" | "circle";
-  variant?: "primary" | "quiet";
+  size?: IconButtonSize;
 }) {
   return (
     <Tooltip
       label={tooltip}
       trigger={
-        <button
-          type="button"
-          aria-label={label}
-          className={[styles.iconButton, className].filter(Boolean).join(" ")}
-          data-size={size}
-          data-shape={shape}
-          data-variant={variant}
-          {...props}
-        >
+        <Button aria-label={label} size={size} variant={variant} {...props}>
           <Icon name={icon} />
-        </button>
+        </Button>
       }
     />
   );

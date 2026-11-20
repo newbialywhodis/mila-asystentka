@@ -1,0 +1,53 @@
+.source {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-block-size: 24px;
+  max-inline-size: 100%;
+  padding: 3px 10px;
+  padding-inline-start: var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background-color: var(--surface-muted);
+  color: var(--ink);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1rem;
+  overflow-wrap: anywhere;
+  text-decoration: none;
+}
+
+.source[data-popup-open] {
+  background-color: color-mix(in oklab, var(--surface-muted), var(--ink) 7%);
+}
+
+@media (hover: hover) {
+  .source:hover {
+    background-color: color-mix(in oklab, var(--surface-muted), var(--ink) 7%);
+  }
+}
+
+.source:active {
+  background-color: color-mix(in oklab, var(--surface-muted), var(--ink) 12%);
+}
+
+.favicon {
+  flex: none;
+  border-radius: 50%;
+  background-color: var(--surface);
+  object-fit: cover;
+}
+
+.preview {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.title {
+  font-weight: 650;
+}
+
+.meta {
+  color: var(--muted);
+  font-size: 0.75rem;
+}

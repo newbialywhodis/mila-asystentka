@@ -1,45 +1,4 @@
-.steps {
-  display: grid;
-  gap: var(--space-3);
-  padding: 0;
-  margin: var(--space-5) 0 0;
-  list-style: none;
-}
-
-.steps li {
-  display: grid;
-  gap: var(--space-2);
-  padding: var(--space-4);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-}
-
-.label {
-  color: var(--primary);
-  font-size: 0.8125rem;
-  font-weight: 650;
-}
-
-.task {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-2);
-  cursor: pointer;
-}
-
-.task input {
-  flex: 0 0 auto;
-  margin: 0;
-  accent-color: var(--primary);
-}
-
-.steps p {
-  color: var(--muted);
-}
-
-.steps a {
-  width: fit-content;
-  color: var(--primary);
-  font-size: 0.875rem;
+.detail {
+  margin-block-start: var(--space-1);
+  padding-inline-start: calc(var(--report-checkbox-size) + var(--space-3));
 }

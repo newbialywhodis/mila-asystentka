@@ -1,4 +1,4 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { createContext, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import type { CSSProperties, KeyboardEvent, PointerEvent, ReactNode } from "react";
 import { IconButton } from "../../components/ui/Button";
 import type { IconName } from "../../components/ui/Icon";
@@ -9,13 +9,24 @@ type Side = (typeof sides)[number];
 
 const panels = {
   left: { label: "Lewy panel boczny", icon: "sidebar", openIcon: "sidebarOpen" },
-  right: { label: "Prawy panel boczny", icon: "sidebarRight", openIcon: "sidebarRightOpen" },
+  right: { label: "Raport", icon: "sidebarRight", openIcon: "sidebarRightOpen" },
 } satisfies Record<Side, { label: string; icon: IconName; openIcon: IconName }>;
 
-export function GuideLayout({ children }: { children: ReactNode }) {
+type ReportPanelControls = {
+  id: string;
+  open: boolean;
+  onOpen: (trigger: HTMLButtonElement) => void;
+};
+
+export const ReportPanelContext = createContext<ReportPanelControls | null>(null);
+
+export function GuideLayout({ children, report }: { children: ReactNode; report: ReactNode }) {
   const id = useId();
   const layout = useRef<HTMLElement>(null);
   const triggers = useRef<Partial<Record<Side, HTMLButtonElement | null>>>({});
+  const reportHeading = useRef<HTMLHeadingElement>(null);
+  const reportTrigger = useRef<HTMLButtonElement>(null);
+  const restoreReportFocus = useRef(false);
   const [layoutWidth, setLayoutWidth] = useState(0);
   const [openSides, setOpenSides] = useState<Side[]>([]);
   const [widths, setWidths] = useState<Partial<Record<Side, number>>>({});
@@ -34,20 +45,41 @@ export function GuideLayout({ children }: { children: ReactNode }) {
   const compact = layoutWidth < 768;
   const visibleSides = compact ? openSides.slice(-1) : openSides;
   const lastOpen = visibleSides.at(-1);
+  const reportOpen = visibleSides.includes("right");
+  const reportId = `${id}-right`;
   const maxWidth = Math.floor(
     Math.min(448, layoutWidth * 0.36, compact ? Infinity : (layoutWidth - 320) / 2),
   );
-  const minWidth = Math.min(192, Math.round(maxWidth * 0.65));
-  const defaultWidth = Math.round(Math.min(304, layoutWidth * 0.33));
-  const limit = (width: number) => Math.min(maxWidth, Math.max(minWidth, Math.round(width)));
-  const panelWidth = (side: Side) => limit(widths[side] ?? defaultWidth);
-  const columnWidth = (side: Side) => (visibleSides.includes(side) ? panelWidth(side) : 0);
+  const minWidth = (side: Side) =>
+    side === "right" ? Math.min(248, maxWidth) : Math.min(192, Math.round(maxWidth * 0.65));
+  const defaultWidth = (side: Side) =>
+    Math.round(
+      Math.min(side === "right" ? 400 : 304, layoutWidth * (side === "right" ? 0.36 : 0.33)),
+    );
+  const limit = (side: Side, width: number) =>
+    Math.min(maxWidth, Math.max(minWidth(side), Math.round(width)));
+  const panelWidth = (side: Side) => limit(side, widths[side] ?? defaultWidth(side));
+  const columnWidth = (side: Side) =>
+    visibleSides.includes(side) && !(compact && side === "right") ? panelWidth(side) : 0;
+
+  useLayoutEffect(() => {
+    if (reportOpen) {
+      reportHeading.current?.focus({ preventScroll: true });
+    } else if (restoreReportFocus.current) {
+      restoreReportFocus.current = false;
+      const trigger = reportTrigger.current;
+      trigger?.focus({ preventScroll: true });
+      if (document.activeElement !== trigger)
+        triggers.current.right?.focus({ preventScroll: true });
+    }
+  }, [reportOpen]);
 
   useEffect(() => {
     if (!lastOpen) return;
 
     function closeOnEscape(event: globalThis.KeyboardEvent) {
       if (event.key !== "Escape" || event.defaultPrevented) return;
+      if (lastOpen === "right") restoreReportFocus.current = true;
       setOpenSides((previous) => (compact ? [] : previous.filter((side) => side !== lastOpen)));
     }
 
@@ -55,18 +87,27 @@ export function GuideLayout({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [compact, lastOpen]);
 
-  function toggleSidebar(side: Side) {
-    setOpenSides((previous) => {
-      const visible = compact ? previous.slice(-1) : previous;
-      if (visible.includes(side)) return visible.filter((item) => item !== side);
-      return compact ? [side] : [...previous, side];
-    });
+  function openReport(trigger: HTMLButtonElement) {
+    reportTrigger.current = trigger;
+    if (reportOpen) {
+      reportHeading.current?.focus({ preventScroll: true });
+    }
+    setOpenSides((previous) =>
+      compact ? ["right"] : [...previous.filter((side) => side !== "right"), "right"],
+    );
+  }
+
+  function closeSidebar(side: Side) {
+    if (side === "right") restoreReportFocus.current = true;
+    setOpenSides((previous) => (compact ? [] : previous.filter((item) => item !== side)));
   }
 
   return (
     <main
       ref={layout}
       className={styles.layout}
+      data-compact={compact}
+      data-report-open={reportOpen}
       // oxlint-disable-next-line react/forbid-dom-props -- CSS variables carry measured widths.
       style={
         {
@@ -86,11 +127,19 @@ export function GuideLayout({ children }: { children: ReactNode }) {
                 triggers.current[side] = button;
               }}
               icon={open ? panel.openIcon : panel.icon}
-              shape="rounded"
-              label={`${open ? "Zamknij" : "Otwórz"} ${panel.label.toLowerCase()}`}
+              label={`${open ? "Zamknij" : "Otwórz"} ${side === "right" ? "panel raportu" : panel.label.toLowerCase()}`}
               aria-expanded={open}
               aria-controls={`${id}-${side}`}
-              onClick={() => toggleSidebar(side)}
+              onClick={(event) => {
+                if (open) {
+                  if (side === "right") reportTrigger.current = event.currentTarget;
+                  closeSidebar(side);
+                } else if (side === "right") {
+                  openReport(event.currentTarget);
+                } else {
+                  setOpenSides((previous) => (compact ? ["left"] : [...previous, "left"]));
+                }
+              }}
             />
           );
         })}
@@ -109,32 +158,44 @@ export function GuideLayout({ children }: { children: ReactNode }) {
             aria-label={label}
             inert={!open}
           >
-            {open ? (
+            {open && !(compact && side === "right") ? (
               <SidebarResizeHandle
                 side={side}
                 label={label}
                 panelId={panelId}
                 width={panelWidth(side)}
-                min={minWidth}
+                min={minWidth(side)}
                 max={maxWidth}
                 onResize={(width) => {
-                  const next = limit(width);
+                  const next = limit(side, width);
                   setWidths((previous) =>
-                    next === limit(previous[side] ?? defaultWidth)
+                    next === limit(side, previous[side] ?? defaultWidth(side))
                       ? previous
                       : { ...previous, [side]: next },
                   );
                 }}
                 onClose={() => {
-                  triggers.current[side]?.focus({ preventScroll: true });
-                  toggleSidebar(side);
+                  if (side === "left") triggers.current.left?.focus({ preventScroll: true });
+                  closeSidebar(side);
                 }}
               />
+            ) : null}
+            {open && side === "right" ? (
+              <>
+                <header className={styles.reportHeader}>
+                  <h2 ref={reportHeading} tabIndex={-1}>
+                    Twój raport
+                  </h2>
+                </header>
+                <div className={styles.reportBody}>{report}</div>
+              </>
             ) : null}
           </aside>
         );
       })}
-      {children}
+      <ReportPanelContext value={{ id: reportId, open: reportOpen, onOpen: openReport }}>
+        {children}
+      </ReportPanelContext>
     </main>
   );
 }

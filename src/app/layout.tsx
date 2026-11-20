@@ -4,7 +4,7 @@ import { TooltipProvider } from "../components/ui/Tooltip";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Mila — przewodnik po ciąży i rodzicielstwie",
+  title: "Mila - przewodnik przyszłej mamy",
   description: "Ułóż swój plan świadczeń, terminów i formalności z Milą.",
 };
 

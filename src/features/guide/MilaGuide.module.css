@@ -5,6 +5,8 @@
   --toolbar-inset: var(--space-3);
   --toolbar-padding-top: max(var(--toolbar-inset), env(safe-area-inset-top));
   --toolbar-height: calc(var(--toolbar-padding-top) + var(--icon-button-size-sm) + var(--space-2));
+  --toolbar-layer: 3;
+  --sidebar-resize-reach: 12px;
   position: relative;
   display: grid;
   grid-template-columns: var(--left-sidebar-width) minmax(0, 1fr) var(--right-sidebar-width);
@@ -23,7 +25,12 @@
 }
 
 .sidebar[data-side="right"] {
+  --report-inset: var(--space-4);
+  display: flex;
   grid-column: 3 / 4;
+  flex-direction: column;
+  min-block-size: 0;
+  background: var(--report-surface);
 }
 
 .sidebar[data-open="false"] {
@@ -40,24 +47,79 @@
 
 .sidebar[data-side="right"]::before {
   inset-inline: 0 auto;
+  pointer-events: none;
+}
+
+.reportHeader {
+  display: flex;
+  flex: none;
+  align-items: center;
+  min-height: var(--toolbar-height);
+  padding-block: var(--toolbar-padding-top) var(--space-2);
+  padding-inline: var(--report-inset)
+    calc(
+      max(var(--toolbar-inset), env(safe-area-inset-right)) + var(--icon-button-size-sm) +
+        var(--space-2)
+    );
+  border-bottom: 1px solid var(--line);
+}
+
+.reportHeader h2 {
+  font-size: 1.0625rem;
+  font-weight: 650;
+}
+
+.reportBody {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow-wrap: anywhere;
+}
+
+.reportEmpty {
+  padding: var(--space-5) var(--report-inset);
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+@media (hover: hover) {
+  .sidebar[data-side="right"]:hover {
+    --scrollbar-opacity: 1;
+    --scrollbar-pointer-events: auto;
+  }
+}
+
+.layout[data-compact="true"] .sidebar[data-side="right"] {
+  z-index: 2;
+  grid-column: 1 / -1;
+}
+
+.layout[data-compact="true"] .reportHeader {
+  justify-content: center;
+  padding-inline: calc(
+    max(var(--toolbar-inset), env(safe-area-inset-left), env(safe-area-inset-right)) +
+      var(--icon-button-size-sm) + var(--space-2)
+  );
+}
+
+.layout[data-compact="true"][data-report-open="true"] .chatScrollArea {
+  visibility: hidden;
 }
 
 .resizeHandle {
   position: absolute;
   z-index: 2;
   inset-block: 0;
-  inset-inline-end: -12px;
-  inline-size: 24px;
+  inset-inline-end: calc(-1 * var(--sidebar-resize-reach));
+  inline-size: calc(2 * var(--sidebar-resize-reach));
   cursor: col-resize;
   touch-action: none;
 }
 
 .sidebar[data-side="right"] > .resizeHandle {
-  inset-inline: -12px auto;
-}
-
-.sidebar:has(.resizeHandle:hover, .resizeHandle[data-dragging="true"])::before {
-  border-color: var(--line-strong);
+  inset-inline: 0 auto;
+  inline-size: var(--sidebar-resize-reach);
 }
 
 .resizeHandle:focus-visible {
@@ -83,25 +145,29 @@
     transition: none;
   }
 
-  .sidebar {
+  .sidebar[data-side="left"] {
     transition: visibility var(--ease);
   }
 }
 
-.scrollport {
-  display: flex;
+.chatScrollArea {
+  --scrollbar-z-index: var(--toolbar-layer);
   grid-area: 1 / 2 / -1 / 3;
-  flex-direction: column;
-  height: 100%;
-  overflow-y: auto;
-  overscroll-behavior-y: contain;
+}
+
+.scrollport {
   scroll-padding-block-start: calc(var(--toolbar-height) + 20px);
   scroll-padding-block-end: calc(20px + var(--composer-height, 0px));
-  scrollbar-width: thin;
+}
+
+.scrollContent {
+  display: flex;
+  flex-direction: column;
+  min-block-size: 100%;
 }
 
 .toolbar {
-  z-index: 3;
+  z-index: var(--toolbar-layer);
   display: flex;
   grid-area: 1 / 1 / 2 / -1;
   justify-content: space-between;
@@ -109,15 +175,17 @@
   padding-inline: max(var(--toolbar-inset), env(safe-area-inset-left))
     max(var(--toolbar-inset), env(safe-area-inset-right));
   background: linear-gradient(to bottom, var(--canvas), transparent);
+  background-repeat: no-repeat;
+  background-size: calc(100% - var(--right-sidebar-width)) 100%;
   pointer-events: none;
+}
+
+.layout[data-compact="true"][data-report-open="true"] .toolbar {
+  background: none;
 }
 
 .toolbar > button {
   pointer-events: auto;
-}
-
-.scrollport:focus-visible {
-  outline-offset: -3px;
 }
 
 .thread,
@@ -148,12 +216,6 @@
   padding-block: var(--space-2) max(var(--space-3), env(safe-area-inset-bottom));
   margin-block-start: auto;
   pointer-events: none;
-}
-
-@media (min-width: 768px) {
-  .scrollport {
-    scrollbar-gutter: stable both-edges;
-  }
 }
 
 @media (max-width: 600px) {

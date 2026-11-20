@@ -259,7 +259,8 @@ export const procedures: readonly Procedure[] = [
     sources: ["childLaw", "child800"],
     steps: [
       "Przygotuj dane dziecka i rachunku bankowego.",
-      "Wypełnij elektroniczny SW-R. Okres świadczeniowy trwa od 1 czerwca do 31 maja. Gdy narodziny i wniosek wypadają w różnych okresach, sprawdź w eZUS, czy potrzebujesz wniosków na oba okresy.",
+      "Wniosek SW-R złóż do ZUS wyłącznie elektronicznie, np. przez eZUS lub mZUS.",
+      "Okres świadczeniowy trwa od 1 czerwca do 31 maja. Gdy narodziny i wniosek wypadają w różnych okresach, sprawdź w eZUS, czy potrzebujesz wniosków na oba okresy.",
     ],
   },
   {

@@ -7,10 +7,12 @@ export function CopyButton({
   label,
   text,
   children,
+  className,
 }: {
   label: string;
   text: string;
   children?: ReactNode;
+  className?: string;
 }) {
   const [state, setState] = useState<"idle" | "copying" | "copied" | "failed">("idle");
   const copying = state === "copying";
@@ -34,7 +36,7 @@ export function CopyButton({
   }
 
   return (
-    <div className={styles.copy}>
+    <div className={className ? `${styles.copy} ${className}` : styles.copy}>
       <IconButton icon={icon} label={label} size="icon-xs" aria-disabled={copying} onClick={copy} />
       {children}
       <output className={styles.status} data-state={state}>

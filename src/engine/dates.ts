@@ -2,6 +2,16 @@ import type { Validity } from "../types/catalog";
 
 const dayMilliseconds = 86_400_000;
 
+export function normalizeNumericDate(text: string): string | undefined {
+  const value = text.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  const parts = value.match(/^(\d{1,2})([./-])(\d{1,2})\2(\d{4})$/);
+  if (parts) {
+    const [, day, , month, year] = parts;
+    return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+  }
+}
+
 export function parseDate(value?: string): Date | undefined {
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return;
   const date = new Date(value + "T00:00:00Z");

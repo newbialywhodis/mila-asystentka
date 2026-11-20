@@ -1,25 +1,21 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { SubmitEvent } from "react";
-import { Button, IconButton } from "../../components/ui/Button";
-import { Icon } from "../../components/ui/Icon";
+import { IconButton } from "../../components/ui/Button";
 import { MilaMascot } from "./MilaMascot";
 import type { MascotReaction } from "./MilaMascot";
 import { maxHelpQuestionLength } from "./helpAnswers";
 import styles from "./ChatComposer.module.css";
-import messageStyles from "./ThreadMessage.module.css";
 
 export function ChatComposer({
   reaction,
   thinking,
   onSend,
   awaitingAnswer,
-  onOpenPlan,
 }: {
   reaction?: MascotReaction;
   thinking: boolean;
   onSend: (text: string) => void;
   awaitingAnswer: boolean;
-  onOpenPlan?: () => void;
 }) {
   const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState(false);
@@ -51,16 +47,6 @@ export function ChatComposer({
 
   return (
     <div className={styles.composer}>
-      {onOpenPlan ? (
-        <Button
-          variant="outline"
-          className={`${styles.plan} ${messageStyles.followUp} ${messageStyles.planShortcut}`}
-          onClick={onOpenPlan}
-        >
-          <Icon name="calendar" size="sm" />
-          Twój plan
-        </Button>
-      ) : null}
       <form
         onSubmit={submit}
         className={styles.form}
@@ -105,13 +91,14 @@ export function ChatComposer({
           icon="send"
           label="Wyślij wiadomość"
           size="icon-sm"
-          variant="primary"
+          variant="brand"
+          rounded
           className={styles.send}
           disabled={!query.trim()}
         />
       </form>
       <p className={styles.note} id={noteId}>
-        Niektóre pytania może obsługiwać AI.
+        Pytania może obsługiwać AI. Nie wpisuj danych osobowych ani medycznych.
       </p>
     </div>
   );

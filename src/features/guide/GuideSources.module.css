@@ -1,0 +1,79 @@
+.trigger {
+  margin-inline-start: calc(-1 * (var(--button-padding) + 1px));
+  white-space: nowrap;
+}
+
+.trigger[aria-expanded="true"] {
+  background-color: transparent;
+}
+
+.avatars {
+  display: flex;
+}
+
+.avatar,
+.favicon {
+  flex: none;
+  border-radius: 50%;
+  background-color: var(--surface);
+  object-fit: contain;
+}
+
+.avatar {
+  border: 1px solid var(--line);
+  padding: 2px;
+}
+
+.avatar + .avatar {
+  margin-inline-start: calc(-1 * var(--space-1));
+}
+
+.popup[role="dialog"] {
+  inline-size: max-content;
+  max-inline-size: min(24rem, var(--available-width));
+  max-block-size: var(--available-height);
+  padding: var(--space-1);
+  overflow-y: auto;
+}
+
+.list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  margin: 0;
+  padding: 0;
+  list-style-type: "";
+}
+
+.link {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+  min-block-size: var(--icon-button-size-sm);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-xs);
+  color: var(--ink);
+  font-size: 0.8125rem;
+  text-decoration: none;
+}
+
+.link:is(:hover, :focus-visible) {
+  background-color: var(--control-hover);
+}
+
+.link:is(:hover, :focus-visible) .title {
+  text-decoration: underline;
+}
+
+.title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (pointer: coarse) {
+  .trigger,
+  .link {
+    min-block-size: var(--control-touch-size);
+  }
+}

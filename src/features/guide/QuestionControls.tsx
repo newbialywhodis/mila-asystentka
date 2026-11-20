@@ -1,8 +1,10 @@
 import { useId, useState } from "react";
 import type { Ref, SubmitEvent } from "react";
 import { Button } from "../../components/ui/Button";
+import { DatePicker } from "../../components/ui/DatePicker";
 import { Icon } from "../../components/ui/Icon";
-import { isGuideDate } from "./flow";
+import { normalizeNumericDate, parseDate } from "../../engine/dates";
+import { formatDate, isGuideDate } from "./flow";
 import type { Answer, Option, PlanInterest } from "./flow";
 import styles from "./QuestionControls.module.css";
 
@@ -15,19 +17,14 @@ type ChoiceProps<T> = {
   onAnswer: SubmitAnswer;
 };
 
-export function SingleChoice({
-  options,
-  labelledBy,
-  selected,
-  onAnswer,
-  compact,
-}: ChoiceProps<Option> & { compact: boolean }) {
+export function SingleChoice({ options, labelledBy, selected, onAnswer }: ChoiceProps<Option>) {
   return (
-    <ul className={compact ? styles.quickReplies : styles.choices} aria-labelledby={labelledBy}>
+    <ul className={styles.choices} aria-labelledby={labelledBy}>
       {options.map(({ value, label, icon, detail }) => (
         <li key={String(value)}>
           <Button
-            variant="secondary"
+            variant="outline"
+            size="lg"
             aria-pressed={selected === undefined ? undefined : value === selected}
             onClick={() => onAnswer(value)}
           >
@@ -78,7 +75,7 @@ export function MultiChoice({
           </label>
         ))}
       </fieldset>
-      <Button type="submit" icon="arrow" disabled={!values.length}>
+      <Button type="submit" size="lg" icon="arrow" disabled={!values.length}>
         Zapisz wybór
       </Button>
     </form>
@@ -90,6 +87,7 @@ export function DateChoice({
   value,
   min,
   max,
+  today,
   inputRef,
   onAnswer,
 }: {
@@ -97,39 +95,45 @@ export function DateChoice({
   value?: string;
   min: string;
   max: string;
+  today: string;
   inputRef: Ref<HTMLInputElement>;
-  onAnswer: (answer: Answer) => void;
+  onAnswer: SubmitAnswer;
 }) {
   const id = useId();
   const [error, setError] = useState("");
 
   function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
-    const date = new FormData(event.currentTarget).get("date");
-    if (typeof date === "string" && isGuideDate(date, { min, max })) {
+    const text = new FormData(event.currentTarget).get("date");
+    const date = typeof text === "string" ? normalizeNumericDate(text) : undefined;
+    if (date && isGuideDate(date, { min, max })) {
       onAnswer(date);
       return;
     }
-    setError("Wpisz poprawną datę z podanego zakresu.");
+    setError(
+      parseDate(date)
+        ? `Wybierz datę od ${formatDate(min)} do ${formatDate(max)}.`
+        : "Wpisz poprawną datę w formacie DD.MM.RRRR.",
+    );
   }
 
   return (
-    <form className={styles.dateForm} onSubmit={submit}>
+    <form className={styles.dateForm} onSubmit={submit} noValidate>
       <div className={styles.dateRow}>
-        <input
+        <DatePicker
           ref={inputRef}
           aria-label={label}
-          type="date"
           name="date"
           defaultValue={value}
           min={min}
           max={max}
+          today={today}
           required
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? `${id}-error` : undefined}
-          onChange={() => setError("")}
+          onValueChange={() => setError("")}
         />
-        <Button type="submit" icon="arrow">
+        <Button type="submit" size="lg" icon="arrow">
           Wyślij datę
         </Button>
       </div>

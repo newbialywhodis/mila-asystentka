@@ -117,6 +117,7 @@ export function QuestionTurn({
               }
               value={dateValue}
               {...getDateBounds(id, asOf, birthDate)}
+              today={asOf}
               inputRef={input}
               onAnswer={selectAnswer}
             />
@@ -131,7 +132,6 @@ export function QuestionTurn({
             <SingleChoice
               options={question.options}
               labelledBy={messageId}
-              compact={binary}
               selected={previousAnswer}
               onAnswer={selectAnswer}
             />
@@ -140,7 +140,8 @@ export function QuestionTurn({
             <div className={styles.actions}>
               {timing ? (
                 <Button
-                  variant="quiet"
+                  variant="ghost"
+                  size="lg"
                   onClick={() => {
                     timingChanged.current = true;
                     setExactTiming(!exactTiming);
@@ -151,12 +152,12 @@ export function QuestionTurn({
                 </Button>
               ) : null}
               {canSkip ? (
-                <Button variant="quiet" onClick={() => selectAnswer(null)}>
+                <Button variant="ghost" size="lg" onClick={() => selectAnswer(null)}>
                   Pomiń pytanie
                 </Button>
               ) : null}
               {onCancel ? (
-                <Button variant="quiet" onClick={onCancel}>
+                <Button variant="ghost" size="lg" onClick={onCancel}>
                   Anuluj zmianę
                 </Button>
               ) : null}

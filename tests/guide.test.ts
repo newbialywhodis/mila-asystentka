@@ -74,23 +74,36 @@ test("wybory w ścieżce planowania ciąży służą planowi przygotowań", () =
 });
 
 test("dodatkowe pytanie korzysta z kontekstu bieżącego kroku", () => {
-  assert.equal(findHelpAnswer(explanationPrompt, "employment")?.source, "maternity");
-  assert.equal(findHelpAnswer(explanationPrompt, "birthCardDate")?.source, "birth");
-  assert.equal(
-    findHelpAnswer("Co to znaczy urlop macierzyński?", "planInterests")?.source,
-    "maternity",
-  );
-  assert.equal(
-    findHelpAnswer("Jak ubezpieczyć dziecko po nadaniu PESEL?", "employment")?.source,
-    "health",
-  );
+  assert.deepEqual(findHelpAnswer(explanationPrompt, "employment")?.sourceIds, ["maternity"]);
+  assert.deepEqual(findHelpAnswer(explanationPrompt, "birthCardDate")?.sourceIds, ["birth"]);
   assert.equal(findHelpAnswer("Co znaczy numer telefonu?"), undefined);
+});
+
+test("wspólne słowo z FAQ nie zastępuje odpowiedzi na otwarte pytanie", () => {
+  assert.equal(findHelpAnswer("Czym różnią się 800+ i becikowe?"), undefined);
+  assert.equal(
+    findHelpAnswer("Jak ubezpieczyć dziecko po nadaniu PESEL?", "employment"),
+    undefined,
+  );
+  assert.equal(
+    findHelpAnswer("Dlaczego pytasz o zatrudnienie i kiedy składam ZAM?", "employment"),
+    undefined,
+  );
 });
 
 test("znane pytania mają odpowiedź bez wysyłania pytania do AI", () => {
   for (const { label, text } of helpTopics) {
     assert.equal(findHelpAnswer(label)?.text, text, label);
   }
+});
+
+test("pytanie o znaczenie trymestru działa w rozmowie i poza krokiem o ciąży", () => {
+  const question = "Co to trymestr?";
+  assert.equal(readTextAnswer("pregnancyTiming", question, "2026-11-19"), undefined);
+  const answer = findHelpAnswer(question, "pregnancyTiming");
+  assert.match(answer?.text ?? "", /jeden z trzech etapów ciąży/);
+  assert.deepEqual(findHelpAnswer("Czym jest trymestr?"), answer);
+  assert.equal(findHelpAnswer("Czy trymestr wpływa na becikowe?", "pregnancyTiming"), undefined);
 });
 
 test("historia zachowuje kolejność przy dopytaniu i zmianie ścieżki", () => {
@@ -101,7 +114,7 @@ test("historia zachowuje kolejność przy dopytaniu i zmianie ścieżki", () => 
   assert.ok(editing.revision !== undefined);
 
   const updated = submitAnswer(editing, editing.revision, "born");
-  const answer = { text: "Wniosek składasz w ZUS.", source: "child800" };
+  const answer = { text: "Wniosek składasz w ZUS.", sourceIds: ["child800"] };
   const resolved = resolveHelp(updated, 0, answer);
 
   assert.deepEqual(resolved.answers, { stage: "born" });

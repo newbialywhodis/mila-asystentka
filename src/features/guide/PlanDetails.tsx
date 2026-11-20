@@ -1,15 +1,17 @@
+import { Tabs } from "@base-ui/react/tabs";
 import { useMemo } from "react";
 import { Icon } from "../../components/ui/Icon";
+import { ScrollArea } from "../../components/ui/ScrollArea";
 import { amounts, documents } from "../../data/references";
 import { questions } from "../../data/questions";
-import { sources } from "../../data/sources";
 import { generatePlan } from "../../engine/plan";
 import type { ProcedureResult } from "../../types/catalog";
 import type { Profile } from "../../types/profile";
 import { formatDate } from "./flow";
 import type { Period } from "./flow";
-import type { PlanSection } from "./PlanNavigation";
 import styles from "./PlanDetails.module.css";
+import reportStyles from "./PlanReport.module.css";
+import { ReportSourceLink } from "./ReportSourceLink";
 
 const statusLabels: Record<ProcedureResult["status"], string> = {
   relevant: "Pasuje do Twoich odpowiedzi",
@@ -49,13 +51,12 @@ function Timeline({
   const deadlines = timelineDeadlines(items);
 
   return (
-    <section aria-labelledby="timeline-heading">
-      <h2 id="timeline-heading">Harmonogram</h2>
+    <>
       {profile.stage === "pregnant" ? (
         <div className={styles.preparation}>
           <Icon name="calendar" />
           <div>
-            <h3>
+            <h3 className={reportStyles.title}>
               {profile.dueDate ? (
                 <time dateTime={profile.dueDate}>{formatDate(profile.dueDate)}</time>
               ) : (
@@ -73,7 +74,7 @@ function Timeline({
         </div>
       ) : null}
       {deadlines.length ? (
-        <ol className={styles.timeline}>
+        <ol className={reportStyles.items}>
           {deadlines.map(
             ({
               procedure,
@@ -85,11 +86,9 @@ function Timeline({
               missingField,
               sources: sourceIds,
             }) => (
-              <li key={`${procedure.id}-${id}`}>
-                <p className={styles.meta}>{procedure.title}</p>
-                <h3>{title}</h3>
+              <li key={`${procedure.id}-${id}`} className={styles.deadline}>
                 {date ? (
-                  <p className={styles.date}>
+                  <p className={styles.date} data-expired={date < asOf}>
                     {date < asOf ? "Termin minął · " : ""}
                     {opens ? (
                       <>
@@ -99,16 +98,17 @@ function Timeline({
                     <time dateTime={date}>{formatDate(date)}</time>
                   </p>
                 ) : null}
+                <h3 className={reportStyles.title}>{title}</h3>
+                <p className={reportStyles.meta}>{procedure.title}</p>
                 {missingField ? (
                   <p>
                     Do wyliczenia terminu potrzebna jest odpowiedź na pytanie „
                     {questions[missingField].label}”
                   </p>
                 ) : null}
-                <p>{consequence}</p>
-                <a href={sources[sourceIds[0]].url} target="_blank" rel="noreferrer">
-                  Źródło · {sources[sourceIds[0]].authority}
-                </a>
+                <p>
+                  {consequence} <ReportSourceLink sourceId={sourceIds[0]} />
+                </p>
               </li>
             ),
           )}
@@ -116,7 +116,7 @@ function Timeline({
       ) : (
         <p className={styles.empty}>W planie nie ma terminów powiązanych z Twoimi odpowiedziami.</p>
       )}
-    </section>
+    </>
   );
 }
 
@@ -124,95 +124,90 @@ function Benefits({ items, medicalCare }: { items: ProcedureResult[]; medicalCar
   const benefits = items.filter(
     ({ procedure }) => procedure.category !== "registration" && procedure.category !== "health",
   );
+  if (!benefits.length) {
+    return <p className={styles.empty}>Brakuje świadczeń dopasowanych do tych odpowiedzi.</p>;
+  }
+
   return (
-    <section aria-labelledby="benefits-heading">
-      <h2 id="benefits-heading">Świadczenia i uprawnienia</h2>
-      {benefits.length ? (
-        benefits.map(
-          ({ procedure, status, amounts: amountIds, duration, documents: needed, reasons }) => (
-            <details key={procedure.id} className={styles.benefit}>
-              <summary>
-                <span>
-                  <strong>{procedure.title}</strong>
-                  <span className={styles.meta}>
-                    {statusLabels[status]} · {procedure.authority}
-                  </span>
+    <div className={reportStyles.items}>
+      {benefits.map(
+        ({ procedure, status, amounts: amountIds, duration, documents: needed, reasons }) => (
+          <details key={procedure.id} className={styles.benefit}>
+            <summary>
+              <span>
+                <strong className={reportStyles.title}>{procedure.title}</strong>
+                <span className={reportStyles.meta}>
+                  {statusLabels[status]} · {procedure.authority}
                 </span>
-                <Icon name="chevron" size="sm" />
-              </summary>
-              <div className={styles.detail}>
-                <p>{procedure.summary}</p>
-                {procedure.id === "BIRTH_GRANT_BECIKOWE" && medicalCare !== undefined ? (
-                  <p>
-                    {medicalCare
-                      ? "Zachowaj dokumentację wizyt. Po porodzie może być potrzebne zaświadczenie o opiece medycznej."
-                      : "Jeśli opieka zaczęła się po 10. tygodniu ciąży, zapytaj w gminie, jak wpływa to na możliwość otrzymania becikowego."}
-                  </p>
-                ) : null}
-                {reasons
-                  .filter(({ id }) => id === "review" || id === "future" || id === "validity")
-                  .map(({ id, text }) => (
-                    <p key={id}>{text}</p>
-                  ))}
-                {amountIds.length ? (
-                  <ul>
-                    {amountIds.map((id) => (
-                      <li key={id}>
-                        {amounts[id].label}
-                        {status !== "relevant" ? " · zależnie od warunków" : ""}
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-                {duration ? (
-                  <p>
-                    {duration.note} · {duration.weeks} tyg.
-                  </p>
-                ) : null}
-                <h3>Co możesz zrobić</h3>
-                <ol>
-                  {procedure.steps.map((step) => (
-                    <li key={step}>{step}</li>
-                  ))}
-                </ol>
-                {needed.length ? (
-                  <>
-                    <h3>Dokumenty</h3>
-                    <ul>
-                      {needed.map(({ id, note, state }) => (
-                        <li key={id}>
-                          <a
-                            href={sources[documents[id].source].url}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            {documents[id].title}
-                          </a>
-                          {state === "conditional" ? " · zależnie od sytuacji" : ""}
-                          {note ? <p>{note}</p> : null}
-                        </li>
-                      ))}
-                    </ul>
-                  </>
-                ) : null}
-                <h3>Źródła</h3>
+              </span>
+              <Icon name="chevron" size="sm" />
+            </summary>
+            <div className={styles.detail}>
+              <p>{procedure.summary}</p>
+              {procedure.id === "BIRTH_GRANT_BECIKOWE" && medicalCare !== undefined ? (
+                <p>
+                  {medicalCare
+                    ? "Zachowaj dokumentację wizyt. Po porodzie może być potrzebne zaświadczenie o opiece medycznej."
+                    : "Jeśli opieka zaczęła się po 10. tygodniu ciąży, zapytaj w gminie, jak wpływa to na możliwość otrzymania becikowego."}
+                </p>
+              ) : null}
+              {reasons
+                .filter(({ id }) => id === "review" || id === "future" || id === "validity")
+                .map(({ id, text }) => (
+                  <p key={id}>{text}</p>
+                ))}
+              {amountIds.length ? (
                 <ul>
-                  {procedure.sources.map((id) => (
+                  {amountIds.map((id) => (
                     <li key={id}>
-                      <a href={sources[id].url} target="_blank" rel="noreferrer">
-                        {sources[id].authority} — {sources[id].title}
-                      </a>
+                      {amounts[id].label}
+                      {status !== "relevant" ? " · zależnie od warunków" : ""}
                     </li>
                   ))}
                 </ul>
-              </div>
-            </details>
-          ),
-        )
-      ) : (
-        <p className={styles.empty}>Brakuje świadczeń dopasowanych do tych odpowiedzi.</p>
+              ) : null}
+              {duration ? (
+                <p>
+                  {duration.note} · {duration.weeks} tyg.
+                </p>
+              ) : null}
+              <h3>Co możesz zrobić</h3>
+              <ol>
+                {procedure.steps.map((step) => (
+                  <li key={step}>{step}</li>
+                ))}
+              </ol>
+              {needed.length ? (
+                <>
+                  <h3>Dokumenty</h3>
+                  <ul>
+                    {needed.map(({ id, note, state }) => (
+                      <li key={id}>
+                        {documents[id].title}{" "}
+                        <ReportSourceLink
+                          sourceId={documents[id].source}
+                          label={documents[id].title}
+                        />
+                        {state === "conditional" ? " · zależnie od sytuacji" : ""}
+                        {note ? <p>{note}</p> : null}
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              ) : null}
+              <h3>Źródła</h3>
+              <ul>
+                {procedure.sources.map((id) => (
+                  <li key={id}>
+                    <ReportSourceLink sourceId={id} showTitle />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </details>
+        ),
       )}
-    </section>
+    </div>
   );
 }
 
@@ -224,52 +219,6 @@ const taskProcedures = new Set([
   "MATERNITY_LEAVE",
   "CHILD_800_PLUS",
 ]);
-
-export function PlanPreview({
-  profile,
-  period,
-  asOf,
-}: {
-  profile: Profile;
-  period?: Period;
-  asOf: string;
-}) {
-  const { items } = useMemo(() => generatePlan(profile, asOf), [profile, asOf]);
-  const deadlines = timelineDeadlines(items.filter(({ status }) => status === "relevant"))
-    .flatMap(({ id, procedure, title, date }) =>
-      date && date >= asOf ? [{ id, procedure, title, date }] : [],
-    )
-    .slice(0, 2);
-  const tasks = items.filter(({ procedure }) => taskProcedures.has(procedure.id)).slice(0, 2);
-
-  return (
-    <div className={styles.preview}>
-      {profile.stage === "pregnant" && period ? <p>{pregnancyPreparation[period]}</p> : null}
-      {deadlines.length > 0 ? (
-        <>
-          <h3>Najbliższe terminy</h3>
-          <ul>
-            {deadlines.map(({ id, procedure, title, date }) => (
-              <li key={`${procedure.id}-${id}`}>
-                <strong>{title}</strong>
-                <time dateTime={date}>{formatDate(date)}</time>
-              </li>
-            ))}
-          </ul>
-        </>
-      ) : tasks.length > 0 ? (
-        <>
-          <h3>Sprawy do sprawdzenia</h3>
-          <ul>
-            {tasks.map(({ procedure }) => (
-              <li key={procedure.id}>{procedure.title}</li>
-            ))}
-          </ul>
-        </>
-      ) : null}
-    </div>
-  );
-}
 
 function Tasks({
   profile,
@@ -283,79 +232,77 @@ function Tasks({
   onToggle: (id: string) => void;
 }) {
   const tasks = items.filter(({ procedure }) => taskProcedures.has(procedure.id));
+  if (!tasks.length) {
+    return <p className={styles.empty}>W tej chwili plan nie zawiera zadań do odhaczenia.</p>;
+  }
+
   return (
-    <section aria-labelledby="tasks-heading">
-      <h2 id="tasks-heading">Lista zadań</h2>
-      {tasks.length ? (
-        <ul className={styles.tasks}>
-          {tasks.map(({ procedure }) => (
-            <li key={procedure.id}>
-              <label
-                htmlFor={`task-${procedure.id}`}
-                aria-labelledby={`task-title-${procedure.id}`}
-              >
-                <input
-                  id={`task-${procedure.id}`}
-                  type="checkbox"
-                  aria-labelledby={`task-title-${procedure.id}`}
-                  checked={checked.includes(procedure.id)}
-                  onChange={() => onToggle(procedure.id)}
-                />
-                <span>
-                  <strong id={`task-title-${procedure.id}`}>{procedure.title}</strong>
-                  <span className={styles.meta}>
-                    {profile.stage === "pregnant" &&
-                    procedure.phase === "birth" &&
-                    procedure.id !== "MATERNITY_LEAVE"
-                      ? "Po narodzinach · "
-                      : ""}
-                    {procedure.authority}
-                  </span>
-                  <span>{procedure.steps[0]}</span>
-                </span>
-              </label>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className={styles.empty}>W tej chwili plan nie zawiera zadań do odhaczenia.</p>
-      )}
-    </section>
+    <ul className={reportStyles.items}>
+      {tasks.map(({ procedure }) => (
+        <li key={procedure.id}>
+          <label className={`${reportStyles.row} ${reportStyles.check}`}>
+            <input
+              type="checkbox"
+              aria-labelledby={`task-title-${procedure.id}`}
+              checked={checked.includes(procedure.id)}
+              onChange={() => onToggle(procedure.id)}
+            />
+            <span>
+              <strong id={`task-title-${procedure.id}`} className={reportStyles.title}>
+                {procedure.title}
+              </strong>
+              <span className={reportStyles.meta}>
+                {profile.stage === "pregnant" &&
+                procedure.phase === "birth" &&
+                procedure.id !== "MATERNITY_LEAVE"
+                  ? "Po narodzinach · "
+                  : ""}
+                {procedure.authority}
+              </span>
+              <span className={styles.taskStep}>{procedure.steps[0]}</span>
+            </span>
+          </label>
+        </li>
+      ))}
+    </ul>
   );
 }
 
 export function PlanDetails({
   profile,
   period,
-  section,
   asOf,
   checked,
   onToggle,
 }: {
   profile: Profile;
   period?: Period;
-  section: PlanSection;
   asOf: string;
   checked: string[];
   onToggle: (id: string) => void;
 }) {
   const { items } = useMemo(() => generatePlan(profile, asOf), [profile, asOf]);
+  const notice =
+    profile.standardResidence === false ? (
+      <p className={styles.notice}>
+        Jeśli sprawa dotyczy też innego kraju, potwierdź zasady z instytucją przyjmującą wniosek.
+      </p>
+    ) : null;
+
   return (
-    <div className={styles.details}>
-      {profile.standardResidence === false ? (
-        <p className={styles.notice}>
-          Jeśli sprawa dotyczy też innego kraju, potwierdź zasady z instytucją przyjmującą wniosek.
-        </p>
-      ) : null}
-      {section === "timeline" ? (
+    <>
+      <Tabs.Panel value="timeline" render={<ScrollArea contentClassName={reportStyles.content} />}>
+        {notice}
         <Timeline profile={profile} period={period} items={items} asOf={asOf} />
-      ) : null}
-      {section === "benefits" ? (
+      </Tabs.Panel>
+      <Tabs.Panel value="benefits" render={<ScrollArea contentClassName={reportStyles.content} />}>
+        {notice}
         <Benefits items={items} medicalCare={profile.medicalCareWeek10} />
-      ) : null}
-      {section === "tasks" ? (
+      </Tabs.Panel>
+      <Tabs.Panel value="tasks" render={<ScrollArea contentClassName={reportStyles.content} />}>
+        {notice}
         <Tasks profile={profile} items={items} checked={checked} onToggle={onToggle} />
-      ) : null}
-    </div>
+      </Tabs.Panel>
+    </>
   );
 }
