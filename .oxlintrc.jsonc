@@ -93,7 +93,7 @@
       },
     },
     {
-      "files": ["src/app/**/*.tsx", "src/features/**/screens/**/*.tsx"],
+      "files": ["src/app/**/*.tsx", "src/features/**/*.tsx"],
       "rules": {
         "react/forbid-dom-props": [
           "error",
