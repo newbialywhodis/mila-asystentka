@@ -23,7 +23,7 @@ export function GuideHelpReply({
     <div className={styles.exchange} data-chat-scroll>
       <UserMessage>{exchange.question}</UserMessage>
       <div>
-        <MilaMessage copyText={copyText}>
+        <MilaMessage copyText={copyText} speechText={answer?.text}>
           <output className={styles.reply} tabIndex={-1} data-chat-focus={`help-${exchange.id}`}>
             {answer ? (
               <MilaMessageText key={answer.text}>{answer.text}</MilaMessageText>

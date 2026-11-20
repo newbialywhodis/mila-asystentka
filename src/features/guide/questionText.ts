@@ -1,33 +1,41 @@
 import { formatDate, getPeriod, guideQuestions } from "./flow";
 import type { Answers, QuestionId } from "./flow";
 
-export function getQuestionText(id: QuestionId, answers: Answers, editing = false): string {
+export function getFullQuestionText(id: QuestionId, text: string): string {
+  const { hint } = guideQuestions[id];
+  return hint ? `${text}\n\n${hint}` : text;
+}
+
+export function getQuestionText(
+  id: QuestionId,
+  answers: Answers,
+  { editing = false, celebrate = false } = {},
+): string {
   const { label } = guideQuestions[id];
   const question =
     id === "pregnancyTiming" ? "W którym jesteś trymestrze lub kiedy masz termin porodu?" : label;
   if (editing) return `Jasne, możemy to poprawić. ${question}`;
 
+  const greeting = celebrate ? "Gratulacje! 💛 " : "";
   switch (id) {
     case "stage":
-      return "Cześć, jestem Mila! Pomogę Ci poukładać sprawy związane z ciążą i narodzinami dziecka. Na jakim jesteś etapie?";
+      return "Cześć, jestem Mila! Pomogę Ci ogarnąć formalności i sprawdzić, o jakie świadczenia możesz się ubiegać. Na jakim jesteś etapie?";
     case "planInterests":
-      return "Przygotujmy plan na czas przed ciążą. Co chcesz w nim uwzględnić?";
+      return "Jasne, przygotujmy się krok po kroku. Co chcesz uwzględnić w swoim planie?";
     case "pregnancyTiming":
-      return `Dopasuję plan do etapu Twojej ciąży. ${question}`;
+      return `${greeting}${question}`;
     case "birthDate":
-      return "Gratulacje! Zacznijmy od daty narodzin, żebym mogła wyliczyć terminy formalności. Kiedy urodziło się dziecko?";
+      return `${greeting}Od daty urodzenia policzę terminy. ${question}`;
     case "employment": {
       if (typeof answers.birthDate === "string") {
-        return `Od ${formatDate(answers.birthDate)} policzę terminy zależne od daty urodzenia. A jak teraz pracujesz? To pomoże mi dobrać informacje o urlopach i świadczeniach.`;
+        return `Mam datę urodzenia: ${formatDate(answers.birthDate)}. A jak teraz pracujesz? Od tego zależy, które informacje o urlopach i świadczeniach Ci się przydadzą.`;
       }
       const timing = answers.pregnancyTiming;
-      if (getPeriod(timing)) {
-        return "Uwzględnię ten trymestr w planie. A jak teraz pracujesz? Od tego zależy, które informacje o urlopach i świadczeniach będą dla Ciebie przydatne.";
-      }
       if (typeof timing === "string") {
-        return "Uwzględnię termin porodu w planie. A jak teraz pracujesz? Od tego zależy, które informacje o urlopach i świadczeniach będą dla Ciebie przydatne.";
+        const detail = getPeriod(timing) ? "trymestr" : "termin porodu";
+        return `Uwzględnię ${detail} w planie. A jak teraz pracujesz? Od tego zależy, które informacje o urlopach i świadczeniach Ci się przydadzą.`;
       }
-      return "Żeby dopasować informacje o urlopach i świadczeniach, dopytam o pracę. Jaka jest Twoja sytuacja zawodowa?";
+      return "Dopytam jeszcze o pracę, żeby dobrać informacje o urlopach i świadczeniach. Jaka jest Twoja sytuacja zawodowa?";
     }
     case "sicknessLeave":
       return "Przy etacie warto sprawdzić zasady zwolnienia w ciąży. Czy jesteś teraz na zwolnieniu lekarskim?";
@@ -43,7 +51,7 @@ export function getQuestionText(id: QuestionId, answers: Answers, editing = fals
     case "standardResidence":
       return `Sprawdźmy jeszcze, według jakich zasad ułożyć plan. ${label}`;
     case "medicalCareWeek10":
-      return "Zostało mi pytanie o becikowe. Czy jesteś pod opieką medyczną najpóźniej od 10. tygodnia ciąży?";
+      return "Jeszcze jedno pytanie, tym razem o becikowe. Czy jesteś pod opieką medyczną od 10. tygodnia ciąży lub wcześniej?";
     case "birthRegistered":
       return "Przejdźmy do formalności po narodzinach. Czy urodzenie zostało już zgłoszone w urzędzie stanu cywilnego?";
     case "birthCardDate":

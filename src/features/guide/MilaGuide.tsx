@@ -66,7 +66,7 @@ export function MilaGuide() {
     if (!reaction) return;
     const timeout = setTimeout(
       () => setReaction(undefined),
-      reaction.kind === "smile" ? 1150 : 450,
+      reaction.kind === "smile" ? 2200 : 450,
     );
     return () => clearTimeout(timeout);
   }, [reaction]);
@@ -106,7 +106,10 @@ export function MilaGuide() {
     setConversation((previous) =>
       previous === conversation ? updated : submitAnswer(previous, index, value, text),
     );
-    setReaction({ kind: updated.messages[updated.prompt].kind === "plan" ? "smile" : "nod" });
+    const next = updated.messages[updated.prompt];
+    setReaction({
+      kind: next.kind === "plan" || (next.kind === "question" && next.celebrate) ? "smile" : "nod",
+    });
   }
 
   function edit(question: QuestionId) {

@@ -1,11 +1,11 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { Button } from "../../components/ui/Button";
-import { CopyButton } from "../../components/ui/CopyButton";
 import { Icon } from "../../components/ui/Icon";
 import { parseDate } from "../../engine/dates";
-import { MilaMessage, MilaMessageText } from "./ThreadMessage";
+import { MilaMessage, MilaMessageActions, MilaMessageText } from "./ThreadMessage";
 import { DateChoice, MultiChoice, SingleChoice } from "./QuestionControls";
 import type { SubmitAnswer } from "./QuestionControls";
+import { getFullQuestionText } from "./questionText";
 import { canSkipQuestion, getDateBounds, guideQuestions } from "./flow";
 import type { Answer, QuestionId } from "./flow";
 import styles from "./QuestionTurn.module.css";
@@ -42,7 +42,7 @@ export function QuestionTurn({
   const timing = question.input === "timing";
   const exact = timing && exactTiming;
   const canSkip = canSkipQuestion(id);
-  const copyText = question.hint ? `${text}\n\n${question.hint}` : text;
+  const copyText = getFullQuestionText(id, text);
   const binary =
     question.input === "choice" &&
     question.options.every(({ value }) => typeof value === "boolean");
@@ -164,9 +164,7 @@ export function QuestionTurn({
           ) : null}
         </div>
       ) : null}
-      <div className={messageStyles.followUp}>
-        <CopyButton label="Kopiuj wiadomość Mili" text={copyText} />
-      </div>
+      <MilaMessageActions text={copyText} />
     </div>
   );
 }

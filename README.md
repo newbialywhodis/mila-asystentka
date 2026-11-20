@@ -16,6 +16,12 @@ bun run check
 
 Wpisane pytania Mila dopasowuje do odpowiedzi ze źródłami. Ustaw serwerowy `OPENAI_API_KEY` (lokalnie w `.env.local`), aby włączyć dopasowanie przez AI dla pytań, których nie rozpoznaje lokalnie. Opcjonalnie ustaw `OPENAI_HELP_MODEL`, aby zmienić domyślny model `gpt-4.1-mini`. Do API trafia tylko wpisane pytanie, treść bieżącego pytania Mili oraz lista możliwych odpowiedzi.
 
+## Nagrania Mili
+
+Dodaj `ELEVENLABS_API_KEY=...` do pliku `.env.local` w katalogu projektu. Klucz potrzebuje uprawnienia Text to Speech. Uruchom `bun run audio:generate --dry-run`, aby sprawdzić liczbę brakujących nagrań, a następnie `bun run audio:generate`, aby je pobrać. Skrypt używa głosu `QWxjfoFYJP0TtqPaCcTu` i modelu Multilingual v2.
+
+Do wdrożenia dołącz pliki MP3 z `public/audio/mila/` i manifest `src/features/guide/audioManifest.json`. Po zmianie tekstów uruchom generator ponownie. Aplikacja odtwarza gotowe MP3 i korzysta z syntezy przeglądarki dla pozostałych wiadomości.
+
 ## Źródła
 
 `bun run sources fetch` pobiera kopie źródeł, a `bun run sources diff` porównuje je z sumami w manifeście. Oba polecenia przyjmują opcjonalną listę identyfikatorów źródeł. Zmiany wymagają ręcznej oceny.

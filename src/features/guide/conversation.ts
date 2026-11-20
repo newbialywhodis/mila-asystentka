@@ -10,7 +10,13 @@ export type HelpExchange = {
 };
 
 type ConversationMessage =
-  | { kind: "question"; question: QuestionId; text: string; previousAnswer?: Answer }
+  | {
+      kind: "question";
+      question: QuestionId;
+      text: string;
+      previousAnswer?: Answer;
+      celebrate?: boolean;
+    }
   | { kind: "answer"; question: QuestionId; text: string }
   | { kind: "help"; exchange: HelpExchange }
   | { kind: "plan"; stage: Answers["stage"] };
@@ -41,6 +47,10 @@ export function submitAnswer(
 
   const answers = saveAnswer(conversation.answers, message.question, value);
   const next = getQuestionIds(answers).find((id) => answers[id] === undefined);
+  const celebrate =
+    message.question === "stage" &&
+    answers.stage !== conversation.answers.stage &&
+    (next === "pregnancyTiming" || next === "birthDate");
   return {
     answers,
     messages: [
@@ -51,7 +61,12 @@ export function submitAnswer(
         text: text ?? answerLabel(message.question, value),
       },
       next
-        ? { kind: "question", question: next, text: getQuestionText(next, answers) }
+        ? {
+            kind: "question",
+            question: next,
+            text: getQuestionText(next, answers, { celebrate }),
+            celebrate,
+          }
         : { kind: "plan", stage: answers.stage },
     ],
     prompt: conversation.messages.length + 1,
@@ -79,7 +94,7 @@ export function reviseAnswer(conversation: Conversation, question: QuestionId): 
         kind: "question",
         question,
         previousAnswer,
-        text: getQuestionText(question, base.answers, true),
+        text: getQuestionText(question, base.answers, { editing: true }),
       },
     ],
     revision: base.messages.length,

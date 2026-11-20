@@ -123,3 +123,7 @@ export function findHelpAnswer(question: string, context?: QuestionId): HelpAnsw
 export const missingHelpAnswer: HelpAnswer = {
   text: "Spróbuj doprecyzować pytanie. Mogę pomóc m.in. w sprawach 800+, becikowego, urlopu macierzyńskiego, zgłoszenia urodzenia i ubezpieczenia dziecka.",
 };
+
+export function getStaticHelpTexts(): string[] {
+  return [...helpTopics, ...Object.values(explanations), missingHelpAnswer].map(({ text }) => text);
+}

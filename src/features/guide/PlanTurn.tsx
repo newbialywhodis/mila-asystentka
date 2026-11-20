@@ -7,6 +7,7 @@ import { PlanNavigation } from "./PlanNavigation";
 import type { PlanSection } from "./PlanNavigation";
 import { PlanningPlan } from "./PlanningPlan";
 import { MilaMessage, MilaMessageText } from "./ThreadMessage";
+import { getPlanNotice } from "./planNotice";
 import styles from "./PlanTurn.module.css";
 import messageStyles from "./ThreadMessage.module.css";
 
@@ -46,11 +47,7 @@ export function PlanTurn({
   const panelHeadingId = useId();
   const planning = stage === "planning";
   const section = controls?.section;
-  const notice = planning
-    ? "Mam już dla Ciebie plan przygotowań przed ciążą. Zebrałam w nim sprawy, które możesz sprawdzić w wolnej chwili."
-    : stage === "pregnant"
-      ? "Twój plan jest gotowy. Zebrałam w nim przygotowania przed porodem i formalności po narodzinach."
-      : "Twój plan jest gotowy. Zebrałam w nim terminy, formalności po narodzinach i świadczenia do sprawdzenia.";
+  const notice = getPlanNotice(stage);
   return (
     <section
       className={styles.turn}

@@ -34,6 +34,15 @@
   visibility: hidden;
 }
 
+.speechStatus {
+  color: var(--danger);
+  font-size: 0.8125rem;
+}
+
+.speechStatus:empty {
+  position: absolute;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .followUp {
     animation: rise-in 220ms ease-out;

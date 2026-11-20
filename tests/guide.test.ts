@@ -116,6 +116,8 @@ test("historia zachowuje kolejność przy dopytaniu i zmianie ścieżki", () => 
   const next = resolved.messages[resolved.prompt];
   assert.equal(next.kind, "question");
   assert.equal(next.question, "birthDate");
+  assert.equal(next.celebrate, true);
+  assert.match(next.text, /^Gratulacje! 💛 /u);
   assert.match(next.text, /Kiedy urodziło się dziecko\?$/);
   assert.deepEqual([...getEditableAnswers(resolved)], [["stage", 7]]);
 });
@@ -129,6 +131,29 @@ test("odpowiedź tekstowa zmienia profil i zachowuje treść wiadomości w histo
   assert.equal(conversation.answers.stage, "pregnant");
   assert.equal(conversation.messages[0], initialConversation.messages[0]);
   assert.deepEqual(conversation.messages[1], { kind: "answer", question: "stage", text });
+  const next = conversation.messages[conversation.prompt];
+  assert.equal(next.kind, "question");
+  assert.equal(next.question, "pregnancyTiming");
+  assert.equal(next.celebrate, true);
+  assert.match(next.text, /^Gratulacje! 💛 /u);
+});
+
+test("planowanie i ponowny wybór tego samego etapu nie wywołują gratulacji", () => {
+  const planning = submitAnswer(initialConversation, 0, "planning");
+  const interests = planning.messages[planning.prompt];
+  assert.equal(interests.kind, "question");
+  assert.equal(interests.celebrate, false);
+  assert.doesNotMatch(interests.text, /Gratulacje/u);
+
+  const pregnant = submitAnswer(initialConversation, 0, "pregnant");
+  const editing = reviseAnswer(pregnant, "stage");
+  assert.ok(editing.revision !== undefined);
+  const confirmed = submitAnswer(editing, editing.revision, "pregnant");
+  const timing = confirmed.messages[confirmed.prompt];
+  assert.equal(timing.kind, "question");
+  assert.equal(timing.question, "pregnancyTiming");
+  assert.equal(timing.celebrate, false);
+  assert.doesNotMatch(timing.text, /Gratulacje/u);
 });
 
 test("pole rozmowy rozpoznaje odpowiedzi, a dopytania zostawia do obsługi pomocy", () => {

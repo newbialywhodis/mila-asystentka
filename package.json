@@ -9,6 +9,7 @@
     "test": "bun test",
     "typecheck": "tsc --noEmit",
     "validate:data": "bun scripts/validate-data.ts",
+    "audio:generate": "bun scripts/generate-mila-audio.ts",
     "sources": "bun scripts/sources.ts",
     "lint": "oxlint --deny-warnings",
     "lint:fix": "oxlint --fix --deny-warnings",
