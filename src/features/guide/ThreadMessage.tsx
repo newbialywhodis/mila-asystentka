@@ -96,7 +96,7 @@ export function UserMessage({
           icon="pencil"
           className={styles.edit}
           label={`Zmień odpowiedź „${children}” na pytanie „${question}”`}
-          title="Zmień odpowiedź"
+          tooltip="Zmień odpowiedź"
           onClick={onEdit}
         />
       ) : null}

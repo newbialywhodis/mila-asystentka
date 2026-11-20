@@ -1,6 +1,7 @@
 import type { ComponentPropsWithoutRef, ComponentPropsWithRef } from "react";
 import { Icon } from "./Icon";
 import type { IconName } from "./Icon";
+import { Tooltip } from "./Tooltip";
 import styles from "./Button.module.css";
 
 type ButtonProps = ComponentPropsWithoutRef<"button"> & {
@@ -31,30 +32,36 @@ export function Button({
 export function IconButton({
   icon,
   label,
+  tooltip = label,
   size = "icon-sm",
   shape = "circle",
   variant = "quiet",
   className,
   ...props
-}: ComponentPropsWithRef<"button"> & {
+}: Omit<ComponentPropsWithRef<"button">, "title"> & {
   icon: IconName;
   label: string;
+  tooltip?: string;
   size?: "icon-xs" | "icon-sm" | "icon" | "icon-lg";
   shape?: "rounded" | "circle";
   variant?: "primary" | "quiet";
 }) {
   return (
-    <button
-      type="button"
-      aria-label={label}
-      title={label}
-      className={[styles.iconButton, className].filter(Boolean).join(" ")}
-      data-size={size}
-      data-shape={shape}
-      data-variant={variant}
-      {...props}
-    >
-      <Icon name={icon} />
-    </button>
+    <Tooltip
+      label={tooltip}
+      trigger={
+        <button
+          type="button"
+          aria-label={label}
+          className={[styles.iconButton, className].filter(Boolean).join(" ")}
+          data-size={size}
+          data-shape={shape}
+          data-variant={variant}
+          {...props}
+        >
+          <Icon name={icon} />
+        </button>
+      }
+    />
   );
 }

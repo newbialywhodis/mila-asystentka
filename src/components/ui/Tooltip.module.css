@@ -1,0 +1,32 @@
+.positioner {
+  z-index: 12;
+}
+
+.positioner[data-anchor-hidden] {
+  visibility: hidden;
+}
+
+.popup {
+  max-inline-size: min(16rem, var(--available-width));
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xs);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-tooltip);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .popup {
+    transition: opacity var(--ease);
+  }
+
+  .popup[data-starting-style],
+  .popup[data-ending-style] {
+    opacity: 0;
+  }
+}
