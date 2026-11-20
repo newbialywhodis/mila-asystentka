@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { IconButton } from "../../components/ui/Button";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { warsawToday } from "../../engine/dates";
 import { ChatComposer } from "./ChatComposer";
 import {
@@ -16,6 +15,7 @@ import {
 import { getPeriod, getProfile, guideQuestions } from "./flow";
 import type { Answer, QuestionId } from "./flow";
 import { GuideHelpReply } from "./GuideHelp";
+import { GuideLayout } from "./GuideLayout";
 import { findHelpAnswer, missingHelpAnswer } from "./helpAnswers";
 import type { HelpAnswer } from "./helpAnswers";
 import type { MascotReaction } from "./MilaMascot";
@@ -29,8 +29,6 @@ import styles from "./MilaGuide.module.css";
 type MessageLocation = { key: string; scrollOnly?: boolean };
 
 export function MilaGuide() {
-  const sidebarId = useId();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [conversation, setConversation] = useState(initialConversation);
   const [asOf, setAsOf] = useState("");
   const [section, setSection] = useState<PlanSection>();
@@ -50,17 +48,6 @@ export function MilaGuide() {
   const period = getPeriod(answers.pregnancyTiming);
   const editable = getEditableAnswers(conversation);
   const thinking = messages.some((message) => message.kind === "help" && !message.exchange.answer);
-
-  useEffect(() => {
-    if (!sidebarOpen) return;
-
-    function closeOnEscape(event: KeyboardEvent) {
-      if (event.key === "Escape" && !event.defaultPrevented) setSidebarOpen(false);
-    }
-
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [sidebarOpen]);
 
   useEffect(() => {
     if (!reaction) return;
@@ -190,24 +177,7 @@ export function MilaGuide() {
   }
 
   return (
-    <main className={styles.layout} data-sidebar-open={sidebarOpen}>
-      <aside
-        id={sidebarId}
-        className={styles.sidebar}
-        aria-label="Panel boczny"
-        inert={!sidebarOpen}
-      />
-      <div className={styles.toolbar}>
-        <IconButton
-          icon={sidebarOpen ? "sidebarOpen" : "sidebar"}
-          size="icon-sm"
-          shape="rounded"
-          label={sidebarOpen ? "Zamknij panel boczny" : "Otwórz panel boczny"}
-          aria-expanded={sidebarOpen}
-          aria-controls={sidebarId}
-          onClick={() => setSidebarOpen((open) => !open)}
-        />
-      </div>
+    <GuideLayout>
       <section
         ref={scrollport}
         className={styles.scrollport}
@@ -295,7 +265,7 @@ export function MilaGuide() {
           </div>
         </footer>
       </section>
-    </main>
+    </GuideLayout>
   );
 }
 

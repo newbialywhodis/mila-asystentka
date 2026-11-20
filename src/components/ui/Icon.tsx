@@ -20,6 +20,17 @@ const paths = {
       {sidebarOutline}
     </>
   ),
+  sidebarRight: <g transform="translate(24 0) scale(-1 1)">{sidebarOutline}</g>,
+  sidebarRightOpen: (
+    <>
+      <path
+        d="M15.75 4.75v14.5h3.5a2 2 0 0 0 2-2V6.75a2 2 0 0 0-2-2Z"
+        fill="currentColor"
+        stroke="none"
+      />
+      <g transform="translate(24 0) scale(-1 1)">{sidebarOutline}</g>
+    </>
+  ),
   arrow: <path d="M4 12h15m-6-6 6 6-6 6" />,
   send: <path d="M12 20V5m-6 6 6-6 6 6" />,
   back: <path d="M20 12H5m6-6-6 6 6 6" />,
