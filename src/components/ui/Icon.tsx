@@ -2,9 +2,9 @@ import type { ReactNode } from "react";
 import styles from "./Icon.module.css";
 
 const sidebarOutline = (
-  <g strokeWidth="1.5">
-    <rect x="3.75" y="3.75" width="16.5" height="16.5" rx="2" />
-    <path d="M8.75 4V20" />
+  <g strokeWidth="1.5" strokeLinecap="butt">
+    <path d="M2.75 6.75C2.75 5.64543 3.64543 4.75 4.75 4.75H19.25C20.3546 4.75 21.25 5.64543 21.25 6.75V17.25C21.25 18.3546 20.3546 19.25 19.25 19.25H4.75C3.64543 19.25 2.75 18.3546 2.75 17.25V6.75Z" />
+    <path d="M8.25 5V12V19" />
   </g>
 );
 
@@ -13,7 +13,7 @@ const paths = {
   sidebarOpen: (
     <>
       <path
-        d="M8.75 3.75v16.5h-3a2 2 0 0 1-2-2V5.75a2 2 0 0 1 2-2Z"
+        d="M8.25 4.75v14.5h-3.5a2 2 0 0 1-2-2V6.75a2 2 0 0 1 2-2Z"
         fill="currentColor"
         stroke="none"
       />

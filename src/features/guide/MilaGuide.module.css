@@ -2,15 +2,42 @@
   --guide-width: 44rem;
   --guide-inset: clamp(16px, 4vw, 28px);
   --chat-message-gap: var(--space-5);
+  --sidebar-width: min(19rem, 33vw);
+  --toolbar-inset: var(--space-3);
+  --toolbar-padding-top: max(var(--toolbar-inset), env(safe-area-inset-top));
+  position: relative;
   display: grid;
+  grid-template-columns: 0px minmax(0, 1fr);
   grid-template-rows: auto minmax(0, 1fr);
   height: 100svh;
   height: 100dvh;
+  overflow: clip;
   background: var(--canvas);
+}
+
+.layout[data-sidebar-open="true"] {
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+}
+
+.sidebar {
+  position: absolute;
+  grid-area: 1 / 1 / -1 / 2;
+  inset-block: 0;
+  inset-inline-end: 0;
+  inline-size: var(--sidebar-width);
+  border-inline-end: 1px solid var(--line);
+  background: var(--canvas);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .layout {
+    transition: grid-template-columns var(--ease);
+  }
 }
 
 .scrollport {
   display: flex;
+  grid-area: 2 / 2;
   flex-direction: column;
   height: 100%;
   overflow-y: auto;
@@ -21,9 +48,12 @@
 }
 
 .toolbar {
+  z-index: 1;
   display: flex;
-  padding: max(var(--space-2), env(safe-area-inset-top))
-    max(var(--space-3), env(safe-area-inset-left)) var(--space-2);
+  grid-area: 1 / 1 / 2 / -1;
+  justify-self: start;
+  padding: var(--toolbar-padding-top) max(var(--toolbar-inset), env(safe-area-inset-left))
+    var(--space-2);
 }
 
 .scrollport:focus-visible {
@@ -44,7 +74,7 @@
   gap: var(--chat-message-gap);
   padding-block: clamp(
       var(--space-2),
-      calc(17dvh - var(--control-touch-size) - 2 * var(--space-2)),
+      calc(17dvh - var(--icon-button-size-sm) - var(--toolbar-padding-top) - var(--space-2)),
       100px
     )
     var(--space-6);

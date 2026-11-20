@@ -31,14 +31,16 @@ export function Button({
 export function IconButton({
   icon,
   label,
-  size = "sm",
+  size = "icon-sm",
+  shape = "circle",
   variant = "quiet",
   className,
   ...props
 }: ComponentPropsWithRef<"button"> & {
   icon: IconName;
   label: string;
-  size?: "sm" | "md";
+  size?: "icon-xs" | "icon-sm" | "icon" | "icon-lg";
+  shape?: "rounded" | "circle";
   variant?: "primary" | "quiet";
 }) {
   return (
@@ -48,12 +50,11 @@ export function IconButton({
       title={label}
       className={[styles.iconButton, className].filter(Boolean).join(" ")}
       data-size={size}
+      data-shape={shape}
       data-variant={variant}
       {...props}
     >
-      <span className={styles.iconButtonFace}>
-        <Icon name={icon} size={size} />
-      </span>
+      <Icon name={icon} />
     </button>
   );
 }

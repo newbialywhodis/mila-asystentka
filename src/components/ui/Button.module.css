@@ -61,11 +61,13 @@
 }
 
 .iconButton {
+  --icon-button-size: var(--icon-button-size-sm);
+  --icon-button-glyph-size: var(--icon-size-md);
   --icon-button-hover: var(--control-hover);
   --icon-button-pressed: var(--control-pressed);
   display: inline-grid;
-  inline-size: var(--control-touch-size);
-  block-size: var(--control-touch-size);
+  inline-size: var(--icon-button-size);
+  block-size: var(--icon-button-size);
   flex: 0 0 auto;
   place-items: center;
   padding: 0;
@@ -75,16 +77,34 @@
   background: transparent;
 }
 
-.iconButton[data-size="sm"] {
-  inline-size: var(--control-target-sm);
-  block-size: var(--control-target-sm);
+.iconButton[data-shape="rounded"] {
+  border-radius: var(--radius-xs);
+}
+
+.iconButton[data-size="icon-xs"] {
+  --icon-button-size: var(--icon-button-size-xs);
+  --icon-button-glyph-size: var(--icon-size-sm);
+}
+
+.iconButton[data-size="icon"] {
+  --icon-button-size: var(--icon-button-size-md);
+}
+
+.iconButton[data-size="icon-lg"] {
+  --icon-button-size: var(--icon-button-size-lg);
+  --icon-button-glyph-size: var(--icon-size-lg);
+}
+
+.iconButton > svg {
+  inline-size: var(--icon-button-glyph-size);
+  block-size: var(--icon-button-glyph-size);
 }
 
 .iconButton[data-variant="primary"] {
-  --icon-button-fill: var(--primary);
   --icon-button-hover: var(--primary-hover);
   --icon-button-pressed: var(--primary-pressed);
   color: var(--primary-foreground);
+  background: var(--primary);
 }
 
 .button:disabled {
@@ -94,37 +114,23 @@
 }
 
 .iconButton:disabled {
-  --icon-button-fill: var(--surface-muted);
+  background: var(--surface-muted);
   color: var(--quiet);
   cursor: default;
 }
 
-.iconButtonFace {
-  display: grid;
-  place-items: center;
-  inline-size: var(--control-face-sm);
-  block-size: var(--control-face-sm);
-  border-radius: inherit;
-  background: var(--icon-button-fill, transparent);
-}
-
-.iconButton[data-size="md"] .iconButtonFace {
-  inline-size: var(--control-face-md);
-  block-size: var(--control-face-md);
-}
-
 @media (hover: hover) {
-  .iconButton:hover:enabled:not([aria-disabled="true"]) .iconButtonFace {
+  .iconButton:hover:enabled:not([aria-disabled="true"]) {
     background: var(--icon-button-hover);
   }
 }
 
-.iconButton:active:enabled:not([aria-disabled="true"]) .iconButtonFace {
+.iconButton:active:enabled:not([aria-disabled="true"]) {
   background: var(--icon-button-pressed);
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .iconButtonFace {
+  .iconButton {
     transition: background-color var(--ease);
   }
 }

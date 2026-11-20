@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { IconButton } from "../../components/ui/Button";
-import { Sheet } from "../../components/ui/Sheet";
 import { warsawToday } from "../../engine/dates";
 import { ChatComposer } from "./ChatComposer";
 import {
@@ -30,6 +29,8 @@ import styles from "./MilaGuide.module.css";
 type MessageLocation = { key: string; scrollOnly?: boolean };
 
 export function MilaGuide() {
+  const sidebarId = useId();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [conversation, setConversation] = useState(initialConversation);
   const [asOf, setAsOf] = useState("");
   const [section, setSection] = useState<PlanSection>();
@@ -49,6 +50,17 @@ export function MilaGuide() {
   const period = getPeriod(answers.pregnancyTiming);
   const editable = getEditableAnswers(conversation);
   const thinking = messages.some((message) => message.kind === "help" && !message.exchange.answer);
+
+  useEffect(() => {
+    if (!sidebarOpen) return;
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape" && !event.defaultPrevented) setSidebarOpen(false);
+    }
+
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [sidebarOpen]);
 
   useEffect(() => {
     if (!reaction) return;
@@ -175,12 +187,22 @@ export function MilaGuide() {
   }
 
   return (
-    <main className={styles.layout}>
+    <main className={styles.layout} data-sidebar-open={sidebarOpen}>
+      <aside
+        id={sidebarId}
+        className={styles.sidebar}
+        aria-label="Panel boczny"
+        inert={!sidebarOpen}
+      />
       <div className={styles.toolbar}>
-        <Sheet
-          variant="sidebar"
-          title="Panel boczny"
-          trigger={<IconButton icon="sidebar" size="md" label="Otwórz panel boczny" />}
+        <IconButton
+          icon={sidebarOpen ? "sidebarOpen" : "sidebar"}
+          size="icon-sm"
+          shape="rounded"
+          label={sidebarOpen ? "Zamknij panel boczny" : "Otwórz panel boczny"}
+          aria-expanded={sidebarOpen}
+          aria-controls={sidebarId}
+          onClick={() => setSidebarOpen((open) => !open)}
         />
       </div>
       <section

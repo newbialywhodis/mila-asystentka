@@ -104,7 +104,7 @@ export function ChatComposer({
           type="submit"
           icon="send"
           label="Wyślij wiadomość"
-          size="md"
+          size="icon-sm"
           variant="primary"
           className={styles.send}
           disabled={!query.trim()}

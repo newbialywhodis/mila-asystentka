@@ -26,7 +26,7 @@ export function CopyButton({ label, text }: { label: string; text: string }) {
 
   return (
     <div className={styles.copy}>
-      <IconButton icon={icon} label={label} aria-disabled={copying} onClick={copy} />
+      <IconButton icon={icon} label={label} size="icon-xs" aria-disabled={copying} onClick={copy} />
       <output className={styles.status} data-state={state}>
         {state === "copied" ? "Skopiowano" : state === "failed" ? "Nie udało się skopiować" : null}
       </output>

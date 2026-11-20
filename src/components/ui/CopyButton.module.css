@@ -3,7 +3,7 @@
   align-items: center;
   gap: var(--space-1);
   margin-block-start: var(--space-2);
-  margin-inline-start: calc((var(--icon-size-sm) - var(--control-target-sm)) / 2);
+  margin-inline-start: calc((var(--icon-size-sm) - var(--icon-button-size-xs)) / 2);
 }
 
 .status:not([data-state="failed"]) {

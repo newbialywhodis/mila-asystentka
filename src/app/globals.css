@@ -8,6 +8,11 @@
   background: var(--canvas);
 }
 
+::selection {
+  background-color: var(--selection);
+  color: var(--selection-foreground);
+}
+
 * {
   box-sizing: border-box;
 }
