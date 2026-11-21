@@ -16,6 +16,13 @@
   --landing-window-shadow: 0 18px 48px #4a394311, 0 3px 8px #4a394305;
   --landing-sage: #e6eade;
   --landing-illustration-line: #655e60;
+  --login-ink: #151820;
+  --login-muted: #48566b;
+  --login-accent: #0055a9;
+  --login-tile: #f1f4fa;
+  --login-tile-hover: #e5edf9;
+  --login-divider: #dfe4ed;
+  --login-banner-base: #202633;
   --line: #dfdcd7;
   --line-strong: #827e78;
   --scroll-thumb: #00000026;

@@ -66,7 +66,15 @@ function clampWidth(width: number, min: number, max: number) {
   return Math.min(max, Math.max(min, Math.round(width)));
 }
 
-export function GuideLayout({ cases, children }: { cases: ReactNode; children: ReactNode }) {
+export function GuideLayout({
+  cases,
+  children,
+  panelsEnabled,
+}: {
+  cases: ReactNode;
+  children: ReactNode;
+  panelsEnabled: boolean;
+}) {
   const layout = useRef<HTMLDivElement>(null);
   const casesToggle = useRef<HTMLButtonElement>(null);
   const attachmentsToggle = useRef<HTMLButtonElement>(null);
@@ -81,8 +89,10 @@ export function GuideLayout({ cases, children }: { cases: ReactNode; children: R
   const [mobilePanel, setMobilePanel] = useState<keyof typeof panels | null>(null);
   const [attachmentOutlet, setAttachmentOutlet] = useState<HTMLDivElement | null>(null);
   const compact = layoutWidth > 0 && layoutWidth < desktopBreakpoint;
-  const casesOpen = compact ? mobilePanel === "cases" : (preferences?.open ?? false);
-  const attachmentsOpen = compact ? mobilePanel === "attachments" : desktopAttachmentsOpen;
+  const casesOpen =
+    panelsEnabled && (compact ? mobilePanel === "cases" : (preferences?.open ?? false));
+  const attachmentsOpen =
+    panelsEnabled && (compact ? mobilePanel === "attachments" : desktopAttachmentsOpen);
   const panelBudget = layoutWidth - minimumChatWidth;
   const maxCasesWidth = Math.max(
     0,
@@ -186,6 +196,7 @@ export function GuideLayout({ cases, children }: { cases: ReactNode; children: R
 
   const showAttachments = useCallback(
     (reason: "new-document" | "preview") => {
+      if (!panelsEnabled) return;
       if (compact) {
         if (reason === "new-document") return;
         const opener = document.activeElement;
@@ -197,7 +208,7 @@ export function GuideLayout({ cases, children }: { cases: ReactNode; children: R
       setDesktopAttachmentsOpen(true);
       if (reason === "preview") attachmentsToggle.current?.focus({ preventScroll: true });
     },
-    [compact],
+    [compact, panelsEnabled],
   );
   const controls = useMemo(
     () => ({ closeMobileCases, attachmentOutlet, showAttachments }),
@@ -209,8 +220,9 @@ export function GuideLayout({ cases, children }: { cases: ReactNode; children: R
       <div
         ref={layout}
         className={styles.layout}
-        inert={compact && mobilePanel !== null}
+        inert={panelsEnabled && compact && mobilePanel !== null}
         data-compact={compact || undefined}
+        data-panels-enabled={panelsEnabled}
         data-sidebar-open={!compact && casesOpen}
         data-attachments-open={!compact && attachmentsOpen}
         // oxlint-disable-next-line react/forbid-dom-props -- Apply the measured panel widths to the grid.
@@ -237,6 +249,7 @@ export function GuideLayout({ cases, children }: { cases: ReactNode; children: R
           Mila
         </ButtonLink>
         <GuidePanel
+          enabled={panelsEnabled}
           panel={panels.cases}
           toggle={casesToggle}
           compact={compact}
@@ -260,6 +273,7 @@ export function GuideLayout({ cases, children }: { cases: ReactNode; children: R
           {children}
         </main>
         <GuidePanel
+          enabled={panelsEnabled}
           panel={panels.attachments}
           toggle={attachmentsToggle}
           compact={compact}
@@ -291,6 +305,7 @@ export function GuideLayout({ cases, children }: { cases: ReactNode; children: R
 }
 
 function GuidePanel({
+  enabled,
   panel,
   toggle,
   compact,
@@ -300,6 +315,7 @@ function GuidePanel({
   resize,
   children,
 }: {
+  enabled: boolean;
   panel: (typeof panels)[keyof typeof panels];
   toggle: RefObject<HTMLButtonElement | null>;
   compact: boolean;
@@ -313,6 +329,7 @@ function GuidePanel({
   children: ReactNode;
 }) {
   const id = useId();
+  if (!enabled) return null;
   return (
     <>
       <IconButton

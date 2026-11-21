@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { MilaGuide } from "../../features/guide/MilaGuide";
-import { parseStartTopics } from "../../features/guide/startTopics";
+import { demoProfile, demoProfileCookie } from "../../features/guide/demo-profile";
+import { parseStartTopics, topicChatHref } from "../../features/guide/startTopics";
 
 export const dynamic = "force-dynamic";
 
@@ -14,10 +16,28 @@ export default async function ChatPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { topics } = await searchParams;
+  const [{ topics }, cookieStore] = await Promise.all([searchParams, cookies()]);
+  const initialTopics = parseStartTopics(topics);
+  const demoSignedIn = cookieStore.get(demoProfileCookie)?.value === demoProfile.id;
+
+  async function signOut() {
+    "use server";
+    const cookieStore = await cookies();
+    cookieStore.set(demoProfileCookie, "", {
+      maxAge: 0,
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/chat",
+    });
+  }
+
   return (
     <MilaGuide
-      initialTopics={parseStartTopics(topics)}
+      key={demoSignedIn ? "signed-in" : "guest"}
+      initialTopics={initialTopics}
+      loginHref={demoSignedIn ? undefined : topicChatHref(initialTopics, "/chat/login")}
+      signOutAction={demoSignedIn ? signOut : undefined}
       uploadAllowed={
         process.env.MILA_PDF_UPLOAD_ALLOWED === "1" &&
         Boolean(process.env.AI_GATEWAY_API_KEY?.trim())

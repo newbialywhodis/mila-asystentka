@@ -1,0 +1,218 @@
+﻿.page {
+  display: grid;
+  min-block-size: 100svh;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: clamp(1.5rem, 2.1vw, 2.5rem);
+  padding: clamp(1.25rem, 2.1vw, 2.5rem);
+  background: var(--surface);
+  color: var(--login-ink);
+  font-family: "Segoe UI", system-ui, sans-serif;
+}
+
+.page :focus-visible {
+  outline-color: var(--login-accent);
+}
+
+.header {
+  display: flex;
+  min-block-size: 6.25rem;
+  flex-wrap: wrap;
+  align-content: start;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  margin-block-end: var(--space-6);
+  padding-block: var(--space-2) var(--space-5);
+  border-block-end: 1px solid var(--login-divider);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.coatOfArms {
+  inline-size: 2rem;
+  block-size: auto;
+  flex: none;
+}
+
+.wordmark {
+  font-size: 1.6rem;
+  font-weight: 750;
+}
+
+.badge {
+  padding: 0.25rem 0.7rem;
+  border-radius: var(--radius-pill);
+  background: var(--login-tile);
+  color: var(--login-accent);
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+
+.backLink,
+.bannerLink {
+  display: inline-flex;
+  min-block-size: var(--control-touch-size);
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--login-accent);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.backLink:hover,
+.bannerLink:hover {
+  text-decoration: underline;
+}
+
+.content h1 {
+  font-size: clamp(1.625rem, 2.8vw, 2rem);
+  line-height: 1.25;
+}
+
+.intro {
+  margin-block: var(--space-6) 1.25rem;
+  color: var(--login-muted);
+  font-size: clamp(0.9375rem, 1.2vw, 1.125rem);
+}
+
+.choices {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.tile {
+  display: grid;
+  inline-size: 100%;
+  min-block-size: 6.875rem;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: clamp(0.75rem, 1vw, 1.25rem);
+  padding: clamp(1rem, 1.4vw, 1.5rem);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--login-tile);
+  color: var(--login-ink);
+  text-align: start;
+  text-decoration: none;
+}
+
+.tile:hover {
+  background: var(--login-tile-hover);
+}
+
+.tileIcon,
+.tileArrow {
+  display: flex;
+  color: var(--login-accent);
+}
+
+.tileIcon svg {
+  inline-size: clamp(1.75rem, 3vw, 2.75rem);
+  block-size: clamp(1.75rem, 3vw, 2.75rem);
+}
+
+.tileText {
+  display: grid;
+  gap: var(--space-2);
+  font-size: clamp(0.9375rem, 1.2vw, 1.125rem);
+  overflow-wrap: anywhere;
+}
+
+.tileText > span {
+  color: var(--login-muted);
+}
+
+.banner {
+  position: relative;
+  display: grid;
+  min-block-size: clamp(33rem, calc(100svh - 5rem), 56rem);
+  align-items: end;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 1.25rem;
+  background: var(--login-banner-base);
+  color: var(--surface);
+  text-align: center;
+}
+
+.bannerImage {
+  z-index: -2;
+  object-fit: cover;
+  object-position: center top;
+}
+
+.banner::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    var(--login-banner-base),
+    color-mix(in srgb, var(--login-banner-base) 70%, transparent) 18%,
+    transparent 46%
+  );
+  content: "";
+}
+
+.bannerCopy {
+  padding: clamp(1.25rem, 4vw, 4rem);
+}
+
+.bannerCopy h2 {
+  max-inline-size: 24ch;
+  margin-inline: auto;
+  font-size: clamp(1.5rem, 2.35vw, 2rem);
+  line-height: 1.25;
+}
+
+.bannerCopy p {
+  margin-block: var(--space-5) var(--space-6);
+  font-size: clamp(1rem, 1.4vw, 1.25rem);
+}
+
+.bannerLink {
+  justify-content: center;
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.375rem;
+  background: var(--surface);
+  text-align: center;
+}
+
+.banner .bannerLink:focus-visible {
+  outline-color: var(--surface);
+}
+
+@media (max-width: 48rem) {
+  .page {
+    grid-template-columns: minmax(0, 1fr);
+    padding: var(--space-4);
+  }
+
+  .header {
+    min-block-size: auto;
+    margin-block-end: var(--space-5);
+    padding-block: 0 var(--space-3);
+  }
+
+  .intro {
+    margin-block-start: var(--space-4);
+  }
+
+  .banner {
+    min-block-size: clamp(25rem, 95vw, 36rem);
+  }
+
+  .banner::before {
+    background: linear-gradient(
+      to top,
+      var(--login-banner-base),
+      color-mix(in srgb, var(--login-banner-base) 82%, transparent) 65%,
+      transparent 86%
+    );
+  }
+}

@@ -1,9 +1,11 @@
+import { useRouter } from "next/navigation";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { RefObject } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "../../components/ui/Button";
 import { Icon } from "../../components/ui/Icon";
 import { ScrollArea } from "../../components/ui/ScrollArea";
+import { Sheet } from "../../components/ui/Sheet";
 import { labels } from "../../engine/parent-case";
 import { AttachmentPreview } from "../parent/AttachmentPreview";
 import type { AttachedDocument } from "../parent/case-session";
@@ -15,6 +17,7 @@ import { useParentWorkspace } from "../parent/useParentWorkspace";
 import { SetActionGazeContext } from "./ActionGaze";
 import type { ActionGaze } from "./ActionGaze";
 import { ChatComposer } from "./ChatComposer";
+import { useChatLoginDraft } from "./ChatLoginDraft";
 import { useGuidePanels } from "./GuideLayout";
 import styles from "./CaseConversation.module.css";
 import type { StartTopic } from "./startTopics";
@@ -25,6 +28,7 @@ export function CaseConversation({
   id,
   selection,
   initialTopics,
+  loginHref,
   uploadAllowed,
   input,
   onSummary,
@@ -32,14 +36,19 @@ export function CaseConversation({
   id: number;
   selection: CaseSelection | null;
   initialTopics?: readonly StartTopic[];
+  loginHref?: string;
   uploadAllowed: boolean;
   input: RefObject<HTMLTextAreaElement | null>;
   onSummary: (id: number, title: string) => void;
 }) {
+  const router = useRouter();
+  const { draft, setDraft } = useChatLoginDraft();
   const { attachmentOutlet, showAttachments } = useGuidePanels();
   const workspace = useParentWorkspace(uploadAllowed);
   const [startPage, setStartPage] = useState<StartPage>("start");
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(id === 1 ? draft : "");
+  const [loginPromptOpen, setLoginPromptOpen] = useState(false);
+  const loginButton = useRef<HTMLButtonElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const actionGaze = useRef<ActionGaze>({ hovered: null, focused: null });
   const setActionGaze = useCallback(
@@ -136,8 +145,19 @@ export function CaseConversation({
   }, [active, input, turns, workspace.expanded]);
 
   function submitQuery(text: string) {
+    if (loginHref) {
+      setLoginPromptOpen(true);
+      return;
+    }
     setQuery("");
+    if (id === 1 && draft) setDraft("");
     void workspace.send(text);
+  }
+
+  function openLogin() {
+    if (!loginHref) return;
+    setDraft(query);
+    router.push(loginHref);
   }
 
   function choosePdf() {
@@ -159,6 +179,11 @@ export function CaseConversation({
   return (
     <>
       <div className={styles.conversation} data-empty={isEmpty} hidden={!active}>
+        {loginHref ? (
+          <Button className={styles.loginAction} variant="outline" rounded onClick={openLogin}>
+            Zaloguj się (demo)
+          </Button>
+        ) : null}
         <ScrollArea
           rootClassName={styles.chatScrollArea}
           renderViewport={<section ref={scrollport} />}
@@ -183,11 +208,11 @@ export function CaseConversation({
                 onQueryChange={setQuery}
                 thinking={workspace.thinking}
                 onSend={submitQuery}
-                onAttach={choosePdf}
+                onAttach={loginHref ? undefined : choosePdf}
               />
             </div>
           </footer>
-          {isEmpty ? (
+          {!loginHref && isEmpty ? (
             <StartActions
               workspace={workspace}
               page={startPage}
@@ -198,9 +223,24 @@ export function CaseConversation({
             />
           ) : null}
         </ScrollArea>
-        <CaseTools workspace={workspace} active={active} topics={initialTopics} />
+        {loginHref ? (
+          <Sheet
+            title="Zaloguj się, żeby wysłać wiadomość"
+            description="To logowanie demonstracyjne. Po powrocie Twoja wiadomość będzie czekać w polu tekstowym."
+            open={active && loginPromptOpen}
+            onOpenChange={setLoginPromptOpen}
+            initialFocus={loginButton}
+            finalFocus={() => input.current ?? true}
+          >
+            <Button ref={loginButton} variant="brand" onClick={openLogin}>
+              Zaloguj przez mObywatela (demo)
+            </Button>
+          </Sheet>
+        ) : (
+          <CaseTools workspace={workspace} active={active} topics={initialTopics} />
+        )}
       </div>
-      {active ? (
+      {active && !loginHref ? (
         <input
           ref={fileInput}
           type="file"

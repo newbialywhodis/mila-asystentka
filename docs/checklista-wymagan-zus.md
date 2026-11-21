@@ -36,8 +36,8 @@ Stan lokalnej wersji Mili na 21 listopada 2026 r., łącznie ze zmianami w katal
 
 ## 3. Symulacje, odsyłacze i zmiana parametrów · s. 13–14
 
-- [ ] **Częściowo · Logowanie przez mObywatela.** Przycisk pokazuje fikcyjny profil i pozwala użyć jego danych. Brakuje osobnego kroku potwierdzenia symulowanego logowania. Brief przewiduje symulację.
-- [ ] **Częściowo · Pobranie informacji o ubezpieczeniu z ZUS oraz ręczne wprowadzenie danych.** Ręczne odpowiedzi działają, a demo pozwala wczytać fikcyjny przypadek z aktywnym ubezpieczeniem. Do pełnej próby potrzeba też symulowanego pobrania danych pokazujących brak ubezpieczenia.
+- [x] **Symulowane logowanie przez mObywatela.** Osobna strona pozwala potwierdzić logowanie demonstracyjne. Po powrocie do rozmowy Mila udostępnia panele, a lista spraw pokazuje fikcyjny profil Jana Kowalskiego. [Strona logowania](../src/app/chat/login/page.tsx)
+- [x] **Symulowane pobranie informacji o ubezpieczeniu z ZUS oraz ręczne wprowadzenie danych.** W eZUS można wczytać fikcyjny stan na 2.11.2026 r. w dwóch wariantach. Aktywne chorobowe daje 1400 zł brutto za 7 dni ojcowskiego, a jego brak prowadzi do wyjaśnienia przyczyny odmowy. Dane można też podać ręcznie.
 - [ ] **Częściowo · Zaświadczenie o zadłużeniu na dzień powstania prawa.** eZUS pokazuje fikcyjne 0,00 zł na 2.11.2026. Silnik stosuje datowany próg do ręcznie podanego salda. Symulacja zaświadczenia obejmuje jedną datę i jedno saldo.
 - [x] **Podgląd e-ZLA.** Demo pokazuje okres fikcyjnego zwolnienia i kod B. Przycisk przekazuje te dane do oceny chorobowego.
 - [ ] **Częściowo · Połączenie z PUE/eZUS.** Jest karta z przykładowymi danymi. Brakuje symulowanej możliwości zadania pytania i szerszego podglądu konta ubezpieczonego.

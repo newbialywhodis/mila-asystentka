@@ -11,7 +11,7 @@ bun install --frozen-lockfile
 bun run dev
 ```
 
-Strona główna jest na [localhost:3000](http://localhost:3000), a przycisk „Porozmawiaj z Milą” prowadzi do [/chat](http://localhost:3000/chat). Kalkulator, przykłady i podgląd PDF-u działają bez kluczy API. Spinacz przy polu wiadomości dodaje PDF do bieżącej sprawy. Przykład „Przykładowy PDF” pokazuje potwierdzenie odczytanych danych na fikcyjnym wniosku. Menu po lewej przełącza sprawy zachowane w pamięci otwartej karty. Zmiany sprawdzisz poleceniem `bun run check`.
+Strona główna jest na [localhost:3000](http://localhost:3000), a przycisk „Porozmawiaj z Milą” prowadzi do [/chat](http://localhost:3000/chat). Wybierz „Zaloguj przez mObywatela (demo)” i potwierdź na ekranie logowania, żeby otworzyć rozmowę na fikcyjnym profilu Jana Kowalskiego. Kalkulator, przykłady i podgląd PDF-u działają bez kluczy API. Spinacz przy polu wiadomości dodaje PDF do bieżącej sprawy. Przykład „Przykładowy PDF” pokazuje potwierdzenie odczytanych danych na fikcyjnym wniosku. Menu po lewej przełącza sprawy zachowane w pamięci otwartej karty. Zmiany sprawdzisz poleceniem `bun run check`.
 
 ## Próba na sprawie ZUS
 

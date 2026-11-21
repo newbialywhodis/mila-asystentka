@@ -27,9 +27,12 @@ export function suggestedPlanInterests(topics: readonly StartTopic[]): PlanInter
   );
 }
 
-export function topicChatHref(topics: readonly StartTopic[]) {
+export function topicChatHref(
+  topics: readonly StartTopic[],
+  path: "/chat" | "/chat/login" = "/chat",
+) {
   const validated = parseStartTopics(topics.join(","));
-  return validated.length ? `/chat?topics=${validated.join(",")}` : "/chat";
+  return validated.length ? `${path}?topics=${validated.join(",")}` : path;
 }
 
 export function preferredPlanSection(topics: readonly StartTopic[]): PlanSection {

@@ -20,7 +20,7 @@ export function ChatComposer({
   reaction?: MascotReaction;
   thinking: boolean;
   onSend: (text: string) => void;
-  onAttach: () => void;
+  onAttach?: () => void;
   query: string;
   onQueryChange: (query: string) => void;
   input: RefObject<HTMLTextAreaElement | null>;
@@ -94,13 +94,15 @@ export function ChatComposer({
         readOnly
       />
       <div className={styles.actions}>
-        <IconButton
-          icon="paperclip"
-          label="Dodaj PDF do rozmowy"
-          tooltip="Dodaj PDF"
-          onClick={onAttach}
-          rounded
-        />
+        {onAttach ? (
+          <IconButton
+            icon="paperclip"
+            label="Dodaj PDF do rozmowy"
+            tooltip="Dodaj PDF"
+            onClick={onAttach}
+            rounded
+          />
+        ) : null}
         <IconButton
           type="submit"
           icon="send"

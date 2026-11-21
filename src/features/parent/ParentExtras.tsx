@@ -146,6 +146,58 @@ export function FamilyPlanner({
   );
 }
 
+const demoPaternityFacts = {
+  birth: "2026-08-12",
+  from: "2026-11-02",
+  through: "2026-11-08",
+  employment: "business",
+  paternityUsed: "none",
+} satisfies CaseFacts;
+
+const demoPaternityWithInsurance = {
+  ...demoPaternityFacts,
+  insured: true,
+  debt: 0,
+  basis: 600_000,
+  payer: "zus",
+} satisfies CaseFacts;
+
+function ZusSimulation({ onLoad }: { onLoad: (facts: CaseFacts) => void }) {
+  const [insured, setInsured] = useState(true);
+  return (
+    <>
+      <p>
+        Fikcyjne dane osoby prowadzącej działalność gospodarczą. Stan na{" "}
+        {formatDay(demoPaternityFacts.from)} r.
+      </p>
+      <label className={styles.field}>
+        Ubezpieczenie chorobowe
+        <select
+          value={insured ? "insured" : "uninsured"}
+          onChange={(event) => setInsured(event.currentTarget.value === "insured")}
+        >
+          <option value="insured">Aktywne ubezpieczenie</option>
+          <option value="uninsured">Brak ubezpieczenia</option>
+        </select>
+      </label>
+      {insured ? (
+        <p>
+          Zaświadczenie o zadłużeniu wykazuje saldo {moneyLabel(demoPaternityWithInsurance.debt)}.
+        </p>
+      ) : null}
+      <Button
+        size="sm"
+        variant="brand"
+        onClick={() =>
+          onLoad(insured ? demoPaternityWithInsurance : { ...demoPaternityFacts, insured: false })
+        }
+      >
+        Użyj fikcyjnych danych w rozmowie
+      </Button>
+    </>
+  );
+}
+
 export function SimulationCard({
   onLoad,
   onAdmin,
@@ -153,7 +205,7 @@ export function SimulationCard({
   onLoad: (benefit: Benefit, facts: CaseFacts) => void;
   onAdmin: () => void;
 }) {
-  const [selected, setSelected] = useState<"account" | "zus" | "usc" | "medical">();
+  const [selected, setSelected] = useState<"zus" | "usc" | "medical">();
   const [receipt, setReceipt] = useState(false);
   return (
     <section className={styles.card} aria-label="Symulacja usług">
@@ -162,7 +214,6 @@ export function SimulationCard({
       <div className={styles.actions}>
         {(
           [
-            { key: "account", label: "mObywatel" },
             { key: "zus", label: "eZUS" },
             { key: "medical", label: "e-ZLA" },
             { key: "usc", label: "Odpis aktu" },
@@ -181,34 +232,7 @@ export function SimulationCard({
           </Button>
         ))}
       </div>
-      {selected === "account" || selected === "zus" ? (
-        <>
-          <p>
-            {selected === "account"
-              ? "Fikcyjny profil. Działalność i aktywne ubezpieczenie chorobowe."
-              : "Fikcyjne zaświadczenie ZUS. Saldo składek na 2.11.2026 r. wynosi 0,00 zł."}
-          </p>
-          <Button
-            size="sm"
-            variant="brand"
-            onClick={() =>
-              onLoad("paternity", {
-                birth: "2026-08-12",
-                from: "2026-11-02",
-                through: "2026-11-08",
-                employment: "business",
-                insured: true,
-                debt: 0,
-                basis: 600_000,
-                payer: "zus",
-                paternityUsed: "none",
-              })
-            }
-          >
-            Użyj fikcyjnych danych w rozmowie
-          </Button>
-        </>
-      ) : null}
+      {selected === "zus" ? <ZusSimulation onLoad={(facts) => onLoad("paternity", facts)} /> : null}
       {selected === "medical" ? (
         <>
           <p>Zwolnienie demonstracyjne od 2 do 15 listopada 2026 r. Kod B.</p>

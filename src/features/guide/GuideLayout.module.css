@@ -45,6 +45,13 @@
   z-index: 3;
 }
 
+@media (max-width: 480px) {
+  .layout[data-panels-enabled="false"] .homeLink {
+    justify-self: start;
+    inset-inline-start: var(--corner-start);
+  }
+}
+
 .skipLink {
   z-index: 4;
   padding: var(--space-2) var(--space-3);

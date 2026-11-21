@@ -95,6 +95,13 @@
   grid-row: 3;
 }
 
+.loginAction {
+  position: absolute;
+  z-index: 3;
+  inset-block-start: var(--corner-top);
+  inset-inline-end: var(--corner-end);
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .emptyHeading {
     animation: welcome-in 220ms ease-out both;

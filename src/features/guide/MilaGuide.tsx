@@ -1,11 +1,13 @@
 "use client";
 
-import { createRef, useCallback, useId, useState } from "react";
+import { createRef, useCallback, useId, useState, useTransition } from "react";
 import type { RefObject } from "react";
 import { Button } from "../../components/ui/Button";
+import { DropdownMenu, DropdownMenuItem } from "../../components/ui/DropdownMenu";
 import { Icon } from "../../components/ui/Icon";
 import { CaseConversation } from "./CaseConversation";
 import type { CaseSelection } from "./CaseConversation";
+import { demoProfile } from "./demo-profile";
 import { GuideLayout, useGuidePanels } from "./GuideLayout";
 import type { CloseMobileCases } from "./GuideLayout";
 import styles from "./MilaGuide.module.css";
@@ -15,9 +17,13 @@ type GuideCase = { id: number; title?: string; input: RefObject<HTMLTextAreaElem
 
 export function MilaGuide({
   initialTopics = [],
+  loginHref,
+  signOutAction,
   uploadAllowed = false,
 }: {
   initialTopics?: readonly StartTopic[];
+  loginHref?: string;
+  signOutAction?: () => Promise<void>;
   uploadAllowed?: boolean;
 }) {
   const [conversations, setConversations] = useState<GuideCase[]>(() => [
@@ -50,12 +56,14 @@ export function MilaGuide({
 
   return (
     <GuideLayout
+      panelsEnabled={!loginHref}
       cases={
         <CaseHistory
           history={history}
           selected={selection.id}
           onNewCase={openDraft}
           onSelect={openCase}
+          signOutAction={signOutAction}
         />
       }
     >
@@ -66,6 +74,7 @@ export function MilaGuide({
           input={input}
           selection={selection.id === id ? selection : null}
           initialTopics={id === 1 ? initialTopics : undefined}
+          loginHref={loginHref}
           uploadAllowed={uploadAllowed}
           onSummary={setCaseSummary}
         />
@@ -79,11 +88,13 @@ function CaseHistory({
   selected,
   onNewCase,
   onSelect,
+  signOutAction,
 }: {
   history: GuideCase[];
   selected: number;
   onNewCase: (closeMobileCases: CloseMobileCases) => void;
   onSelect: (item: GuideCase, closeMobileCases: CloseMobileCases) => void;
+  signOutAction?: () => Promise<void>;
 }) {
   const { closeMobileCases } = useGuidePanels();
   const headingId = useId();
@@ -111,7 +122,7 @@ function CaseHistory({
                   variant="ghost"
                   onClick={() => onSelect(item, closeMobileCases)}
                 >
-                  <span className={styles.historyTitle} title={item.title}>
+                  <span className={styles.sidebarOptionLabel} title={item.title}>
                     {item.title}
                   </span>
                 </Button>
@@ -120,6 +131,32 @@ function CaseHistory({
           </ul>
         </nav>
       ) : null}
+      {signOutAction ? <ProfileMenu signOutAction={signOutAction} /> : null}
+    </div>
+  );
+}
+
+function ProfileMenu({ signOutAction }: { signOutAction: () => Promise<void> }) {
+  const [signingOut, startTransition] = useTransition();
+
+  return (
+    <div className={styles.profile}>
+      <DropdownMenu
+        side="top"
+        trigger={
+          <Button className={styles.sidebarOption} variant="ghost">
+            <span className={styles.profileAvatar} aria-hidden="true">
+              {demoProfile.initials}
+            </span>
+            <span className={styles.sidebarOptionLabel}>{demoProfile.name}</span>
+            <Icon name="chevron" />
+          </Button>
+        }
+      >
+        <DropdownMenuItem disabled={signingOut} onClick={() => startTransition(signOutAction)}>
+          Wyloguj się
+        </DropdownMenuItem>
+      </DropdownMenu>
     </div>
   );
 }

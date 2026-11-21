@@ -11,11 +11,12 @@ export function LandingPrivacy() {
       <h2 id="data-title">Twoje informacje w prototypie</h2>
       <div className={styles.trustContent}>
         <div>
-          <h3>Rozmowa bez konta</h3>
+          <h3>Profil demonstracyjny</h3>
           <p>
-            Odpowiedzi, plan i odhaczone zadania są przechowywane w pamięci strony w bieżącej sesji.
-            Po odświeżeniu strony rozmowa zaczyna się od nowa. Nie ma trwałego zapisu ani
-            przypomnień. Tematy wybrane na stronie głównej są przekazywane w adresie rozmowy.
+            Logowanie demonstracyjne uruchamia fikcyjny profil. Przeglądarka zapamiętuje wybór w
+            pliku cookie sesji. Odpowiedzi, plan i odhaczone zadania są przechowywane w pamięci
+            strony. Po odświeżeniu rozmowa zaczyna się od nowa. Tematy wybrane na stronie głównej są
+            przekazywane w adresie rozmowy.
           </p>
         </div>
         <div>
