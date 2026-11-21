@@ -1,0 +1,16 @@
+.section {
+  background: var(--landing-canvas);
+}
+
+.section h2 {
+  max-inline-size: 850px;
+  margin-inline: auto;
+}
+
+.note {
+  margin-block-start: 18px;
+  color: var(--quiet);
+  font-size: 0.75rem;
+  line-height: 1.8;
+  text-align: center;
+}

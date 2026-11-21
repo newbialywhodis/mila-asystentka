@@ -1,0 +1,358 @@
+import styles from "./FamilyHug.module.css";
+
+// Original Mila artwork and layer order from the supplied CSS prototype.
+// Fixed SVG placement wraps local CSS motion; no runtime source-file dependency.
+export function FamilyIllustration() {
+  return (
+    <svg
+      className={styles.illustration}
+      xmlns="http://www.w3.org/2000/svg"
+      width="720"
+      height="830"
+      viewBox="160 65 720 830"
+      fill="none"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <g
+        stroke="var(--landing-illustration-line)"
+        strokeWidth="3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        {/* The far embrace passes behind the carrying parent. */}
+        <g data-part="far-embrace" transform="translate(520 700)">
+          <g className={styles.farEmbrace}>
+            <g data-part="far-shoulder" transform="translate(-48 -338) rotate(177)">
+              <g className={styles.farShoulder}>
+                <path d="M-8-24C30-29 67-22 88-18L111-13 109 17C76 29 36 31-8 22Z" fill="#d9afb9" />
+                <g data-part="far-elbow" transform="translate(105 0) rotate(-24)">
+                  <g className={styles.farElbow}>
+                    <path
+                      d="M-8-17C12-17 27-11 41-15L56-22C62-29 71-27 69-20L65-13 81-18C89-21 94-16 87-11L74-3C89-6 95-2 88 3L63 15C44 27 20 24-7 18Z"
+                      fill="#edc9b1"
+                    />
+                    <path
+                      d="M63-13 74-15m-11 16 13-7m-23 17 12-5"
+                      stroke="#bf9483"
+                      strokeWidth="2"
+                    />
+                  </g>
+                </g>
+                <path d="M99-17 101 20" stroke="#b58195" />
+              </g>
+            </g>
+          </g>
+        </g>
+        <g data-part="joining-parent" transform="translate(520 705)">
+          <g className={styles.joiningParent}>
+            <path
+              d="M-57-110C-68-12-66 91-75 153H13L28 40 56 153H139C122 65 119-58 101-112Z"
+              fill="#ddd8da"
+            />
+            <path d="m16-55 12 95m-58-72-8 175m123-185 19 182" stroke="#b4aab1" strokeWidth="2.5" />
+            <g className={styles.breatheJoining}>
+              <g data-part="joining-torso" transform="translate(0 -275) rotate(-7)">
+                <g className={styles.joiningTorso}>
+                  <path
+                    d="M-35-125C-66-116-83-89-86-48L-92 181C-45 200 53 198 121 180L115-56C113-103 78-131 38-132Z"
+                    fill="#d9afb9"
+                  />
+                  <path
+                    d="M-61-90c-8 27-8 54-9 80m168-66 4 73M-66 159c48 8 102 8 156-1"
+                    stroke="#b58195"
+                    strokeWidth="2.4"
+                  />
+                  <path d="M-16-128c13 18 32 23 48 17l24-21" fill="#f4dde2" />
+                  <path d="M-15-130-17-173 28-180 35-134C23-116 3-117-15-130Z" fill="#e7bfa5" />
+                  <g data-part="joining-head" transform="translate(4 -163) rotate(-10)">
+                    <g className={styles.joiningHead}>
+                      <path
+                        d="M-43-95C-41-123-14-138 12-128 37-136 60-112 51-85L38-28-39-23Z"
+                        fill="#564b50"
+                      />
+                      <path
+                        d="M-40-88C-42-58-47-47-54-33-57-26-45-21-40-23L-38-5C-34 15-15 28 5 21 25 14 36-5 39-32 57-34 58-58 43-60L35-95C12-113-20-111-40-88Z"
+                        fill="#e7bfa5"
+                      />
+                      <path
+                        d="M-42-80c14-1 23-11 28-26 11 15 30 23 52 20l9 36C62-70 59-101 45-114 35-125 23-125 12-122-5-137-22-127-27-118-48-120-58-101-52-87Z"
+                        fill="#564b50"
+                      />
+                      <path
+                        d="M-37-104c9-9 18-11 27-8m15 3c11 9 21 12 34 11"
+                        stroke="#76636b"
+                        strokeWidth="2.2"
+                      />
+                      <path d="M43-46c9-8 13 3 5 9" stroke="#bb8e79" strokeWidth="2" />
+                      <g data-part="joining-eyes" transform="translate(-13 -45)">
+                        <path
+                          d="M-17 1c3-4 6-4 10-1m16-1c3-3 7-3 10 0"
+                          stroke="#564c50"
+                          strokeWidth="3"
+                        />
+                      </g>
+                      <path
+                        d="m-19-37-3 11-7 1m10 15c7 7 16 7 23 1m-34-49c5-4 10-5 15-3"
+                        stroke="#80635b"
+                        strokeWidth="2.3"
+                      />
+                      <path
+                        d="m-27 2 2 3m7 3 2 3m7-1 1 4m8-7 1 3m7-8 1 3"
+                        stroke="#a57d70"
+                        strokeWidth="1.8"
+                      />
+                      <path d="M12-22h6" stroke="#d4a18f" strokeWidth="6" />
+                    </g>
+                  </g>
+                  <g data-part="joining-front-shoulder" transform="translate(94 -83) rotate(77)">
+                    <g className={styles.joiningFrontShoulder}>
+                      <path
+                        data-part="joining-sleeve"
+                        d="M-12-32C22-36 73-29 114-25 145-22 163-20 174-16L178 18C151 27 120 28 87 29L-9 27C-25 12-26-16-12-32Z"
+                        fill="#d9afb9"
+                      />
+                      <path
+                        d="M137-23c3 14 3 29 0 44m-35-35 23 5"
+                        stroke="#b58195"
+                        strokeWidth="2.2"
+                      />
+                      <g data-part="joining-front-elbow" transform="translate(170 0) rotate(67)">
+                        <g className={styles.joiningFrontElbow}>
+                          <path
+                            data-part="joining-forearm"
+                            d="M-10-17C22-22 64-21 108-19L143-21 157-29C164-33 170-28 164-21L157-14 177-16C186-16 188-10 180-7L161-2 180-1C190 0 188 6 180 8L159 12 174 14C182 17 178 22 171 22L143 20C110 22 67 25 26 24L-8 19Z"
+                            fill="#e7bfa5"
+                          />
+                          <path
+                            d="m153-11 13-6m-9 15 14-4m-18 13 14-2"
+                            stroke="#bb8e79"
+                            strokeWidth="2"
+                          />
+                        </g>
+                      </g>
+                    </g>
+                  </g>
+                </g>
+              </g>
+            </g>
+          </g>
+        </g>
+        <g data-part="carrying-parent" transform="translate(380 705)">
+          <g className={styles.carryingParent}>
+            <g data-part="carrier-hips">
+              <path
+                d="M-78-110C-84-12-81 87-89 153H-2L16 25 43 153H126C105 75 97-30 85-118Z"
+                fill="#e5ded5"
+              />
+              <path d="M9-58 16 25m-65-65-7 177M72-43l22 184" stroke="#b9afa7" strokeWidth="2.5" />
+              <path d="M-74-78C-33-65 33-64 89-82" stroke="#c9beb4" />
+            </g>
+            <g className={styles.breatheCarrier}>
+              <g data-part="carrier-torso" transform="translate(0 -260)">
+                <g className={styles.carrierTorso}>
+                  <path
+                    d="M-47-122C-79-116-94-92-99-54L-107 138C-72 160 37 169 107 142L85-34C82-76 57-112 21-122Z"
+                    fill="#dce4d2"
+                  />
+                  <path
+                    d="M-63-99C-78-61-79-20-82 19m151-63 10 137M-76 124c47 13 102 14 157 3"
+                    stroke="#a4b39b"
+                    strokeWidth="2.4"
+                  />
+                  <path d="M-25-116-15-90 9-111 31-87 39-117" fill="#eef0e6" />
+                  <path d="M9-108 18-57m3 18 3 30" stroke="#a4b39b" strokeWidth="2.2" />
+                  <path d="M-48-128-44-166-5-170 3-126C-9-110-28-108-48-128Z" fill="#f0cfb8" />
+                  <path d="M-41-149c10 11 21 10 32 4" stroke="#cb9f88" strokeWidth="2" />
+                  <g data-part="carrier-head" transform="translate(-30 -157) rotate(8)">
+                    <g className={styles.carrierHead}>
+                      <path
+                        d="M-43-26C-70-32-76-57-63-75-82-96-64-123-42-119-33-146 2-140 12-117 37-113 48-92 36-63L25-16Z"
+                        fill="#76615a"
+                      />
+                      <path
+                        d="M-42-92C-34-111-5-113 13-100 31-88 33-67 29-43L40-27C42-22 33-20 29-20L26-1C23 18 4 31-16 22-37 13-44-8-45-34-62-37-62-60-47-62Z"
+                        fill="#f0cfb8"
+                      />
+                      <path
+                        d="M-46-60C-31-64-24-86-23-100-11-80 9-72 31-74 36-103 17-123-6-123-36-125-58-103-56-77Z"
+                        fill="#76615a"
+                      />
+                      <path
+                        d="M-55-87c-12-7-17-19-10-29m16 9c7-15 17-17 26-18m-24 63c-3-22 10-37 20-41"
+                        stroke="#5f504d"
+                        strokeWidth="2.2"
+                      />
+                      <path d="M-50-48c-7-7-12 2-4 9" stroke="#c39480" strokeWidth="2" />
+                      <g data-part="carrier-eyes" transform="translate(7 -44)">
+                        <path
+                          d="M-18-2c3-3 6-3 9 0m17 1c3-3 6-2 8 1"
+                          stroke="#564c50"
+                          strokeWidth="3"
+                        />
+                      </g>
+                      <path
+                        d="m10-39-1 13 7 1M-1-10c7 6 14 5 19-1m-36-49c5-3 10-3 14-1"
+                        stroke="#80635b"
+                        strokeWidth="2.3"
+                      />
+                      <path d="M-24-23c3 3 8 4 12 3" stroke="#dcae9d" strokeWidth="6" />
+                    </g>
+                  </g>
+                  {/* Cradling arm behind the blanket. */}
+                  <g data-part="carrier-back-arm" transform="translate(66 -69) rotate(-9)">
+                    <path d="M-20-8C-26 26-23 68-11 98 6 114 30 95 30 78L22 3Z" fill="#dce4d2" />
+                    <path d="M-13 76c15 10 29 11 42 4" stroke="#a4b39b" strokeWidth="2" />
+                  </g>
+                  <g data-part="infant" transform="translate(80 -12) rotate(-21)">
+                    <g className={styles.infant}>
+                      <path
+                        d="M-27-18C-43 1-45 29-39 55L-20 105C-8 127 24 132 43 115 56 103 53 79 46 54L32 10C25-16-4-28-27-18Z"
+                        fill="#f1dce3"
+                      />
+                      <path
+                        d="M-33 8C-9 9 20 26 43 53M-36 30C-12 31 19 51 49 76M-30 58c19 3 40 16 60 32M-17 98c11 1 23 7 34 14"
+                        stroke="#c3a0af"
+                        strokeWidth="2"
+                      />
+                      <path
+                        d="M-25-16C-39-23-45-41-37-57-29-75-3-78 12-66 26-54 26-34 15-22 6-11-12-8-25-16Z"
+                        fill="#f4d6c0"
+                      />
+                      <path
+                        d="M-39-49c-5-20 11-38 31-37 19 0 34 14 35 34-20 2-43-2-66-10Z"
+                        fill="#e6dfe9"
+                      />
+                      <path
+                        d="M-38-56c22 4 43 7 64 5m-42-24c-4 5-6 10-6 15"
+                        stroke="#b6a8be"
+                        strokeWidth="2"
+                      />
+                      <path
+                        d="m-24-38 6 2m14-1 6 1m-15 10c3 2 6 2 8 0"
+                        stroke="#8e7268"
+                        strokeWidth="2.2"
+                      />
+                      <path d="M-28-29h4" stroke="#e0b1a3" strokeWidth="5" />
+                      <path
+                        d="M6 24c-2-11 1-22 6-22 4 0 4 5 4 9 8-5 15-1 11 5l-9 12"
+                        fill="#f4d6c0"
+                        strokeWidth="2.2"
+                      />
+                    </g>
+                  </g>
+                  <g data-part="carrier-front-arm" transform="translate(-76 -28) rotate(-5)">
+                    <path
+                      d="M-19-12C-26 22-29 61-14 80 0 94 20 86 31 77L24 17 17-13Z"
+                      fill="#dce4d2"
+                    />
+                    <path d="M-16 53c13 3 27 3 43-2" stroke="#a4b39b" strokeWidth="2" />
+                    <g data-part="carrier-front-elbow" transform="translate(3 69) rotate(5)">
+                      <path
+                        d="M-17-13C20-16 57-23 92-25L125-32C133-34 140-29 132-24L118-18 144-21C153-21 155-15 147-12L126-8 148-8C158-7 157-1 148 1L117 7C76 22 30 24-10 20-26 17-31-4-17-13Z"
+                        fill="#f0cfb8"
+                      />
+                      <path
+                        d="m117-18 13-4m-10 14 14-3m-23 13 15-3"
+                        stroke="#c69b87"
+                        strokeWidth="2"
+                      />
+                    </g>
+                  </g>
+                </g>
+              </g>
+            </g>
+          </g>
+        </g>
+        <g data-part="older-child" transform="translate(510 751)">
+          <g className={styles.olderChild}>
+            <g data-part="child-legs">
+              <path d="M-47-18-51 109H2L12 30 29 109H82L63-23Z" fill="#c4cbb8" />
+              <path d="m10 14 2 16m-37 6-1 63m72-62 12 61" stroke="#98a38d" strokeWidth="2.2" />
+            </g>
+            <g className={styles.breatheChild}>
+              <g data-part="child-torso" transform="translate(8 -121) rotate(-8)">
+                <g className={styles.childTorso}>
+                  <g data-part="child-far-arm" transform="translate(46 -32) rotate(-48)">
+                    <g className={styles.childFarArm}>
+                      <path d="M-13-4C-18 17-16 52-9 74 1 87 18 80 18 67L15-3Z" fill="#e8d39d" />
+                      <g data-part="child-far-elbow" transform="translate(2 66) rotate(-24)">
+                        <g className={styles.childFarElbow}>
+                          <path
+                            d="M-11-7c12 3 28 1 37-4l8-10c5-5 10-2 8 4l-2 5 8-1c7 0 8 5 2 9L37 8c-11 9-29 15-43 10Z"
+                            fill="#efc9ad"
+                          />
+                        </g>
+                      </g>
+                    </g>
+                  </g>
+                  <path
+                    d="M-25-48C-47-42-56-27-58-5L-60 112C-24 122 30 122 65 108L55-8C53-31 34-48 13-52Z"
+                    fill="#e8d39d"
+                  />
+                  <path
+                    d="m-43 20 90 3m-93 23 96 3m-97 22 98 2m-97 23 96 0"
+                    stroke="#d0b97e"
+                    strokeWidth="2.4"
+                  />
+                  <path d="M-18-50-18-73 11-77 14-51C5-40-6-39-18-50Z" fill="#efc9ad" />
+                  <path d="m-25-48 12 15 13-13 14 12 10-15" fill="#f4e7bf" strokeWidth="2.5" />
+                  <g data-part="child-head" transform="translate(-2 -67) rotate(-7)">
+                    <g className={styles.childHead}>
+                      <path
+                        d="M-43-36c-15-12-14-35-2-44 2-18 20-25 34-18 14-14 33-7 37 6 20-2 30 16 22 32L34-24Z"
+                        fill="#786156"
+                      />
+                      <path
+                        d="M-38-66C-22-83 8-84 27-69 39-57 41-39 35-20L43-10C44-6 39-2 33-3 27 20 3 28-17 17-30 9-36-5-39-20-55-19-57-42-42-42Z"
+                        fill="#efc9ad"
+                      />
+                      <path
+                        d="M-43-43c15-4 21-17 25-32 10 16 28 23 53 20 10-18-5-38-25-35-19-16-42-7-46 7-18 1-25 22-16 35Z"
+                        fill="#786156"
+                      />
+                      <path
+                        d="M-40-73c3-12 14-15 19-12m9-3c6-6 15-4 17 2M13-84c9 0 14 5 13 11"
+                        stroke="#a08774"
+                        strokeWidth="2"
+                      />
+                      <path d="M-47-33c-5-5-8 2-3 7" stroke="#c2957e" strokeWidth="1.8" />
+                      <g data-part="child-eyes" transform="translate(2 -31)">
+                        <path
+                          d="M-20-2c4-5 8-5 12 0m19 0c4-5 8-5 12-1"
+                          stroke="#65534e"
+                          strokeWidth="2.8"
+                        />
+                      </g>
+                      <path
+                        d="m3-24 1 6 5 1M-6-7C1 4 14 4 20-6"
+                        stroke="#956f60"
+                        strokeWidth="2.1"
+                      />
+                      <path d="m-21-14 6 1m35-2 5-1" stroke="#dda999" strokeWidth="6" />
+                    </g>
+                  </g>
+                  <g data-part="child-near-shoulder" transform="translate(-42 -20) rotate(39)">
+                    <g className={styles.childNearShoulder}>
+                      <path d="M-15-3C-17 19-17 43-10 63 1 75 18 65 18 52L17-3Z" fill="#e8d39d" />
+                      <path d="m-13 47 29 2" stroke="#d0b97e" strokeWidth="2.1" />
+                      <g data-part="child-near-elbow" transform="translate(3 58) rotate(190)">
+                        <g className={styles.childNearElbow}>
+                          <path
+                            d="M-12-8C2-15 25-15 44-12L57-18c7-2 10 3 5 7l-6 3 14-1c7 0 8 5 1 8L51 10C31 17 7 20-9 14Z"
+                            fill="#efc9ad"
+                          />
+                          <path d="m53-7 8-2m-12 10 10-2" stroke="#c2957e" strokeWidth="1.8" />
+                        </g>
+                      </g>
+                    </g>
+                  </g>
+                </g>
+              </g>
+            </g>
+          </g>
+        </g>
+      </g>
+    </svg>
+  );
+}

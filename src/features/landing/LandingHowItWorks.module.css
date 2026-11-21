@@ -1,0 +1,42 @@
+.section {
+  padding-block-start: 68px;
+  background: var(--landing-ground);
+}
+
+.example {
+  margin: 0;
+  scroll-margin-block-start: 24px;
+}
+
+.caption {
+  max-inline-size: 690px;
+  margin: 22px auto 0;
+  color: var(--quiet);
+  font-size: 0.75rem;
+  line-height: 1.8;
+  text-align: center;
+  text-wrap: pretty;
+}
+
+.caption strong {
+  display: block;
+  margin-block-end: 8px;
+  color: var(--primary);
+  font-weight: 550;
+}
+
+.caption > span {
+  display: block;
+  margin-block-start: 8px;
+}
+
+@media (max-width: 600px) {
+  .section {
+    padding-block-start: 36px;
+  }
+
+  .caption {
+    margin-block-start: 32px;
+    text-align: start;
+  }
+}

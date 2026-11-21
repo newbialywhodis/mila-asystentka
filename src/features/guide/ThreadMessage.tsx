@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { IconButton } from "../../components/ui/Button";
 import { CopyButton } from "../../components/ui/CopyButton";
+import { SetActionGazeContext } from "./ActionGaze";
 import audioManifest from "./audioManifest.json";
 import styles from "./ThreadMessage.module.css";
 
@@ -23,7 +24,7 @@ async function fetchGeneratedAudio(text: string, token: string, signal: AbortSig
   return response.arrayBuffer();
 }
 
-export function MilaMessageActions({
+function MilaMessageActions({
   text,
   speechText = text,
   speechToken,
@@ -166,23 +167,58 @@ export function MilaMessageActions({
   );
 }
 
+function gazeAction(target: EventTarget | null) {
+  return target instanceof Element
+    ? target.closest<HTMLElement>("button, a[data-button-link][href]")
+    : null;
+}
+
 export function MilaMessage({
   children,
+  smartComponents,
   copyText,
   speechText,
   speechToken,
   leadingActions,
 }: {
   children: ReactNode;
-  copyText?: string;
+  smartComponents?: ReactNode;
+  copyText: string;
   speechText?: string;
   speechToken?: string | null;
   leadingActions?: ReactNode;
 }) {
+  const setActionGaze = useContext(SetActionGazeContext);
+
   return (
     <div className={styles.mila}>
       <span className={styles.author}>Mila</span>
-      {children}
+      <div className={styles.messageBody}>{children}</div>
+      {smartComponents ? (
+        <div
+          className={`${styles.smartComponents} ${styles.followUp}`}
+          onPointerOverCapture={(event) => {
+            if (event.pointerType !== "touch") {
+              setActionGaze?.("hovered", gazeAction(event.target));
+            }
+          }}
+          onPointerOutCapture={(event) => {
+            if (event.pointerType === "touch") return;
+            const action = gazeAction(event.target);
+            if (action && action !== gazeAction(event.relatedTarget)) {
+              setActionGaze?.("hovered", null, action);
+            }
+          }}
+          onFocusCapture={(event) => {
+            setActionGaze?.("focused", gazeAction(event.target));
+          }}
+          onBlurCapture={(event) => {
+            setActionGaze?.("focused", null, gazeAction(event.target));
+          }}
+        >
+          {smartComponents}
+        </div>
+      ) : null}
       {copyText ? (
         <MilaMessageActions
           key={speechText ?? copyText}
@@ -256,10 +292,12 @@ export function UserMessage({
   children,
   onEdit,
   question,
+  editing,
 }: {
   children: string;
-  onEdit?: () => void;
+  onEdit?: (trigger: HTMLButtonElement) => void;
   question?: string;
+  editing?: boolean;
 }) {
   return (
     <div className={styles.user} tabIndex={onEdit ? -1 : undefined}>
@@ -272,7 +310,8 @@ export function UserMessage({
             size="icon-xs"
             label={`Zmień odpowiedź „${children}” na pytanie „${question}”`}
             tooltip="Zmień odpowiedź"
-            onClick={onEdit}
+            aria-expanded={editing}
+            onClick={(event) => onEdit(event.currentTarget)}
           />
         ) : null}
       </CopyButton>

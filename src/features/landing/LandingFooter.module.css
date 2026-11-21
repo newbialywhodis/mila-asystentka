@@ -1,0 +1,157 @@
+.footer {
+  --footer-ground: color-mix(in srgb, var(--accent-surface) 92%, var(--primary));
+
+  color: var(--landing-ink);
+  background: linear-gradient(
+    to bottom,
+    var(--landing-canvas),
+    var(--accent-surface) 30%,
+    var(--footer-ground)
+  );
+}
+
+.container {
+  container-type: inline-size;
+  max-inline-size: 1168px;
+  padding-inline: max(24px, env(safe-area-inset-left)) max(24px, env(safe-area-inset-right));
+  margin-inline: auto;
+}
+
+.information {
+  display: grid;
+  grid-template-columns: minmax(0, 27ch) repeat(3, max-content);
+  align-items: start;
+  justify-content: space-between;
+  gap: 48px;
+  padding-block: 80px 72px;
+  font-size: 0.875rem;
+}
+
+.footer .heading {
+  margin-block-end: 20px;
+  color: var(--primary-pressed);
+  font-size: 1rem;
+  font-weight: 750;
+  letter-spacing: normal;
+  line-height: 1.5;
+}
+
+.description {
+  max-inline-size: 27ch;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.project {
+  margin-block-start: 20px;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  line-height: 1.8;
+}
+
+.links {
+  display: grid;
+  gap: 4px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.link,
+.placeholder {
+  display: block;
+  min-block-size: var(--control-touch-size);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.link {
+  color: var(--landing-ink);
+  font-weight: 450;
+  text-decoration: none;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.25em;
+}
+
+.placeholder {
+  color: var(--muted);
+}
+
+.link:focus-visible {
+  border-radius: 2px;
+  outline: 2px solid var(--focus);
+  outline-offset: 4px;
+}
+
+.wordmarkFrame {
+  block-size: 0.67em;
+  overflow: hidden;
+  overflow: clip;
+  /* Manrope 800, tracking -0.075em: visible "Mila" ink is 1.68em wide.
+     Size to the shared container and trim only the M's 0.07em side bearing. */
+  font-size: calc(100cqi / 1.68);
+  user-select: none;
+}
+
+.wordmark {
+  position: relative;
+  inset-block-start: -0.09em;
+  display: block;
+  inline-size: max-content;
+  /* Negative tracking leaves the a's ink beyond its advance width.
+     Include that overhang in the mask so its right edge stays intact. */
+  padding-inline-end: 0.015em;
+  margin-inline-start: -0.07em;
+  color: var(--primary-pressed);
+  font-weight: 800;
+  letter-spacing: -0.075em;
+  line-height: 1;
+  white-space: nowrap;
+  /* Keep the silhouette crisp; only the ink fades into the pink ground. */
+  -webkit-mask-image: linear-gradient(#000 42%, #000e 55%, #0005 70%, #0000 79%);
+  mask-image: linear-gradient(#000 42%, #000e 55%, #0005 70%, #0000 79%);
+}
+
+@media (hover: hover) {
+  .link:hover {
+    color: var(--primary-hover);
+    text-decoration-line: underline;
+  }
+}
+
+@container (max-width: 54rem) {
+  .information {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 40px 48px;
+    padding-block: 56px 48px;
+  }
+}
+
+@media (max-width: 600px) {
+  .information {
+    gap: 32px 24px;
+    padding-block: 40px;
+  }
+
+  .identity {
+    grid-column: 1 / -1;
+  }
+
+  .description {
+    max-inline-size: 34ch;
+  }
+
+  .footer .heading {
+    margin-block-end: 16px;
+  }
+
+  .project {
+    margin-block-start: 12px;
+  }
+}
+
+@container (max-width: 18rem) {
+  .information {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

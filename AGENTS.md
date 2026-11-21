@@ -22,12 +22,13 @@ This is the Mila repository - Mila is a HackNation MVP for the challenge „Prze
 - Add interface glyphs to the typed registry in `src/components/ui/Icon.tsx`. Give icon-only actions an accessible name through `IconButton`.
 - Prefer native HTML. Wrap Base UI primitives in Mila components when interactions such as dialogs or menus need focus or keyboard management.
 - Keep UI, conversation state and eligibility rules separate. Avoid premature abstractions and unnecessary dependencies.
+- Render Mila's chat turns with `MilaMessage`. Put the reply text in `children` and the turn's cards, forms and choices in `smartComponents`. `MilaMessage` renders them in that order, followed by the message action bar.
 - Prioritize a polished, responsive and accessible MVP. Use deterministic flows and mock data where needed; no database or authentication.
 
 ## Commands
 
 - Use Bun for dependency management and scripts. Install with `bun install --frozen-lockfile`.
-- Run `bun run check` for formatting, lint, types, tests and catalog validation. For interaction changes, exercise the changed flow in a browser, including keyboard and focus behavior where relevant.
+- Run `bun run check` for formatting, lint, types, tests and catalog validation. For interaction changes, prefer Playwright in headless mode from the CLI to exercise the changed flow in a browser, including keyboard and focus behavior where relevant.
 
 ## Writing Code
 

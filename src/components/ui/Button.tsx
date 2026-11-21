@@ -13,7 +13,7 @@ type ButtonVariant =
   | "link"
   | "brand";
 type IconButtonSize = "icon-xs" | "icon-sm" | "icon" | "icon-lg";
-type ButtonSize = "xs" | "sm" | "default" | "lg" | IconButtonSize;
+type ButtonSize = "xs" | "sm" | "default" | "lg" | "xl" | IconButtonSize;
 
 type ButtonProps = ComponentPropsWithRef<"button"> & {
   variant?: ButtonVariant;
@@ -60,6 +60,7 @@ export function ButtonLink({
 }) {
   return (
     <a
+      data-button-link=""
       data-variant={variant}
       data-size={size}
       className={[styles.button, className].filter(Boolean).join(" ")}
@@ -80,17 +81,13 @@ export function IconButton({
 }: Omit<ButtonProps, "children" | "icon" | "size" | "title"> & {
   icon: IconName;
   label: string;
-  tooltip?: string;
+  tooltip?: string | false;
   size?: IconButtonSize;
 }) {
-  return (
-    <Tooltip
-      label={tooltip}
-      trigger={
-        <Button aria-label={label} size={size} variant={variant} {...props}>
-          <Icon name={icon} />
-        </Button>
-      }
-    />
+  const trigger = (
+    <Button aria-label={label} size={size} variant={variant} {...props}>
+      <Icon name={icon} />
+    </Button>
   );
+  return tooltip === false ? trigger : <Tooltip label={tooltip} trigger={trigger} />;
 }

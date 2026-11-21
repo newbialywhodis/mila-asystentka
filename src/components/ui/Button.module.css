@@ -103,6 +103,15 @@
   --button-size: var(--control-touch-size);
 }
 
+.button[data-size="xl"] {
+  --button-size: 58px;
+  --button-padding: 30px;
+  --button-font-size: 1rem;
+  --button-icon-size: var(--icon-size-md);
+  gap: 22px;
+  border-radius: var(--radius-sm);
+}
+
 .button[data-size="icon-xs"] {
   --button-size: var(--icon-button-size-xs);
 }

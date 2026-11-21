@@ -1,0 +1,145 @@
+.faq {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px;
+}
+
+.questions {
+  inline-size: 100%;
+  max-inline-size: 800px;
+  min-inline-size: 0;
+  border-block-start: 1px solid var(--line);
+  margin-inline: auto;
+}
+
+.questions details {
+  border-block-end: 1px solid var(--line);
+}
+
+.questions summary {
+  display: flex;
+  min-block-size: 72px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 22px 8px;
+  color: var(--landing-ink);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.5;
+  text-align: start;
+  list-style: none;
+  cursor: pointer;
+}
+
+.questions summary::-webkit-details-marker {
+  display: none;
+}
+
+.questions summary:focus-visible {
+  border-radius: var(--radius-xs);
+  outline: 2px solid var(--focus);
+  outline-offset: 4px;
+}
+
+.questions summary > span:first-child {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+.indicator {
+  position: relative;
+  flex: none;
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+  color: var(--primary);
+}
+
+.indicator::before,
+.indicator::after {
+  position: absolute;
+  inset: 0;
+  inline-size: 0.875rem;
+  block-size: 1.5px;
+  margin: auto;
+  background: currentColor;
+  content: "";
+}
+
+.indicator::after {
+  transform: rotate(90deg);
+}
+
+.questions details[open] .indicator::after {
+  opacity: 0;
+}
+
+.answer {
+  padding: 0 48px 24px 8px;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1.75;
+  overflow-wrap: anywhere;
+}
+
+.answer p {
+  max-inline-size: 68ch;
+}
+
+.answer p + p {
+  margin-block-start: 12px;
+}
+
+@media (hover: hover) {
+  .questions summary:hover {
+    color: var(--primary);
+    background: var(--control-hover);
+  }
+}
+
+@media (max-width: 600px) {
+  .faq {
+    gap: 28px;
+  }
+
+  .questions summary {
+    gap: 16px;
+    padding-block: 20px;
+  }
+
+  .answer {
+    padding-inline-end: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .questions summary {
+    transition:
+      color var(--ease),
+      background-color var(--ease);
+  }
+
+  @supports selector(details::details-content) {
+    .questions details[open]::details-content {
+      animation: reveal-answer 180ms ease-out;
+    }
+  }
+}
+
+@keyframes reveal-answer {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .questions summary,
+  .questions details::details-content {
+    animation: none;
+    transition: none;
+  }
+}

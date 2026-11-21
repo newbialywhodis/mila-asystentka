@@ -1,0 +1,415 @@
+.stage {
+  position: relative;
+  isolation: isolate;
+  /* Both cards contribute to the scene height, including when text is enlarged. */
+  display: grid;
+  grid-template-columns: 370px 360px;
+  justify-content: center;
+  column-gap: 20px;
+  max-inline-size: 1140px;
+  min-block-size: 520px;
+  padding-block-end: 24px;
+  margin: 56px auto 0;
+}
+
+.window {
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--surface);
+  box-shadow: var(--landing-window-shadow);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.chat {
+  z-index: 2;
+  align-self: start;
+  inline-size: 100%;
+  padding-block-end: 20px;
+  transform: rotate(-2deg);
+}
+
+.windowHeader {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 17px 22px;
+  border-block-end: 1px solid var(--line);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.avatar {
+  display: block;
+  inline-size: 28px;
+  block-size: 28px;
+}
+
+.avatar svg {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+.windowLabel {
+  margin-inline-start: auto;
+  color: var(--quiet);
+  font-size: 0.6875rem;
+  font-weight: 400;
+}
+
+.conversation {
+  display: grid;
+  gap: 22px;
+  padding: 24px;
+}
+
+.conversation p {
+  font-size: 0.875rem;
+  line-height: 1.65;
+}
+
+.author {
+  display: block;
+  margin-block-end: 6px;
+  color: var(--quiet);
+  font-size: 0.6875rem;
+  font-weight: 500;
+}
+
+.reply {
+  max-inline-size: 92%;
+  margin-inline-start: auto;
+}
+
+.bubble {
+  padding: 8px 12px;
+  border-radius: var(--radius-md) var(--radius-md) 6px var(--radius-md);
+  background: var(--accent-surface);
+}
+
+.composer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 11px 14px;
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius-pill);
+  margin: 14px 20px 0;
+  color: var(--quiet);
+  font-size: 0.6875rem;
+}
+
+.plan {
+  z-index: 1;
+  align-self: start;
+  inline-size: 100%;
+  margin-block-start: 70px;
+  background: var(--report-surface);
+  transform: rotate(3deg);
+  transform-origin: top right;
+}
+
+.planHeading {
+  padding: 23px 24px 17px;
+}
+
+.planHeading h3 {
+  font-size: 1.0625rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.planNavigation {
+  display: flex;
+  gap: 22px;
+  padding-inline: 24px;
+  border-block-end: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.6875rem;
+}
+
+.planNavigation span {
+  padding-block: 7px 10px;
+}
+
+.planNavigation span:first-child {
+  border-block-end: 2px solid var(--primary);
+  margin-block-end: -1px;
+  color: var(--primary);
+}
+
+.planContent {
+  padding: 7px 24px 22px;
+}
+
+.deadline {
+  display: flex;
+  gap: 12px;
+  padding-block: 18px;
+}
+
+.deadline > svg {
+  flex: none;
+  margin-block-start: 3px;
+  color: var(--primary);
+}
+
+.deadline time {
+  display: block;
+  margin-block-end: 7px;
+  color: var(--primary);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.planContent p {
+  font-size: 0.8125rem;
+}
+
+.resultTitle {
+  color: var(--ink);
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+.resultMeta {
+  margin-block-start: 4px;
+  color: var(--quiet);
+  line-height: 1.6;
+}
+
+.planContent .condition {
+  margin-block-start: 9px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.6;
+}
+
+.benefit {
+  padding-block: 17px;
+  border-block: 1px solid var(--line);
+}
+
+.planContent .status {
+  margin-block-start: 7px;
+  color: var(--primary);
+  font-size: 0.6875rem;
+}
+
+.nextStep {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding-block-start: 18px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.emptyCheck {
+  flex: none;
+  inline-size: 14px;
+  block-size: 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  margin-block-start: 3px;
+}
+
+.questionNote,
+.planNote {
+  position: absolute;
+  inline-size: 165px;
+  color: var(--landing-ink);
+}
+
+.questionNote {
+  inset-block-start: 110px;
+  inset-inline-start: 0;
+  transform: rotate(-6deg);
+}
+
+.planNote {
+  inset-block-start: 160px;
+  inset-inline-end: 0;
+  transform: rotate(5deg);
+}
+
+.questionNote p,
+.planNote p {
+  font-size: 1.625rem;
+  font-weight: 550;
+  letter-spacing: -0.04em;
+  line-height: 1.2;
+}
+
+.questionNote > span,
+.planNote > span {
+  display: block;
+  margin-block-start: 10px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.7;
+}
+
+.questionNote svg,
+.planNote svg {
+  display: block;
+  inline-size: 74px;
+  block-size: 53px;
+  margin-inline-start: auto;
+  stroke: var(--landing-illustration-line);
+  stroke-width: 1.7px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.planNote svg {
+  margin-inline: 0 auto;
+  transform: scaleX(-1);
+}
+
+@media (min-width: 801px) and (max-width: 1150px) {
+  .stage {
+    grid-template-columns: 330px 330px;
+    min-block-size: 550px;
+  }
+
+  .questionNote,
+  .planNote {
+    inline-size: calc((100% - 720px) / 2);
+    min-inline-size: 80px;
+  }
+
+  .questionNote p,
+  .planNote p {
+    font-size: 1.25rem;
+  }
+
+  .questionNote > span,
+  .planNote > span {
+    font-size: 0.6875rem;
+  }
+}
+
+@media (min-width: 701px) and (max-width: 1000px) {
+  .stage {
+    grid-template-columns: 48% 48%;
+    max-inline-size: 680px;
+    min-block-size: 680px;
+    justify-content: space-between;
+    column-gap: 0;
+    padding-block-start: max(128px, calc(10rem - 32px));
+    margin-block-start: 42px;
+  }
+
+  .questionNote {
+    inset: 0 auto auto 2%;
+    inline-size: 215px;
+    transform: rotate(-4deg);
+  }
+
+  .planNote {
+    inset: 35px 0 auto auto;
+    inline-size: 210px;
+    transform: rotate(4deg);
+  }
+
+  .questionNote p,
+  .planNote p {
+    font-size: 1.375rem;
+  }
+
+  .questionNote svg {
+    margin-inline-start: 20px;
+  }
+
+  .planNote svg {
+    margin-inline-start: 65px;
+  }
+}
+
+@media (max-width: 700px) {
+  .stage {
+    display: flex;
+    max-inline-size: 400px;
+    min-block-size: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+    padding-block: 0;
+    margin-block-start: 34px;
+  }
+
+  .window,
+  .questionNote,
+  .planNote {
+    position: relative;
+    inset: auto;
+  }
+
+  .window {
+    inline-size: calc(100% - 12px);
+    border-radius: 17px;
+  }
+
+  .chat {
+    transform: rotate(-1deg);
+  }
+
+  .plan {
+    align-self: flex-end;
+    margin-block-start: 0;
+    transform: rotate(1deg);
+    transform-origin: center;
+  }
+
+  .questionNote,
+  .planNote {
+    inline-size: 230px;
+    padding-block-end: 20px;
+    margin-inline-start: 5px;
+    transform: rotate(-3deg);
+  }
+
+  .planNote {
+    align-self: flex-end;
+    padding-block-end: 27px;
+    margin-block-start: 35px;
+    text-align: end;
+    transform: rotate(3deg);
+  }
+
+  .questionNote p,
+  .planNote p {
+    font-size: 1.375rem;
+  }
+
+  .questionNote > span,
+  .planNote > span {
+    margin-block-start: 5px;
+  }
+
+  .questionNote svg,
+  .planNote svg {
+    position: absolute;
+    inset: 16px -48px auto auto;
+    inline-size: 55px;
+    block-size: 44px;
+    transform: rotate(46deg);
+  }
+
+  .planNote svg {
+    inset: 20px auto auto -49px;
+    transform: scaleX(-1) rotate(46deg);
+  }
+
+  .conversation {
+    gap: 20px;
+    padding: 22px;
+  }
+
+  .windowHeader {
+    padding: 15px 20px;
+  }
+}

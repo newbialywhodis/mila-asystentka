@@ -1,293 +1,357 @@
-import { createContext, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
-import type { CSSProperties, KeyboardEvent, PointerEvent, ReactNode } from "react";
-import { IconButton } from "../../components/ui/Button";
-import type { IconName } from "../../components/ui/Icon";
-import styles from "./MilaGuide.module.css";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
+import type { ComponentProps, CSSProperties, ReactNode, RefObject } from "react";
+import { ButtonLink, IconButton } from "../../components/ui/Button";
+import { Sheet } from "../../components/ui/Sheet";
+import { SidebarResizeHandle } from "./SidebarResizeHandle";
+import {
+  readPanelPreferences,
+  readPanelSnapshot,
+  subscribeToPanelPreferences,
+  updatePanelPreferences,
+} from "./panel-preferences";
+import styles from "./GuideLayout.module.css";
 
-const sides = ["left", "right"] as const;
-type Side = (typeof sides)[number];
+const desktopBreakpoint = 768;
+const minimumChatWidth = 340;
+const minimumCasesWidth = 176;
+const minimumAttachmentsWidth = 240;
 
 const panels = {
-  left: { label: "Lewy panel boczny", icon: "sidebar", openIcon: "sidebarOpen" },
-  right: { label: "Raport", icon: "sidebarRight", openIcon: "sidebarRightOpen" },
-} satisfies Record<Side, { label: string; icon: IconName; openIcon: IconName }>;
+  cases: {
+    side: "left",
+    title: "Sprawy",
+    closedIcon: "sidebar",
+    openIcon: "sidebarOpen",
+    openLabel: "Otwórz listę spraw",
+    closeLabel: "Zamknij listę spraw",
+    resizeLabel: "Zmień szerokość panelu spraw",
+  },
+  attachments: {
+    side: "right",
+    title: "Załączniki",
+    closedIcon: "sidebarRight",
+    openIcon: "sidebarRightOpen",
+    openLabel: "Otwórz załączniki",
+    closeLabel: "Zamknij załączniki",
+    resizeLabel: "Zmień szerokość panelu załączników",
+  },
+} as const;
 
-type ReportPanelControls = {
-  id: string;
-  open: boolean;
-  onOpen: (trigger: HTMLButtonElement) => void;
+export type CloseMobileCases = (focus?: RefObject<HTMLElement | null>) => boolean;
+type GuidePanels = {
+  closeMobileCases: CloseMobileCases;
+  attachmentOutlet: HTMLDivElement | null;
+  showAttachments: (reason: "new-document" | "preview") => void;
 };
+const GuidePanelsContext = createContext<GuidePanels | null>(null);
 
-export const ReportPanelContext = createContext<ReportPanelControls | null>(null);
+export function useGuidePanels() {
+  const controls = useContext(GuidePanelsContext);
+  if (!controls) throw new Error("Guide panels require GuideLayout.");
+  return controls;
+}
 
-export function GuideLayout({ children, report }: { children: ReactNode; report: ReactNode }) {
-  const id = useId();
-  const layout = useRef<HTMLElement>(null);
-  const triggers = useRef<Partial<Record<Side, HTMLButtonElement | null>>>({});
-  const reportHeading = useRef<HTMLHeadingElement>(null);
-  const reportTrigger = useRef<HTMLButtonElement>(null);
-  const restoreReportFocus = useRef(false);
+function clampWidth(width: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, Math.round(width)));
+}
+
+export function GuideLayout({ cases, children }: { cases: ReactNode; children: ReactNode }) {
+  const layout = useRef<HTMLDivElement>(null);
+  const casesToggle = useRef<HTMLButtonElement>(null);
+  const attachmentsToggle = useRef<HTMLButtonElement>(null);
+  const casesFocus = useRef<RefObject<HTMLElement | null>>(null);
+  const previewOpener = useRef<HTMLElement>(null);
+  const snapshot = useSyncExternalStore(subscribeToPanelPreferences, readPanelSnapshot, () => null);
+  const preferences = useMemo(() => readPanelPreferences(snapshot), [snapshot]);
   const [layoutWidth, setLayoutWidth] = useState(0);
-  const [openSides, setOpenSides] = useState<Side[]>([]);
-  const [widths, setWidths] = useState<Partial<Record<Side, number>>>({});
+  const [casesDragWidth, setCasesDragWidth] = useState<number>();
+  const [attachmentsDragWidth, setAttachmentsDragWidth] = useState<number>();
+  const [desktopAttachmentsOpen, setDesktopAttachmentsOpen] = useState(false);
+  const [mobilePanel, setMobilePanel] = useState<keyof typeof panels | null>(null);
+  const [attachmentOutlet, setAttachmentOutlet] = useState<HTMLDivElement | null>(null);
+  const compact = layoutWidth > 0 && layoutWidth < desktopBreakpoint;
+  const casesOpen = compact ? mobilePanel === "cases" : (preferences?.open ?? false);
+  const attachmentsOpen = compact ? mobilePanel === "attachments" : desktopAttachmentsOpen;
+  const panelBudget = layoutWidth - minimumChatWidth;
+  const maxCasesWidth = Math.max(
+    0,
+    Math.min(448, panelBudget - (desktopAttachmentsOpen ? minimumAttachmentsWidth : 0)),
+  );
+  const minCasesWidth = Math.min(minimumCasesWidth, maxCasesWidth);
+  const casesWidth = clampWidth(
+    casesDragWidth ?? preferences?.width ?? Math.max(224, Math.min(layoutWidth * 0.25, 304)),
+    minCasesWidth,
+    maxCasesWidth,
+  );
+  const maxAttachmentsWidth = Math.max(
+    0,
+    Math.min(760, panelBudget - (casesOpen ? casesWidth : 0)),
+  );
+  const minAttachmentsWidth = Math.min(minimumAttachmentsWidth, maxAttachmentsWidth);
+  const attachmentsWidth = clampWidth(
+    attachmentsDragWidth ?? preferences?.attachmentWidth ?? Math.min(500, layoutWidth * 0.4),
+    minAttachmentsWidth,
+    maxAttachmentsWidth,
+  );
 
   useLayoutEffect(() => {
     const element = layout.current;
     if (!element) return;
-
-    const measure = () => setLayoutWidth(element.clientWidth);
-    measure();
+    let previousCompact = false;
+    const measure = () => {
+      const width = element.clientWidth;
+      const nextCompact = width > 0 && width < desktopBreakpoint;
+      if (previousCompact !== nextCompact) {
+        setMobilePanel(null);
+        setCasesDragWidth(undefined);
+        setAttachmentsDragWidth(undefined);
+        previousCompact = nextCompact;
+      }
+      setLayoutWidth(width);
+    };
     const observer = new ResizeObserver(measure);
+    measure();
     observer.observe(element);
     return () => observer.disconnect();
   }, []);
 
-  const compact = layoutWidth < 768;
-  const visibleSides = compact ? openSides.slice(-1) : openSides;
-  const lastOpen = visibleSides.at(-1);
-  const reportOpen = visibleSides.includes("right");
-  const reportId = `${id}-right`;
-  const maxWidth = Math.floor(
-    Math.min(448, layoutWidth * 0.36, compact ? Infinity : (layoutWidth - 320) / 2),
+  const setCasesOpen = useCallback(
+    (open: boolean) => {
+      if (compact) {
+        if (open) casesFocus.current = null;
+        setMobilePanel(open ? "cases" : null);
+        return;
+      }
+      updatePanelPreferences({ open });
+      if (!open) {
+        setCasesDragWidth(undefined);
+        casesToggle.current?.focus();
+      }
+    },
+    [compact],
   );
-  const minWidth = (side: Side) =>
-    side === "right" ? Math.min(248, maxWidth) : Math.min(192, Math.round(maxWidth * 0.65));
-  const defaultWidth = (side: Side) =>
-    Math.round(
-      Math.min(side === "right" ? 400 : 304, layoutWidth * (side === "right" ? 0.36 : 0.33)),
-    );
-  const limit = (side: Side, width: number) =>
-    Math.min(maxWidth, Math.max(minWidth(side), Math.round(width)));
-  const panelWidth = (side: Side) => limit(side, widths[side] ?? defaultWidth(side));
-  const columnWidth = (side: Side) =>
-    visibleSides.includes(side) && !(compact && side === "right") ? panelWidth(side) : 0;
 
-  useLayoutEffect(() => {
-    if (reportOpen) {
-      reportHeading.current?.focus({ preventScroll: true });
-    } else if (restoreReportFocus.current) {
-      restoreReportFocus.current = false;
-      const trigger = reportTrigger.current;
-      trigger?.focus({ preventScroll: true });
-      if (document.activeElement !== trigger)
-        triggers.current.right?.focus({ preventScroll: true });
-    }
-  }, [reportOpen]);
+  const setAttachmentsOpen = useCallback(
+    (open: boolean) => {
+      if (compact) {
+        if (open) previewOpener.current = null;
+        setMobilePanel(open ? "attachments" : null);
+        return;
+      }
+      setDesktopAttachmentsOpen(open);
+      if (!open) {
+        setAttachmentsDragWidth(undefined);
+        attachmentsToggle.current?.focus();
+      }
+    },
+    [compact],
+  );
 
   useEffect(() => {
-    if (!lastOpen) return;
-
-    function closeOnEscape(event: globalThis.KeyboardEvent) {
-      if (event.key !== "Escape" || event.defaultPrevented) return;
-      if (lastOpen === "right") restoreReportFocus.current = true;
-      setOpenSides((previous) => (compact ? [] : previous.filter((side) => side !== lastOpen)));
+    if (compact || (!casesOpen && !attachmentsOpen)) return;
+    function closeOnEscape(event: KeyboardEvent) {
+      if (
+        event.key !== "Escape" ||
+        event.defaultPrevented ||
+        document.querySelector('[role="dialog"][data-open]')
+      )
+        return;
+      if (attachmentsOpen) setAttachmentsOpen(false);
+      else setCasesOpen(false);
     }
-
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [compact, lastOpen]);
+  }, [compact, casesOpen, attachmentsOpen, setCasesOpen, setAttachmentsOpen]);
 
-  function openReport(trigger: HTMLButtonElement) {
-    reportTrigger.current = trigger;
-    if (reportOpen) {
-      reportHeading.current?.focus({ preventScroll: true });
-    }
-    setOpenSides((previous) =>
-      compact ? ["right"] : [...previous.filter((side) => side !== "right"), "right"],
-    );
-  }
+  const closeMobileCases = useCallback<CloseMobileCases>(
+    (focus) => {
+      if (!compact || mobilePanel !== "cases") return false;
+      casesFocus.current = focus ?? null;
+      setMobilePanel(null);
+      return true;
+    },
+    [compact, mobilePanel],
+  );
 
-  function closeSidebar(side: Side) {
-    if (side === "right") restoreReportFocus.current = true;
-    setOpenSides((previous) => (compact ? [] : previous.filter((item) => item !== side)));
-  }
+  const showAttachments = useCallback(
+    (reason: "new-document" | "preview") => {
+      if (compact) {
+        if (reason === "new-document") return;
+        const opener = document.activeElement;
+        previewOpener.current =
+          opener instanceof HTMLElement && opener !== document.body ? opener : null;
+        setMobilePanel("attachments");
+        return;
+      }
+      setDesktopAttachmentsOpen(true);
+      if (reason === "preview") attachmentsToggle.current?.focus({ preventScroll: true });
+    },
+    [compact],
+  );
+  const controls = useMemo(
+    () => ({ closeMobileCases, attachmentOutlet, showAttachments }),
+    [closeMobileCases, attachmentOutlet, showAttachments],
+  );
 
   return (
-    <main
-      ref={layout}
-      className={styles.layout}
-      data-compact={compact}
-      data-report-open={reportOpen}
-      // oxlint-disable-next-line react/forbid-dom-props -- CSS variables carry measured widths.
-      style={
-        {
-          "--left-sidebar-width": `${columnWidth("left")}px`,
-          "--right-sidebar-width": `${columnWidth("right")}px`,
-        } as CSSProperties
-      }
-    >
-      <div className={styles.toolbar}>
-        {sides.map((side) => {
-          const panel = panels[side];
-          const open = visibleSides.includes(side);
-          return (
-            <IconButton
-              key={side}
-              ref={(button) => {
-                triggers.current[side] = button;
-              }}
-              icon={open ? panel.openIcon : panel.icon}
-              label={`${open ? "Zamknij" : "Otwórz"} ${side === "right" ? "panel raportu" : panel.label.toLowerCase()}`}
-              aria-expanded={open}
-              aria-controls={`${id}-${side}`}
-              onClick={(event) => {
-                if (open) {
-                  if (side === "right") reportTrigger.current = event.currentTarget;
-                  closeSidebar(side);
-                } else if (side === "right") {
-                  openReport(event.currentTarget);
-                } else {
-                  setOpenSides((previous) => (compact ? ["left"] : [...previous, "left"]));
-                }
-              }}
-            />
-          );
-        })}
+    <GuidePanelsContext value={controls}>
+      <div
+        ref={layout}
+        className={styles.layout}
+        inert={compact && mobilePanel !== null}
+        data-compact={compact || undefined}
+        data-sidebar-open={!compact && casesOpen}
+        data-attachments-open={!compact && attachmentsOpen}
+        // oxlint-disable-next-line react/forbid-dom-props -- Apply the measured panel widths to the grid.
+        style={
+          layoutWidth && !compact
+            ? ({
+                "--sidebar-width": `${casesWidth}px`,
+                "--attachment-width": `${attachmentsWidth}px`,
+              } as CSSProperties)
+            : undefined
+        }
+      >
+        <a className={styles.skipLink} href="#chat-main">
+          Przejdź do rozmowy
+        </a>
+        <ButtonLink
+          className={styles.homeLink}
+          href="/"
+          variant="ghost"
+          size="sm"
+          aria-label="Mila — strona główna"
+          translate="no"
+        >
+          Mila
+        </ButtonLink>
+        <GuidePanel
+          panel={panels.cases}
+          toggle={casesToggle}
+          compact={compact}
+          open={casesOpen}
+          onOpenChange={setCasesOpen}
+          finalFocus={() => casesFocus.current?.current ?? casesToggle.current ?? true}
+          resize={{
+            width: casesWidth,
+            min: minCasesWidth,
+            max: maxCasesWidth,
+            onResize: setCasesDragWidth,
+            onCommit: (width) => {
+              setCasesDragWidth(undefined);
+              updatePanelPreferences({ width: clampWidth(width, minCasesWidth, maxCasesWidth) });
+            },
+          }}
+        >
+          {cases}
+        </GuidePanel>
+        <main id="chat-main" className={styles.content} tabIndex={-1}>
+          {children}
+        </main>
+        <GuidePanel
+          panel={panels.attachments}
+          toggle={attachmentsToggle}
+          compact={compact}
+          open={attachmentsOpen}
+          onOpenChange={setAttachmentsOpen}
+          finalFocus={() =>
+            (previewOpener.current?.isConnected && previewOpener.current) ||
+            attachmentsToggle.current ||
+            true
+          }
+          resize={{
+            width: attachmentsWidth,
+            min: minAttachmentsWidth,
+            max: maxAttachmentsWidth,
+            onResize: setAttachmentsDragWidth,
+            onCommit: (width) => {
+              setAttachmentsDragWidth(undefined);
+              updatePanelPreferences({
+                attachmentWidth: clampWidth(width, minAttachmentsWidth, maxAttachmentsWidth),
+              });
+            },
+          }}
+        >
+          <div className={styles.attachmentOutlet} ref={setAttachmentOutlet} />
+        </GuidePanel>
       </div>
-      {sides.map((side) => {
-        const open = visibleSides.includes(side);
-        const panelId = `${id}-${side}`;
-        const { label } = panels[side];
-        return (
-          <aside
-            key={side}
-            id={panelId}
-            className={styles.sidebar}
-            data-side={side}
-            data-open={open}
-            aria-label={label}
-            inert={!open}
-          >
-            {open && !(compact && side === "right") ? (
-              <SidebarResizeHandle
-                side={side}
-                label={label}
-                panelId={panelId}
-                width={panelWidth(side)}
-                min={minWidth(side)}
-                max={maxWidth}
-                onResize={(width) => {
-                  const next = limit(side, width);
-                  setWidths((previous) =>
-                    next === limit(side, previous[side] ?? defaultWidth(side))
-                      ? previous
-                      : { ...previous, [side]: next },
-                  );
-                }}
-                onClose={() => {
-                  if (side === "left") triggers.current.left?.focus({ preventScroll: true });
-                  closeSidebar(side);
-                }}
-              />
-            ) : null}
-            {open && side === "right" ? (
-              <>
-                <header className={styles.reportHeader}>
-                  <h2 ref={reportHeading} tabIndex={-1}>
-                    Twój raport
-                  </h2>
-                </header>
-                <div className={styles.reportBody}>{report}</div>
-              </>
-            ) : null}
-          </aside>
-        );
-      })}
-      <ReportPanelContext value={{ id: reportId, open: reportOpen, onOpen: openReport }}>
-        {children}
-      </ReportPanelContext>
-    </main>
+    </GuidePanelsContext>
   );
 }
 
-function SidebarResizeHandle({
-  side,
-  label,
-  panelId,
-  width,
-  min,
-  max,
-  onResize,
-  onClose,
+function GuidePanel({
+  panel,
+  toggle,
+  compact,
+  open,
+  onOpenChange,
+  finalFocus,
+  resize,
+  children,
 }: {
-  side: Side;
-  label: string;
-  panelId: string;
-  width: number;
-  min: number;
-  max: number;
-  onResize: (width: number) => void;
-  onClose: () => void;
+  panel: (typeof panels)[keyof typeof panels];
+  toggle: RefObject<HTMLButtonElement | null>;
+  compact: boolean;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  finalFocus: ComponentProps<typeof Sheet>["finalFocus"];
+  resize: Pick<
+    ComponentProps<typeof SidebarResizeHandle>,
+    "width" | "min" | "max" | "onResize" | "onCommit"
+  >;
+  children: ReactNode;
 }) {
-  const drag = useRef<{ pointerId: number; startX: number; startWidth: number }>(null);
-  const [dragging, setDragging] = useState(false);
-  const direction = side === "left" ? 1 : -1;
-
-  function startDrag(event: PointerEvent<HTMLDivElement>) {
-    if (event.button !== 0 || !event.isPrimary || drag.current) return;
-    event.preventDefault();
-    event.currentTarget.focus({ preventScroll: true });
-    event.currentTarget.setPointerCapture(event.pointerId);
-    drag.current = { pointerId: event.pointerId, startX: event.clientX, startWidth: width };
-    setDragging(true);
-  }
-
-  function resize(event: PointerEvent<HTMLDivElement>) {
-    const start = drag.current;
-    if (start?.pointerId !== event.pointerId) return;
-    onResize(start.startWidth + (event.clientX - start.startX) * direction);
-  }
-
-  function stopDrag(event: PointerEvent<HTMLDivElement>) {
-    if (drag.current?.pointerId !== event.pointerId) return;
-    drag.current = null;
-    setDragging(false);
-  }
-
-  function resizeWithKeyboard(event: KeyboardEvent<HTMLDivElement>) {
-    switch (event.key) {
-      case "ArrowLeft":
-        onResize(width - 16 * direction);
-        break;
-      case "ArrowRight":
-        onResize(width + 16 * direction);
-        break;
-      case "Home":
-        onResize(min);
-        break;
-      case "End":
-        onResize(max);
-        break;
-      case "Enter":
-      case "Escape":
-        onClose();
-        break;
-      default:
-        return;
-    }
-    event.preventDefault();
-  }
-
+  const id = useId();
   return (
-    <div
-      className={styles.resizeHandle}
-      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- The separator is a focusable resize control.
-      role="separator"
-      tabIndex={0}
-      aria-label={label}
-      aria-controls={panelId}
-      aria-orientation="vertical"
-      aria-valuemin={min}
-      aria-valuemax={max}
-      aria-valuenow={width}
-      aria-valuetext={`${width} px`}
-      data-dragging={dragging}
-      onKeyDown={resizeWithKeyboard}
-      onPointerDown={startDrag}
-      onPointerMove={resize}
-      onPointerUp={stopDrag}
-      onPointerCancel={stopDrag}
-      onLostPointerCapture={stopDrag}
-    />
+    <>
+      <IconButton
+        ref={toggle}
+        className={panel.side === "left" ? styles.casesToggle : styles.attachmentsToggle}
+        icon={open ? panel.openIcon : panel.closedIcon}
+        label={open ? panel.closeLabel : panel.openLabel}
+        aria-expanded={open}
+        aria-haspopup={compact ? "dialog" : undefined}
+        aria-controls={compact ? undefined : id}
+        onClick={() => onOpenChange(!open)}
+      />
+      {compact ? (
+        <Sheet
+          title={panel.title}
+          side={panel.side}
+          popupClassName={panel.side === "left" ? styles.casesSheet : styles.attachmentsSheet}
+          open={open}
+          onOpenChange={onOpenChange}
+          finalFocus={finalFocus}
+        >
+          {children}
+        </Sheet>
+      ) : (
+        <div className={styles.panelSlot} data-side={panel.side}>
+          <aside id={id} className={styles.panel} aria-label={panel.title} inert={!open}>
+            {panel.side === "left" || open ? children : null}
+          </aside>
+          {open && resize.max > 0 ? (
+            <SidebarResizeHandle
+              {...resize}
+              panelId={id}
+              side={panel.side}
+              label={panel.resizeLabel}
+              onClose={() => onOpenChange(false)}
+            />
+          ) : null}
+        </div>
+      )}
+    </>
   );
 }
