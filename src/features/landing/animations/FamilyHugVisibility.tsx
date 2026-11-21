@@ -12,6 +12,17 @@ export function FamilyHugVisibility({ children }: { children: ReactNode }) {
     const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
     if (!element || motion.matches || !("IntersectionObserver" in window)) return;
 
+    // Keep the server-rendered final pose if it is already visible during hydration.
+    const bounds = element.getBoundingClientRect();
+    if (
+      bounds.bottom > 0 &&
+      bounds.top < window.innerHeight &&
+      bounds.right > 0 &&
+      bounds.left < window.innerWidth
+    ) {
+      return;
+    }
+
     // Hold the original first frame until the illustration itself is visible.
     // A small threshold also works when enlarged text makes the section very tall.
     const observer = new IntersectionObserver(

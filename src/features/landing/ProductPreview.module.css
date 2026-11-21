@@ -1,6 +1,11 @@
 .stage {
   position: relative;
   isolation: isolate;
+  /* Both cards contribute to the scene height, including when text is enlarged. */
+  display: grid;
+  grid-template-columns: 370px 360px;
+  justify-content: center;
+  column-gap: 20px;
   max-inline-size: 1140px;
   min-block-size: 520px;
   padding-block-end: 24px;
@@ -8,7 +13,7 @@
 }
 
 .window {
-  position: absolute;
+  position: relative;
   border: 1px solid var(--line);
   border-radius: 20px;
   background: var(--surface);
@@ -17,11 +22,9 @@
 }
 
 .chat {
-  position: relative;
   z-index: 2;
-  inset-block-start: 0;
-  inset-inline-start: calc(50% - 375px);
-  inline-size: 370px;
+  align-self: start;
+  inline-size: 100%;
   padding-block-end: 20px;
   transform: rotate(-2deg);
 }
@@ -100,11 +103,12 @@
 
 .plan {
   z-index: 1;
-  inset-block-start: 70px;
-  inset-inline-end: calc(50% - 375px);
-  inline-size: 360px;
+  align-self: start;
+  inline-size: 100%;
+  margin-block-start: 70px;
   background: var(--report-surface);
   transform: rotate(3deg);
+  transform-origin: top right;
 }
 
 .planHeading {
@@ -267,17 +271,8 @@
 
 @media (min-width: 801px) and (max-width: 1150px) {
   .stage {
+    grid-template-columns: 330px 330px;
     min-block-size: 550px;
-  }
-
-  .chat {
-    inset-inline-start: calc(50% - 340px);
-    inline-size: 330px;
-  }
-
-  .plan {
-    inset-inline-end: calc(50% - 340px);
-    inline-size: 330px;
   }
 
   .questionNote,
@@ -299,20 +294,13 @@
 
 @media (min-width: 701px) and (max-width: 1000px) {
   .stage {
+    grid-template-columns: 48% 48%;
     max-inline-size: 680px;
     min-block-size: 680px;
-    padding-block-start: 128px;
+    justify-content: space-between;
+    column-gap: 0;
+    padding-block-start: max(128px, calc(10rem - 32px));
     margin-block-start: 42px;
-  }
-
-  .chat {
-    inset: auto;
-    inline-size: 48%;
-  }
-
-  .plan {
-    inset: 198px 0 auto auto;
-    inline-size: 48%;
   }
 
   .questionNote {
@@ -348,6 +336,7 @@
     min-block-size: 0;
     flex-direction: column;
     align-items: flex-start;
+    gap: 0;
     padding-block: 0;
     margin-block-start: 34px;
   }
@@ -370,7 +359,9 @@
 
   .plan {
     align-self: flex-end;
+    margin-block-start: 0;
     transform: rotate(1deg);
+    transform-origin: center;
   }
 
   .questionNote,
