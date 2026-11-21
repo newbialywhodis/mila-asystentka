@@ -402,7 +402,7 @@
   .questionNote svg,
   .planNote svg {
     position: absolute;
-    inset: 16px -61px auto auto;
+    inset: 16px -48px auto auto;
     inline-size: 55px;
     block-size: 44px;
     transform: rotate(46deg);

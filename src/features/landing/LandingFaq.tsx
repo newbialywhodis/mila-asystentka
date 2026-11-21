@@ -27,7 +27,6 @@ const questions = [
     title: "Co dzieje się z wpisanymi informacjami?",
     answer:
       "Odpowiedzi z wywiadu i plan pozostają w pamięci strony. Otwarte pytanie może trafić na serwer i, jeśli włączono pomoc AI, do dostawcy modelu przez AI Gateway. Po uruchomieniu odczytu tekst wygenerowanej odpowiedzi może trafić do ElevenLabs. Nie podawaj danych identyfikujących ani dokumentacji medycznej.",
-    link: { href: "#dane", label: "Przeczytaj informację o danych i głosie" },
   },
   {
     title: "Czy Mila składa wnioski lub wydaje decyzje?",
@@ -54,15 +53,7 @@ export function LandingFaq() {
               <span>{question.title}</span>
               <Icon name="chevron" />
             </summary>
-            <p>
-              {question.answer}
-              {question.link ? (
-                <>
-                  {" "}
-                  <a href={question.link.href}>{question.link.label}</a>.
-                </>
-              ) : null}
-            </p>
+            <p>{question.answer}</p>
           </details>
         ))}
       </div>

@@ -1,12 +1,11 @@
 import Link from "next/link";
 import localFont from "next/font/local";
 import { LandingFaq } from "./LandingFaq";
+import { LandingFamilyHug } from "./LandingFamilyHug";
 import { LandingHero } from "./LandingHero";
 import { LandingTopics } from "./LandingTopics";
 import { LandingHowItWorks } from "./LandingHowItWorks";
 import { LandingPaperwork } from "./LandingPaperwork";
-import { LandingTrust } from "./LandingTrust";
-import { LandingPrivacy } from "./LandingPrivacy";
 import styles from "./MilaLanding.module.css";
 
 const landingFont = localFont({
@@ -42,8 +41,7 @@ export function MilaLanding() {
         <LandingTopics />
         <LandingHowItWorks />
         <LandingPaperwork />
-        <LandingTrust />
-        <LandingPrivacy />
+        <LandingFamilyHug />
         <LandingFaq />
       </main>
       <footer className={`${styles.container} ${styles.footer}`}>
@@ -53,10 +51,7 @@ export function MilaLanding() {
           </span>{" "}
           Przewodnik przyszłej mamy
         </p>
-        <p>
-          Niezależny prototyp na HackNation. <a href="#zrodla">Źródła i ograniczenia</a>.{" "}
-          <a href="#dane">Informacja o danych</a>.
-        </p>
+        <p>Niezależny prototyp na HackNation.</p>
       </footer>
     </div>
   );

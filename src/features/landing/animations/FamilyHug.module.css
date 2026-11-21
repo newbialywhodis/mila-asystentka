@@ -396,6 +396,16 @@
   }
 }
 
+/* Static final SVG pose is the fallback without JavaScript or observer support.
+   Pausing preserves the first frame, delays and choreography when visibility starts it. */
+.family:not([data-motion]) g {
+  animation: none;
+}
+
+.family[data-motion="waiting"] g {
+  animation-play-state: paused;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .family g {
     animation: none;

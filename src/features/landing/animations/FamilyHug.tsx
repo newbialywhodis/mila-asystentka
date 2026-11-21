@@ -1,11 +1,11 @@
 import { FamilyIllustration } from "./FamilyIllustration";
-import styles from "./FamilyHug.module.css";
+import { FamilyHugVisibility } from "./FamilyHugVisibility";
 
-/** Decorative, self-contained SVG animation; the embrace plays once on mount. */
+/** Server-rendered artwork; only its visibility wrapper needs client JavaScript. */
 export function FamilyHug() {
   return (
-    <div className={styles.family} aria-hidden="true">
+    <FamilyHugVisibility>
       <FamilyIllustration />
-    </div>
+    </FamilyHugVisibility>
   );
 }

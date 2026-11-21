@@ -28,7 +28,7 @@ export function LandingHowItWorks() {
             na zgłoszenie. Ocena na {formatDate(exampleAsOf)}.
             <span>
               To fragment planu, nie decyzja o świadczeniu. Warunek ubezpieczenia w dniu porodu
-              wymaga potwierdzenia. <a href="#zrodla">Poznaj źródła i ograniczenia</a>.
+              wymaga potwierdzenia.
             </span>
           </figcaption>
         </figure>
