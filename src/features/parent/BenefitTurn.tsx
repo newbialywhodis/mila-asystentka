@@ -66,9 +66,8 @@ export function BenefitAssessment({
   const documents = !question && goal === "application" && result.documents.length > 0;
   const pending = question && !deferred;
   const { session } = workspace;
-  const hasDocument = session.turns.some((entry) => entry.kind === "document");
   const showResult = pending
-    ? active && hasDocument && Boolean(result.period)
+    ? active && Boolean(result.period)
     : !deferred || Boolean(result.period);
   const hint = pending ? question.hint : undefined;
   const hintId = hint ? promptId + "-hint" : undefined;
@@ -86,6 +85,7 @@ export function BenefitAssessment({
               benefit={benefit}
               result={result}
               insured={turn.insured}
+              futureCoverage={Boolean(result.coverageDay && result.coverageDay > session.asOf)}
               showTopUp={!deferred}
               showReason={result.reason !== text}
             />
@@ -193,6 +193,7 @@ function FactAnswer({
           initialValue: facts[field],
           promptId: alternateId ?? promptId,
           hintId: alternateId ?? hintId,
+          upcomingStart: key === "from" && facts.requestedDays !== undefined,
         }}
       />
       {key !== "birthStage" ? (

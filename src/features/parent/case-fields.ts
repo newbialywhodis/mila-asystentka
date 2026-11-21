@@ -1,7 +1,7 @@
-import { normalizeNumericDate, parseDate } from "../../engine/dates";
+import { parseDate } from "../../engine/dates";
 import { casePatchSchema, employmentLabels, formatDay, moneyLabel } from "../../engine/parent-case";
 import type { CaseFacts, FactKey } from "../../engine/parent-case";
-import { normalizeGuideText } from "../guide/textInput";
+import { normalizeGuideText, normalizePolishDate } from "../guide/textInput";
 
 type Choice = { label: string; value: string | boolean };
 type Field = {
@@ -81,6 +81,11 @@ export const fields: Record<FactKey, Field> = {
     label: "Ostatni dzień",
     question: "Jaki jest ostatni dzień tego okresu?",
     type: "date",
+  },
+  requestedDays: {
+    label: "Planowana liczba dni",
+    question: "Ile dni chcesz uwzględnić w tym okresie?",
+    type: "number",
   },
   employment: {
     label: "Tytuł ubezpieczenia",
@@ -253,7 +258,54 @@ export function validateFact(key: FactKey, value: unknown): CaseFacts | undefine
   return parsed.success ? parsed.data : undefined;
 }
 
-export function readFact(key: FactKey, input: string) {
+const lengthWords = new Map([
+  ["jeden", 1],
+  ["jedna", 1],
+  ["dwa", 2],
+  ["trzy", 3],
+  ["cztery", 4],
+  ["piec", 5],
+  ["szesc", 6],
+  ["siedem", 7],
+  ["osiem", 8],
+  ["dziewiec", 9],
+  ["dziesiec", 10],
+  ["czternascie", 14],
+]);
+const units = "(dzien|dni|tydzien|tygodnie|tygodni)";
+const lengthWithUnit = "(\\d{1,3}|" + [...lengthWords.keys()].join("|") + ") " + units;
+export const periodLengthPattern = "(?:tydzien|" + lengthWithUnit + ")";
+const lengthWithUnitPattern = new RegExp("^" + lengthWithUnit + "$");
+const dayCountFields = new Set<FactKey>([
+  "requestedDays",
+  "otherParentDays",
+  "usedDays",
+  "sickDaysUsed",
+  "rehabUsed",
+]);
+
+export function readPeriodLength(text: string): number | undefined {
+  if (text === "tydzien") return 7;
+  const match = text.match(lengthWithUnitPattern);
+  if (!match) return;
+  const count = lengthWords.get(match[1]) ?? Number(match[1]);
+  return count * (match[2].startsWith("ty") ? 7 : 1);
+}
+
+export function readCaseDate(text: string, upcomingFrom?: string) {
+  const explicit = normalizePolishDate(text);
+  if (explicit) return parseDate(explicit) ? explicit : undefined;
+  if (!upcomingFrom) return;
+  const year = upcomingFrom.slice(0, 4);
+  const candidate = normalizePolishDate(text, year);
+  if (candidate && parseDate(candidate)) {
+    if (candidate >= upcomingFrom) return candidate;
+    const next = normalizePolishDate(text, String(Number(year) + 1));
+    if (parseDate(next)) return next;
+  }
+}
+
+export function readFact(key: FactKey, input: string, upcomingFrom?: string) {
   const field = fields[key];
   const text = normalizeGuideText(input).replace(/[.!]$/, "");
   if (field.options) {
@@ -266,12 +318,37 @@ export function readFact(key: FactKey, input: string) {
     }
     if (key === "standardRate" && /^(tak|standardowa|podstawowa)$/.test(text))
       return validateFact(key, true);
+    if (key === "paternityUsed") {
+      const answer = text.replace(/ (?:z )?(?:urlopu )?ojcowskiego$/, "");
+      if (
+        /^(?:nic|jeszcze nie|(?:jeszcze )?nie (?:korzystalem|korzystalam|wykorzystalem|wykorzystalam)(?: jeszcze)?(?: nic| ani dnia)?)$/.test(
+          answer,
+        )
+      )
+        return validateFact(key, "none");
+      const length = readPeriodLength(
+        answer.replace(/^(?:wykorzystalem|wykorzystalam|wzialem|wzielam) (?:juz )?/, ""),
+      );
+      if (length === 0) return validateFact(key, "none");
+      if (length === 7) return validateFact(key, "week");
+      if (length === 14) return validateFact(key, "full");
+    }
     return;
   }
   if (field.type === "date") {
-    const value = normalizeNumericDate(text);
-    if (parseDate(value)) return validateFact(key, value);
+    const dateText =
+      key === "from"
+        ? text.replace(/^od /, "")
+        : key === "through"
+          ? text.replace(/^do /, "")
+          : text;
+    const value = readCaseDate(dateText, key === "from" ? upcomingFrom : undefined);
+    if (value) return validateFact(key, value);
     return;
+  }
+  if (dayCountFields.has(key)) {
+    const days = /^\d+$/.test(text) ? Number(text) : readPeriodLength(text);
+    return days === undefined ? undefined : validateFact(key, days);
   }
   const numeric = text.replace(/\s/g, "").replace(/(?:zl|pln|dni|tygodni|g|%)$/, "");
   if (!/^\d+(?:[.,]\d{1,2})?$/.test(numeric)) return;

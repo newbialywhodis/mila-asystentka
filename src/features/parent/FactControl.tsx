@@ -13,6 +13,7 @@ type GuidedControl = {
   promptId: string;
   hintId?: string;
   submitLabel?: string;
+  upcomingStart?: boolean;
 };
 
 export function FactControl({
@@ -40,11 +41,13 @@ export function FactControl({
 
   function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
-    const facts = readFact(fact, value);
+    const facts = readFact(fact, value, guided?.upcomingStart ? today : undefined);
     if (!facts) {
       setError(
         field.type === "date"
-          ? "Wpisz poprawną datę w formacie DD.MM.RRRR."
+          ? guided?.upcomingStart
+            ? "Wpisz poprawną datę, np. 7 grudnia lub 07.12.2026."
+            : "Wpisz poprawną datę w formacie DD.MM.RRRR."
           : "Sprawdź wpisaną wartość.",
       );
       return;

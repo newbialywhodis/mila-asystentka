@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button, ButtonLink } from "../../components/ui/Button";
 import { sources } from "../../data/sources";
-import { formatDay, labels, moneyLabel } from "../../engine/parent-case";
+import { formatDay, formatDays, labels, moneyLabel } from "../../engine/parent-case";
 import type { Benefit, CaseFacts, FactKey, FactSource } from "../../engine/parent-case";
 import type { BenefitResult } from "../../engine/parent-benefit";
 import { maternityTopUp } from "../../engine/parent-benefit";
@@ -13,12 +13,14 @@ export function ResultCard({
   benefit,
   result,
   insured,
+  futureCoverage,
   showTopUp,
   showReason = true,
 }: {
   benefit: Benefit;
   result: BenefitResult;
   insured?: boolean;
+  futureCoverage: boolean;
   showTopUp?: boolean;
   showReason?: boolean;
 }) {
@@ -39,7 +41,13 @@ export function ResultCard({
         <p>
           Na {formatDay(result.coverageDay)}{" "}
           <strong>
-            {insured ? "potwierdzono ubezpieczenie chorobowe" : "brak ubezpieczenia chorobowego"}
+            {futureCoverage
+              ? insured
+                ? "zakładamy ubezpieczenie chorobowe"
+                : "zakładamy brak ubezpieczenia chorobowego"
+              : insured
+                ? "potwierdzono ubezpieczenie chorobowe"
+                : "brak ubezpieczenia chorobowego"}
           </strong>{" "}
           z podanego tytułu.
         </p>
@@ -54,7 +62,7 @@ export function ResultCard({
           <div>
             <dt>{result.projected ? "Przewidywany okres" : "Okres wypłaty"}</dt>
             <dd>
-              <strong>{period.days} dni</strong>
+              <strong>{formatDays(period.days)}</strong>
               <span>
                 {formatDay(period.from)} – {formatDay(period.through)}
               </span>
@@ -96,7 +104,7 @@ export function ResultCard({
           {money && period ? (
             <p>
               Podstawa {moneyLabel(money.basis)}. Kwota dzienna {moneyLabel(money.daily)} ×{" "}
-              {period.days} dni.
+              {formatDays(period.days)}.
             </p>
           ) : null}
           <a href={sources[result.source]?.url} target="_blank" rel="noreferrer">

@@ -1,10 +1,12 @@
+import { addDays, daysBetween, isoDate, parseDate } from "../../engine/dates";
 import { assessBenefit } from "../../engine/parent-benefit";
 import type { BenefitResult, DemoRate } from "../../engine/parent-benefit";
-import { applyCaseFacts, emptyParentCase, formatDay } from "../../engine/parent-case";
+import { applyCaseFacts, emptyParentCase, formatDay, formatDays } from "../../engine/parent-case";
 import type { Benefit, CaseFacts, FactKey, ParentCase } from "../../engine/parent-case";
 import type { HelpAnswer } from "../guide/helpAnswers";
 import type { DocumentData } from "./case-documents";
 import { fields } from "./case-fields";
+import type { CaseRequest } from "./case-message";
 import type { CaseGoal, CaseTool } from "./parent-intent";
 
 export type CaseQuestion = { key: FactKey; text: string; hint?: string };
@@ -73,6 +75,7 @@ export function selectBenefit(session: CaseSession, benefit: Benefit): CaseSessi
     family: applyCaseFacts(session.family, {
       from: undefined,
       through: undefined,
+      requestedDays: undefined,
       insured: undefined,
       documentDate: undefined,
       standardRate: undefined,
@@ -94,6 +97,8 @@ export function saveFacts(session: CaseSession, facts: CaseFacts, sources?: Pare
   }
   if (patch.averagedRequest) patch.standardRate = undefined;
   else if (patch.standardRate === true) patch.averagedRequest = undefined;
+  if (patch.through !== undefined) patch.requestedDays = undefined;
+  else if (patch.requestedDays !== undefined) patch.through = undefined;
 
   const stageChanged =
     stage !== undefined && previousStage !== undefined && stage !== previousStage;
@@ -102,6 +107,7 @@ export function saveFacts(session: CaseSession, facts: CaseFacts, sources?: Pare
       "children",
       "from",
       "through",
+      "requestedDays",
       "documentDate",
       "averagedRequest",
       "standardRate",
@@ -192,11 +198,13 @@ export function getAssessment(session: CaseSession): AssessmentTurn | undefined 
       : result.missing;
   const question: CaseQuestion | undefined = missing && {
     key: missing,
-    text: questionText(missing, result),
+    text: questionText(missing, result, session),
     hint:
       result.status === "missing" && result.reason !== "Potrzebuję jeszcze jednej informacji."
         ? result.reason
-        : fields[missing].hint,
+        : missing === "from" && family.facts.requestedDays !== undefined
+          ? "Możesz wpisać np. „7 grudnia”. Bez roku przyjmę najbliższy taki dzień."
+          : fields[missing].hint,
   };
   const text =
     question?.text ??
@@ -216,10 +224,21 @@ export function getAssessment(session: CaseSession): AssessmentTurn | undefined 
   };
 }
 
-function questionText(key: FactKey, result: BenefitResult) {
+const periodNames: Partial<Record<Benefit, string>> = {
+  paternity: " ojcowskiego",
+  parental: " rodzicielskiego",
+  sickness: " chorobowego w ciąży",
+  rehabilitation: " świadczenia rehabilitacyjnego",
+};
+
+function questionText(key: FactKey, result: BenefitResult, session: CaseSession) {
+  const { requestedDays } = session.family.facts;
+  if (key === "from" && requestedDays !== undefined && session.benefit) {
+    return `Sprawdzę ${formatDays(requestedDays)}${periodNames[session.benefit] ?? ""}. Od kiedy chcesz zacząć?`;
+  }
   if (key === "insured" && result.coverageDay) {
     const date = formatDay(result.coverageDay);
-    return result.projected
+    return result.projected || result.coverageDay > session.asOf
       ? `Czy zakładasz, że ${date} będziesz mieć ubezpieczenie chorobowe?`
       : `Czy ${date} obejmowało Cię ubezpieczenie chorobowe?`;
   }
@@ -232,9 +251,28 @@ function questionText(key: FactKey, result: BenefitResult) {
   return fields[key].question;
 }
 
-export function appendAssessment(session: CaseSession): CaseSession {
+export function appendAssessment(session: CaseSession, showRequestedPeriod = false): CaseSession {
   const assessment = getAssessment(session);
-  return assessment ? append(session, assessment) : askBenefit(session, session.goal);
+  if (!assessment) return askBenefit(session, session.goal);
+  if (
+    showRequestedPeriod &&
+    assessment.question &&
+    !assessment.result.period &&
+    assessment.question.key !== "through" &&
+    assessment.question.key !== "requestedDays"
+  ) {
+    const { from, through, requestedDays } = session.family.facts;
+    const start = parseDate(from);
+    const end =
+      parseDate(through) ??
+      (start && requestedDays !== undefined ? addDays(start, requestedDays - 1) : undefined);
+    if (start && end && start <= end) {
+      const range = formatDay(isoDate(start)) + " do " + formatDay(isoDate(end));
+      const length = formatDays(daysBetween(start, end) + 1);
+      assessment.text = `Sprawdzę okres od ${range} (${length}). ${assessment.text}`;
+    }
+  }
+  return append(session, assessment);
 }
 
 export function askBenefit(session: CaseSession, goal: CaseGoal): CaseSession {
@@ -251,6 +289,21 @@ export function askBenefit(session: CaseSession, goal: CaseGoal): CaseSession {
 export function getBenefitTurn(session: CaseSession): BenefitChoice | AssessmentTurn | undefined {
   return session.turns.findLast(
     (turn) => turn.kind === "chooseBenefit" || turn.kind === "assessment",
+  );
+}
+
+export function continueWithRequest(session: CaseSession, request: CaseRequest, text: string) {
+  const { benefit, facts } = request;
+  const current = getBenefitTurn(session);
+  const goal =
+    request.goal ??
+    (current?.kind === "chooseBenefit" || benefit === session.benefit
+      ? (current?.goal ?? session.goal)
+      : "calculation");
+  const next = saveFacts({ ...selectBenefit(session, benefit), goal }, facts);
+  return appendAssessment(
+    append(next, { kind: "user", text, local: true }),
+    facts.from !== undefined || facts.through !== undefined || facts.requestedDays !== undefined,
   );
 }
 

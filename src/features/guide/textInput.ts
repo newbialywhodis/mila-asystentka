@@ -68,6 +68,18 @@ const months = [
   "grudnia",
 ];
 
+export function normalizePolishDate(text: string, defaultYear?: string) {
+  const value = text.replace(/ (?:r\.?|roku)$/, "");
+  const numeric = normalizeNumericDate(value);
+  if (numeric) return numeric;
+  const named = value.match(/^(\d{1,2}) ([a-z]+)(?: (\d{4}))?$/);
+  const year = named?.[3] ?? defaultYear;
+  if (named && year) {
+    const month = months.indexOf(named[2]) + 1;
+    return `${year}-${String(month).padStart(2, "0")}-${named[1].padStart(2, "0")}`;
+  }
+}
+
 type TextAnswer = { value: Answer } | { clarification: string };
 
 export function readTextAnswer(
@@ -153,22 +165,14 @@ export function readTextAnswer(
 }
 
 function readDate(text: string, asOf: string): string | undefined {
-  const value = text
-    .replace(
-      /^(mam termin(?: porodu)? na|termin(?: porodu)? to|urodzilam|dziecko urodzilo sie|karta zostala sporzadzona) /,
-      "",
-    )
-    .replace(/ (?:r|roku)$/, "");
+  const value = text.replace(
+    /^(mam termin(?: porodu)? na|termin(?: porodu)? to|urodzilam|dziecko urodzilo sie|karta zostala sporzadzona) /,
+    "",
+  );
   const today = parseDate(asOf);
   if (today && (value === "wczoraj" || value === "przedwczoraj")) {
     return isoDate(addDays(today, value === "wczoraj" ? -1 : -2));
   }
   if (today && (value === "dzisiaj" || value === "dzis")) return asOf;
-  const numeric = normalizeNumericDate(value);
-  if (numeric) return numeric;
-  const named = value.match(/^(\d{1,2}) ([a-z]+) (\d{4})$/);
-  if (named) {
-    const month = months.indexOf(named[2]) + 1;
-    return `${named[3]}-${String(month).padStart(2, "0")}-${named[1].padStart(2, "0")}`;
-  }
+  return normalizePolishDate(value);
 }

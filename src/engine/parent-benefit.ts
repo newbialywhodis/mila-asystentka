@@ -38,6 +38,7 @@ const minimumPay = [
 ];
 
 const maternityWeeks = [20, 31, 33, 35, 37];
+const paternityDurations = [7, 14];
 const rehabDocuments =
   "https://www.zus.pl/swiadczenia/zasilki/swiadczenie-rehabilitacyjne/z-ubezpieczenia-chorobowego/niezbedne-dokumenty";
 export function parentalPool(children: number, certificate: boolean) {
@@ -193,17 +194,22 @@ export function assessBenefit(
   const rehab = benefit === "rehabilitation";
   const care = benefit === "careMaternity";
   const loss = benefit === "lossMaternity";
+  const requested = projected ? undefined : parseDate(f.from);
+  const explicitEnd = projected ? undefined : parseDate(f.through);
+  const planDays = projected || explicitEnd ? undefined : f.requestedDays;
   if (f.exception)
     return review(
       "Ta sprawa wymaga uwzględnienia szczególnej podstawy lub odrębnego rozstrzygnięcia ZUS.",
     );
   if (!sickness && !rehab && f.birth && f.birth > asOf)
     return need("birth", "Data urodzenia może przypadać najpóźniej dzisiaj.");
+  if (benefit === "paternity" && planDays !== undefined && !paternityDurations.includes(planDays))
+    return need("requestedDays", "Wpisz 7 dni albo 14 dni ojcowskiego.");
+  if (!requested && planDays !== undefined && benefit !== "maternity" && !loss) return need("from");
   if (!sickness && !rehab && !birth && !dueDate) {
     if (projected) return need("dueDate");
     return need(benefit === "maternity" && !f.birthStage ? "birthStage" : "birth");
   }
-  const requested = projected ? undefined : parseDate(f.from);
   if (benefit !== "maternity" && !loss && !requested) return need("from");
   const from = requested ?? birth ?? dueDate;
   if (!from) return need("from");
@@ -301,10 +307,11 @@ export function assessBenefit(
   let extent: number | undefined;
   let cap: number | undefined;
   let rate = 10_000;
-  let through = projected ? undefined : parseDate(f.through);
+  const periodField = planDays === undefined ? "through" : "requestedDays";
+  let through = explicitEnd ?? (planDays === undefined ? undefined : addDays(from, planDays - 1));
   const requestedDays = through ? daysBetween(from, through) + 1 : undefined;
   if (requestedDays !== undefined && requestedDays <= 0)
-    return need("through", "Koniec musi przypadać w dniu rozpoczęcia albo później.");
+    return need(periodField, "Koniec musi przypadać w dniu rozpoczęcia albo później.");
   if (benefit === "paternity" && birth) {
     if (from >= addMonths(birth, 12) || (through && through >= addMonths(birth, 12))) {
       return standardDecision(
@@ -316,11 +323,13 @@ export function assessBenefit(
     if (!cap) return standardDecision("Wykorzystano już pełny wymiar ojcowskiego.");
     if (
       requestedDays !== undefined &&
-      ((requestedDays !== 7 && requestedDays !== 14) || requestedDays > cap)
+      (!paternityDurations.includes(requestedDays) || requestedDays > cap)
     ) {
       return need(
-        "through",
-        "Podaj pełny tydzień albo dwa tygodnie w granicach pozostałego wymiaru.",
+        periodField,
+        cap === 7
+          ? "Został Ci tydzień ojcowskiego. Podaj okres obejmujący 7 dni."
+          : "Podaj pełny tydzień albo dwa tygodnie w granicach pozostałego wymiaru.",
       );
     }
   }
@@ -456,7 +465,7 @@ export function assessBenefit(
   if (cap !== undefined && days > cap)
     return {
       ...need(
-        "through",
+        periodField,
         "Okres przekracza dostępny wymiar. Skróć go lub sprawdź wcześniej wykorzystane dni.",
       ),
       coverageDay,

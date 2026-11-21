@@ -23,6 +23,7 @@ export const caseFactsSchema = z.strictObject({
   dueDate: date,
   from: date,
   through: date,
+  requestedDays: z.number().int().min(1).max(938),
   employment: z.enum(employmentTypes),
   insured: z.boolean(),
   exception: z.boolean(),
@@ -114,4 +115,8 @@ export function moneyLabel(cents: number) {
 
 export function formatDay(iso: string) {
   return iso.split("-").reverse().join(".");
+}
+
+export function formatDays(days: number) {
+  return days === 1 ? "1 dzień" : days + " dni";
 }

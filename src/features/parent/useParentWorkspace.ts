@@ -9,11 +9,13 @@ import { normalizeGuideText } from "../guide/textInput";
 import { pdfUploadLimit } from "./case-documents";
 import type { DocumentData } from "./case-documents";
 import { factValue, fields, readFact } from "./case-fields";
+import { readCaseRequest } from "./case-message";
 import {
   append,
   appendAssessment,
   askBenefit,
   continueWithDocument,
+  continueWithRequest,
   getBenefitTurn,
   newSession,
   saveFacts,
@@ -98,6 +100,7 @@ function recordAnswer(
       local: !text,
       answer,
     }),
+    facts.from !== undefined || facts.requestedDays !== undefined,
   );
 }
 
@@ -370,17 +373,12 @@ export function useParentWorkspace(uploadAllowed: boolean) {
       askWhichBenefit(text);
       return;
     }
-    if (benefitTurn?.kind === "chooseBenefit") {
-      const chosen = (Object.keys(labels) as Benefit[]).find(
-        (benefit) => normalizeGuideText(labels[benefit]) === normalized,
-      );
-      if (chosen) {
-        begin(chosen, benefitTurn, text);
-        return;
-      }
-    }
     if (benefitTurn?.kind === "assessment" && question) {
-      const facts = readFact(question.key, text);
+      const upcoming =
+        question.key === "from" && session.family.facts.requestedDays !== undefined
+          ? session.asOf
+          : undefined;
+      const facts = readFact(question.key, text, upcoming);
       if (facts && (!facts.birth || facts.birth <= session.asOf)) {
         confirm(benefitTurn, facts, { text });
         return;
@@ -389,6 +387,15 @@ export function useParentWorkspace(uploadAllowed: boolean) {
         defer(benefitTurn, text);
         return;
       }
+    }
+    const local = readCaseRequest(text, {
+      asOf: session.asOf || warsawToday(),
+      benefit: benefitTurn?.kind === "chooseBenefit" ? null : session.benefit,
+      pending: question?.key,
+    });
+    if (local) {
+      update((previous) => continueWithRequest(previous, local, text));
+      return;
     }
     const controller = new AbortController();
     pendingRequest.current = controller;
