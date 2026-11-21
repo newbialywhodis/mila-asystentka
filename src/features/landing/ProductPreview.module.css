@@ -2,7 +2,8 @@
   position: relative;
   isolation: isolate;
   max-inline-size: 1140px;
-  block-size: 520px;
+  min-block-size: 520px;
+  padding-block-end: 24px;
   margin: 56px auto 0;
 }
 
@@ -16,6 +17,7 @@
 }
 
 .chat {
+  position: relative;
   z-index: 2;
   inset-block-start: 0;
   inset-inline-start: calc(50% - 375px);
@@ -75,6 +77,12 @@
 .reply {
   max-inline-size: 92%;
   margin-inline-start: auto;
+}
+
+.bubble {
+  padding: 8px 12px;
+  border-radius: var(--radius-md) var(--radius-md) 6px var(--radius-md);
+  background: var(--accent-surface);
 }
 
 .composer {
@@ -154,6 +162,18 @@
 
 .planContent p {
   font-size: 0.8125rem;
+}
+
+.resultTitle {
+  color: var(--ink);
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+.resultMeta {
+  margin-block-start: 4px;
+  color: var(--quiet);
+  line-height: 1.6;
 }
 
 .planContent .condition {
@@ -247,7 +267,7 @@
 
 @media (min-width: 801px) and (max-width: 1150px) {
   .stage {
-    block-size: 550px;
+    min-block-size: 550px;
   }
 
   .chat {
@@ -280,12 +300,13 @@
 @media (min-width: 701px) and (max-width: 1000px) {
   .stage {
     max-inline-size: 680px;
-    block-size: 680px;
+    min-block-size: 680px;
+    padding-block-start: 128px;
     margin-block-start: 42px;
   }
 
   .chat {
-    inset: 128px auto auto 0;
+    inset: auto;
     inline-size: 48%;
   }
 
@@ -324,9 +345,10 @@
   .stage {
     display: flex;
     max-inline-size: 400px;
-    block-size: auto;
+    min-block-size: 0;
     flex-direction: column;
     align-items: flex-start;
+    padding-block: 0;
     margin-block-start: 34px;
   }
 

@@ -1,4 +1,5 @@
 import { generatePlan } from "../../engine/plan";
+import { initialConversation, submitAnswer } from "../guide/conversation";
 import { getProfile } from "../guide/flow";
 import type { Answers } from "../guide/flow";
 
@@ -10,6 +11,13 @@ export const exampleAnswers = {
   birthRegistered: false,
   birthCardDate: "2026-11-19",
 } satisfies Answers;
+
+// The actual opening exchange, using the same answer as the report below.
+export const exampleOpening = submitAnswer(
+  initialConversation,
+  initialConversation.prompt,
+  exampleAnswers.stage,
+).messages;
 
 export const exampleAsOf = "2026-11-21";
 const { items } = generatePlan(getProfile(exampleAnswers), exampleAsOf);

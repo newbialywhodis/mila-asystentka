@@ -1,5 +1,6 @@
 import { Icon } from "../../components/ui/Icon";
-import styles from "./MilaLanding.module.css";
+import sectionStyles from "./LandingSection.module.css";
+import styles from "./LandingFaq.module.css";
 
 const questions = [
   {
@@ -26,6 +27,7 @@ const questions = [
     title: "Co dzieje się z wpisanymi informacjami?",
     answer:
       "Odpowiedzi z wywiadu i plan pozostają w pamięci strony. Otwarte pytanie może trafić na serwer i, jeśli włączono pomoc AI, do dostawcy modelu przez AI Gateway. Po uruchomieniu odczytu tekst wygenerowanej odpowiedzi może trafić do ElevenLabs. Nie podawaj danych identyfikujących ani dokumentacji medycznej.",
+    link: { href: "#dane", label: "Przeczytaj informację o danych i głosie" },
   },
   {
     title: "Czy Mila składa wnioski lub wydaje decyzje?",
@@ -38,10 +40,10 @@ export function LandingFaq() {
   return (
     <section
       id="pytania"
-      className={`${styles.container} ${styles.faq}`}
+      className={`${sectionStyles.section} ${styles.faq}`}
       aria-labelledby="faq-title"
     >
-      <div className={styles.faqIntroduction}>
+      <div className={sectionStyles.heading}>
         <h2 id="faq-title">Zanim zaczniemy</h2>
         <p>Kilka odpowiedzi, które warto mieć na początek.</p>
       </div>
@@ -49,15 +51,15 @@ export function LandingFaq() {
         {questions.map((question) => (
           <details key={question.title}>
             <summary>
-              {question.title}
+              <span>{question.title}</span>
               <Icon name="chevron" />
             </summary>
             <p>
               {question.answer}
-              {question.title === "Co dzieje się z wpisanymi informacjami?" ? (
+              {question.link ? (
                 <>
                   {" "}
-                  <a href="#dane">Przeczytaj informację o danych i głosie</a>.
+                  <a href={question.link.href}>{question.link.label}</a>.
                 </>
               ) : null}
             </p>

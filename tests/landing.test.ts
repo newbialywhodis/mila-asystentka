@@ -7,6 +7,7 @@ import {
   exampleAllowance,
   exampleAnswers,
   exampleAsOf,
+  exampleOpening,
   exampleRegistration,
 } from "../src/features/landing/exampleCase";
 
@@ -24,6 +25,8 @@ test("fikcyjny przykład landingu można odtworzyć przez aktualny wywiad", () =
   }
   assert.equal(conversation.messages[conversation.prompt].kind, "plan");
   assert.deepEqual(getProfile(conversation.answers), getProfile(exampleAnswers));
+  assert.equal(exampleOpening.length, 3);
+  assert.deepEqual(exampleOpening, conversation.messages.slice(0, exampleOpening.length));
 });
 
 test("przykład zachowuje spójność dat i nie sugeruje potwierdzonego prawa do zasiłku", () => {

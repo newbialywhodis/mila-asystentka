@@ -29,12 +29,14 @@ export function LandingTopics() {
         <div className={sectionStyles.heading}>
           <h2 id="topics-title">Wszystko, co ważne. W jednym miejscu.</h2>
           <p>
-            Wybierz, w czym potrzebujesz pomocy. Mila pomoże Ci odnaleźć się w formalnościach
-            związanych z rodzicielstwem.
+            Zaznacz obszary, które chcesz szczególnie sprawdzić. Przejdziesz standardowy wywiad, a
+            Mila przygotuje plan na podstawie Twoich odpowiedzi.
           </p>
         </div>
         <fieldset className={styles.topics}>
-          <legend className={styles.legend}>Wybierz tematy rozmowy. Możesz zaznaczyć kilka.</legend>
+          <legend className={styles.legend}>
+            Wybierz obszary do sprawdzenia. Możesz zaznaczyć kilka.
+          </legend>
           {landingTopics.map((topic) => (
             <TopicCard
               key={topic.id}
@@ -47,6 +49,10 @@ export function LandingTopics() {
         <output className={styles.message} aria-live="polite" aria-atomic="true">
           {topicSelectionMessage(selected.length)}
         </output>
+        <p className={styles.scopeNote}>
+          Tematy pomagają ustalić, od czego zacząć przeglądanie planu. Ich wybór nie potwierdza
+          prawa do świadczeń.
+        </p>
         <div className={sectionStyles.action}>
           <ButtonLink href={topicChatHref(selected)} variant="brand" size="xl">
             Porozmawiaj z Milą <Icon name="arrow" />

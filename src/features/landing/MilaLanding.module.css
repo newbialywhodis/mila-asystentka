@@ -158,61 +158,6 @@
   line-height: 1.75;
 }
 
-.faq {
-  display: grid;
-  grid-template-columns: 0.85fr 1.4fr;
-  gap: 72px;
-  padding-block: 90px;
-}
-
-.faqIntroduction p {
-  max-inline-size: 28ch;
-  margin-block-start: 16px;
-  color: var(--muted);
-  line-height: 1.75;
-}
-
-.questions {
-  min-inline-size: 0;
-  border-block-start: 1px solid var(--line);
-}
-
-.questions details {
-  border-block-end: 1px solid var(--line);
-}
-
-.questions summary {
-  display: flex;
-  min-block-size: 72px;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  padding-block: 20px;
-  font-weight: 550;
-  list-style: none;
-  cursor: pointer;
-}
-
-.questions summary::-webkit-details-marker {
-  display: none;
-}
-
-.questions summary svg {
-  flex: none;
-  color: var(--primary);
-}
-
-.questions details[open] summary svg {
-  transform: rotate(90deg);
-}
-
-.questions details > p {
-  padding-block-end: 24px;
-  padding-inline-end: 40px;
-  color: var(--muted);
-  line-height: 1.75;
-}
-
 .footer {
   display: flex;
   justify-content: space-between;
@@ -239,7 +184,6 @@
   }
 
   .sectionLink:hover,
-  .questions summary:hover,
   .page a:not([data-variant]):hover {
     color: var(--primary);
     text-decoration: underline;
@@ -250,10 +194,6 @@
 @media (max-width: 900px) {
   .navigation {
     gap: 20px;
-  }
-
-  .faq {
-    gap: 40px;
   }
 }
 
@@ -272,8 +212,7 @@
   }
 
   .sectionHeading,
-  .trustContent,
-  .faq {
+  .trustContent {
     grid-template-columns: minmax(0, 1fr);
     gap: 24px;
   }
@@ -281,19 +220,6 @@
   .trust,
   .privacy {
     padding-block: 36px;
-  }
-
-  .faq {
-    padding-block: 52px;
-  }
-
-  .faqIntroduction p {
-    max-inline-size: none;
-    margin-block-start: 10px;
-  }
-
-  .questions details > p {
-    padding-inline-end: 0;
   }
 
   .footer {

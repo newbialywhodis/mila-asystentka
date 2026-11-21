@@ -24,12 +24,22 @@
 
 .message {
   display: block;
-  min-block-size: 48px;
+  min-block-size: 24px;
   margin: 27px auto 12px;
   color: var(--muted);
   font-size: 0.875rem;
   line-height: 1.7;
   text-align: center;
+}
+
+.scopeNote {
+  max-inline-size: 64ch;
+  margin: 0 auto 24px;
+  color: var(--muted);
+  font-size: 0.875rem;
+  line-height: 1.7;
+  text-align: center;
+  text-wrap: pretty;
 }
 
 @media (min-width: 601px) and (max-width: 900px) {

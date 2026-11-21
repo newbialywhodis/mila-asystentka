@@ -3,9 +3,7 @@ import { Icon } from "../../components/ui/Icon";
 import { questions } from "../../data/questions";
 import { formatDate } from "../guide/flow";
 import { planSections } from "../guide/PlanNavigation";
-import messageStyles from "../guide/ThreadMessage.module.css";
-import reportStyles from "../guide/PlanReport.module.css";
-import { exampleAllowance, exampleRegistration } from "./exampleCase";
+import { exampleAllowance, exampleOpening, exampleRegistration } from "./exampleCase";
 import styles from "./ProductPreview.module.css";
 
 function ConversationPreview() {
@@ -18,25 +16,24 @@ function ConversationPreview() {
           dangerouslySetInnerHTML={{ __html: createMilaFace("product-preview-mila", "idle") }}
         />
         <span>Mila</span>
-        <span className={styles.windowLabel}>Rozmowa</span>
+        <span className={styles.windowLabel}>Początek rozmowy</span>
       </div>
       <div className={styles.conversation}>
-        <div className={messageStyles.mila}>
-          <span className={styles.author}>Mila</span>
-          <p>Na jakim etapie ciąży jesteś?</p>
-        </div>
-        <div className={styles.reply}>
-          <span className={messageStyles.author}>Twoja odpowiedź</span>
-          <p className={messageStyles.bubble}>Moje dziecko już się urodziło.</p>
-        </div>
-        <div className={messageStyles.mila}>
-          <span className={styles.author}>Mila</span>
-          <p>
-            Ojej, gratulacje!!! ❤️
-            <br />
-            Powiedz mi proszę, kiedy urodziło się dziecko?
-          </p>
-        </div>
+        {exampleOpening.map((message) =>
+          message.kind === "question" || message.kind === "answer" ? (
+            <div
+              key={`${message.kind}-${message.question}`}
+              className={message.kind === "answer" ? styles.reply : undefined}
+            >
+              <span className={styles.author}>
+                {message.kind === "answer" ? "Twoja odpowiedź" : "Mila"}
+              </span>
+              <p className={message.kind === "answer" ? styles.bubble : undefined}>
+                {message.text}
+              </p>
+            </div>
+          ) : null,
+        )}
       </div>
       <div className={styles.composer} aria-hidden="true">
         <span>Odpowiedz lub zapytaj Milę…</span>
@@ -68,12 +65,12 @@ function PlanResultPreview() {
             {deadline.date ? (
               <time dateTime={deadline.date}>Do {formatDate(deadline.date)}</time>
             ) : null}
-            <p className={reportStyles.title}>{procedure.title}</p>
-            <p className={reportStyles.meta}>{deadline.title}</p>
+            <p className={styles.resultTitle}>{procedure.title}</p>
+            <p className={styles.resultMeta}>{deadline.title}</p>
           </div>
         </div>
         <div className={styles.benefit}>
-          <p className={reportStyles.title}>{exampleAllowance.procedure.title}</p>
+          <p className={styles.resultTitle}>{exampleAllowance.procedure.title}</p>
           <p className={styles.status}>Wymaga dodatkowych danych</p>
           {missing ? <p className={styles.condition}>{questions[missing].label}</p> : null}
         </div>
