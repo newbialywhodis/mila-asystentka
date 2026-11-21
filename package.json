@@ -9,7 +9,7 @@
     "build": "next build",
     "start": "next start",
     "test": "bun test",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
     "validate:data": "bun scripts/validate-data.ts",
     "audio:generate": "bun scripts/generate-mila-audio.ts",
     "sources": "bun scripts/sources.ts",
