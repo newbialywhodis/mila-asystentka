@@ -2,7 +2,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { Button } from "../../components/ui/Button";
 import { Icon } from "../../components/ui/Icon";
 import { parseDate } from "../../engine/dates";
-import { MilaMessage, MilaMessageActions, MilaMessageText } from "./ThreadMessage";
+import { MilaMessage, MilaMessageText } from "./ThreadMessage";
 import { DateChoice, MultiChoice, SingleChoice } from "./QuestionControls";
 import type { SubmitAnswer } from "./QuestionControls";
 import { getFullQuestionText } from "./questionText";
@@ -89,9 +89,71 @@ export function QuestionTurn({
     );
   }
 
+  const smartComponents = onAnswer ? (
+    <div ref={controls} className={controlsClass}>
+      {question.input === "date" || exact ? (
+        <DateChoice
+          label={
+            timing
+              ? "Przewidywany termin porodu"
+              : id === "birthDate"
+                ? "Data urodzenia"
+                : "Data sporządzenia karty"
+          }
+          value={dateValue}
+          {...getDateBounds(id, asOf, birthDate)}
+          today={asOf}
+          inputRef={input}
+          onAnswer={selectAnswer}
+        />
+      ) : question.input === "multi" ? (
+        <MultiChoice
+          options={question.options}
+          labelledBy={messageId}
+          selected={previousAnswer}
+          onAnswer={selectAnswer}
+        />
+      ) : (
+        <SingleChoice
+          options={question.options}
+          labelledBy={messageId}
+          selected={previousAnswer}
+          onAnswer={selectAnswer}
+        />
+      )}
+      {timing || canSkip || onCancel ? (
+        <div className={styles.actions}>
+          {timing ? (
+            <Button
+              variant="ghost"
+              size="lg"
+              onClick={() => {
+                timingChanged.current = true;
+                setExactTiming(!exactTiming);
+              }}
+            >
+              <Icon name="calendar" size="sm" />
+              {exactTiming ? "Wybierz trymestr" : "Podaj termin porodu"}
+            </Button>
+          ) : null}
+          {canSkip ? (
+            <Button variant="ghost" size="lg" onClick={() => selectAnswer(null)}>
+              Pomiń pytanie
+            </Button>
+          ) : null}
+          {onCancel ? (
+            <Button variant="ghost" size="lg" onClick={onCancel}>
+              Anuluj zmianę
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  ) : null;
+
   return (
     <div className={styles.turn} data-chat-scroll>
-      <MilaMessage>
+      <MilaMessage copyText={copyText} smartComponents={smartComponents}>
         <p
           id={messageId}
           ref={message}
@@ -104,68 +166,6 @@ export function QuestionTurn({
           <p className={`${styles.hint} ${messageStyles.followUp}`}>{question.hint}</p>
         ) : null}
       </MilaMessage>
-      {onAnswer ? (
-        <div ref={controls} className={`${controlsClass} ${messageStyles.followUp}`}>
-          {question.input === "date" || exact ? (
-            <DateChoice
-              label={
-                timing
-                  ? "Przewidywany termin porodu"
-                  : id === "birthDate"
-                    ? "Data urodzenia"
-                    : "Data sporządzenia karty"
-              }
-              value={dateValue}
-              {...getDateBounds(id, asOf, birthDate)}
-              today={asOf}
-              inputRef={input}
-              onAnswer={selectAnswer}
-            />
-          ) : question.input === "multi" ? (
-            <MultiChoice
-              options={question.options}
-              labelledBy={messageId}
-              selected={previousAnswer}
-              onAnswer={selectAnswer}
-            />
-          ) : (
-            <SingleChoice
-              options={question.options}
-              labelledBy={messageId}
-              selected={previousAnswer}
-              onAnswer={selectAnswer}
-            />
-          )}
-          {timing || canSkip || onCancel ? (
-            <div className={styles.actions}>
-              {timing ? (
-                <Button
-                  variant="ghost"
-                  size="lg"
-                  onClick={() => {
-                    timingChanged.current = true;
-                    setExactTiming(!exactTiming);
-                  }}
-                >
-                  <Icon name="calendar" size="sm" />
-                  {exactTiming ? "Wybierz trymestr" : "Podaj termin porodu"}
-                </Button>
-              ) : null}
-              {canSkip ? (
-                <Button variant="ghost" size="lg" onClick={() => selectAnswer(null)}>
-                  Pomiń pytanie
-                </Button>
-              ) : null}
-              {onCancel ? (
-                <Button variant="ghost" size="lg" onClick={onCancel}>
-                  Anuluj zmianę
-                </Button>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-      <MilaMessageActions text={copyText} />
     </div>
   );
 }

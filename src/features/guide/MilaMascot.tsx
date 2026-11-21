@@ -2,10 +2,10 @@ import { animateMascot, createMascot } from "mascotz";
 import type { MascotController, Mood } from "mascotz";
 import { useEffect, useId, useMemo, useRef, useSyncExternalStore } from "react";
 import type { RefObject } from "react";
+import type { ActionGaze } from "./ActionGaze";
 import styles from "./MilaMascot.module.css";
 
 export type MascotReaction = { kind: "nod" | "blink" | "smile" };
-
 const motionQuery = "(prefers-reduced-motion: reduce)";
 
 function subscribeMotion(notify: () => void) {
@@ -28,10 +28,12 @@ export function MilaMascot({
   reaction,
   thinking,
   composerInput,
+  actionGaze,
 }: {
   reaction?: MascotReaction;
   thinking: boolean;
   composerInput: RefObject<HTMLTextAreaElement | null>;
+  actionGaze: RefObject<ActionGaze>;
 }) {
   const id = `mila-${useId()}`;
   const face = useRef<HTMLSpanElement>(null);
@@ -48,15 +50,21 @@ export function MilaMascot({
     if (reduced || !face.current) return;
     const mascot = animateMascot(face.current, {
       seed: "Mila",
-      lookAt: () =>
-        document.activeElement === composerInput.current ? composerInput.current : null,
+      lookAt: () => {
+        const { hovered, focused } = actionGaze.current;
+        if (hovered?.isConnected) return hovered;
+        if (focused === document.activeElement && focused?.matches(":focus-visible")) {
+          return focused;
+        }
+        return document.activeElement === composerInput.current ? composerInput.current : null;
+      },
     });
     controller.current = mascot;
     return () => {
       mascot.destroy();
       controller.current = null;
     };
-  }, [composerInput, reduced]);
+  }, [actionGaze, composerInput, reduced]);
 
   useEffect(() => {
     if (reduced || !reaction) return;

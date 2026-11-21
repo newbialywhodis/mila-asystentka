@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "bun scripts/prepare-ocr-assets.ts",
     "dev": "next dev",
+    "prebuild": "bun scripts/prepare-ocr-assets.ts",
     "build": "next build",
     "start": "next start",
     "test": "bun test",
@@ -20,11 +22,14 @@
   "dependencies": {
     "@base-ui/react": "1.9.0",
     "@daypicker/react": "^10.0.2",
+    "@tesseract.js-data/pol": "1.0.0",
     "ai": "7.0.178",
     "mascotz": "1.3.0",
     "next": "16.4.6",
+    "pdfjs-dist": "6.5.438",
     "react": "latest",
     "react-dom": "latest",
+    "tesseract.js": "7.0.0",
     "zod": "4.6.7"
   },
   "devDependencies": {

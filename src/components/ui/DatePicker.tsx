@@ -40,9 +40,10 @@ const calendarComponents = {
 
 type DatePickerProps = Pick<
   ComponentPropsWithRef<"input">,
-  "ref" | "name" | "required" | "aria-label" | "aria-describedby" | "aria-invalid"
+  "ref" | "id" | "name" | "required" | "aria-label" | "aria-describedby" | "aria-invalid"
 > & {
   defaultValue?: string;
+  value?: string;
   min: string;
   max: string;
   today: string;
@@ -51,6 +52,7 @@ type DatePickerProps = Pick<
 
 export function DatePicker({
   defaultValue,
+  value: controlledValue,
   min,
   max,
   today,
@@ -60,17 +62,18 @@ export function DatePicker({
   const anchor = useRef<HTMLDivElement>(null);
   const inputOpener = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
-  const [value, setValue] = useState(() => {
+  const [internalValue, setInternalValue] = useState(() => {
     const date = parseDate(defaultValue);
     return date ? inputDateFormat.format(date) : "";
   });
+  const value = controlledValue ?? internalValue;
   const isoValue = normalizeNumericDate(value);
   const selected = isoValue && isoValue >= min && isoValue <= max ? parseDate(isoValue) : undefined;
   const start = parseDate(min);
   const end = parseDate(max);
 
   function changeValue(text: string) {
-    setValue(text);
+    if (controlledValue === undefined) setInternalValue(text);
     onValueChange?.(text);
   }
 

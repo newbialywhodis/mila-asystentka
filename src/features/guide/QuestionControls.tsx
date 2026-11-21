@@ -17,9 +17,24 @@ type ChoiceProps<T> = {
   onAnswer: SubmitAnswer;
 };
 
-export function SingleChoice({ options, labelledBy, selected, onAnswer }: ChoiceProps<Option>) {
+export function SingleChoice<Value extends Option["value"]>({
+  options,
+  labelledBy,
+  selected,
+  onAnswer,
+  className,
+}: {
+  options: readonly (Option & { value: Value })[];
+  labelledBy: string;
+  selected?: Answer;
+  onAnswer: (value: Value) => void;
+  className?: string;
+}) {
   return (
-    <ul className={styles.choices} aria-labelledby={labelledBy}>
+    <ul
+      className={[styles.choices, className].filter(Boolean).join(" ")}
+      aria-labelledby={labelledBy}
+    >
       {options.map(({ value, label, icon, detail }) => (
         <li key={String(value)}>
           <Button

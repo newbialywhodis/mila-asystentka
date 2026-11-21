@@ -1,266 +1,117 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { ScrollArea } from "../../components/ui/ScrollArea";
-import { warsawToday } from "../../engine/dates";
-import { ChatComposer } from "./ChatComposer";
-import {
-  appendHelp,
-  cancelRevision,
-  getEditableAnswers,
-  initialConversation,
-  resolveHelp,
-  reviseAnswer,
-  submitAnswer,
-} from "./conversation";
-import { getPeriod, getProfile, guideQuestions } from "./flow";
-import type { Answer, QuestionId } from "./flow";
-import { GuideHelpReply } from "./GuideHelp";
-import { GuideLayout } from "./GuideLayout";
-import { findHelpAnswer, unavailableHelpAnswer } from "./helpAnswers";
-import type { HelpAnswer } from "./helpAnswers";
-import type { MascotReaction } from "./MilaMascot";
-import type { PlanSection } from "./PlanNavigation";
-import { PlanReport } from "./PlanReport";
-import { PlanTurn } from "./PlanTurn";
-import { QuestionTurn } from "./QuestionTurn";
-import { readTextAnswer } from "./textInput";
-import { UserMessage } from "./ThreadMessage";
+import { createRef, useCallback, useId, useState } from "react";
+import type { RefObject } from "react";
+import { Button } from "../../components/ui/Button";
+import { Icon } from "../../components/ui/Icon";
+import { CaseConversation } from "./CaseConversation";
+import type { CaseSelection } from "./CaseConversation";
+import { GuideLayout, useGuidePanels } from "./GuideLayout";
+import type { CloseMobileCases } from "./GuideLayout";
 import styles from "./MilaGuide.module.css";
 
-type MessageLocation = { key: string; scrollOnly?: boolean };
+type GuideCase = { id: number; title?: string; input: RefObject<HTMLTextAreaElement | null> };
 
-export function MilaGuide() {
-  const [conversation, setConversation] = useState(initialConversation);
-  const [asOf, setAsOf] = useState("");
-  const [section, setSection] = useState<PlanSection>("timeline");
-  const [checked, setChecked] = useState<string[]>([]);
-  const [reaction, setReaction] = useState<MascotReaction>();
-  const scrollport = useRef<HTMLElement>(null);
-  const footer = useRef<HTMLElement>(null);
-  const nextHelpId = useRef(0);
-  const nextLocation = useRef<MessageLocation>(undefined);
-
-  const { answers, messages, prompt, revision } = conversation;
-  const activeIndex = revision ?? prompt;
-  const active = messages[activeIndex];
-  const context = active.kind === "question" ? active.question : undefined;
-  const plan = messages[prompt];
-  const profile = useMemo(() => getProfile(answers), [answers]);
-  const period = getPeriod(answers.pregnancyTiming);
-  const editable = getEditableAnswers(conversation);
-  const thinking = messages.some((message) => message.kind === "help" && !message.exchange.answer);
-
-  useEffect(() => {
-    if (!reaction) return;
-    const timeout = setTimeout(
-      () => setReaction(undefined),
-      reaction.kind === "smile" ? 2200 : 450,
+export function MilaGuide({ uploadAllowed = false }: { uploadAllowed?: boolean }) {
+  const [conversations, setConversations] = useState<GuideCase[]>(() => [
+    { id: 1, input: createRef<HTMLTextAreaElement>() },
+  ]);
+  const [selection, setSelection] = useState<CaseSelection>({ id: 1, focusComposer: false });
+  const history = conversations.filter(({ title }) => title !== undefined).reverse();
+  const setCaseSummary = useCallback((id: number, title: string) => {
+    setConversations((previous) =>
+      previous.map((item) => (item.id === id && item.title !== title ? { ...item, title } : item)),
     );
-    return () => clearTimeout(timeout);
-  }, [reaction]);
-
-  useLayoutEffect(() => {
-    const region = scrollport.current;
-    const composer = footer.current;
-    if (!region || !composer) return;
-
-    const updateScrollPadding = () => {
-      region.style.setProperty("--composer-height", `${composer.offsetHeight}px`);
-    };
-
-    updateScrollPadding();
-    const observer = new ResizeObserver(updateScrollPadding);
-    observer.observe(composer, { box: "border-box" });
-    return () => observer.disconnect();
   }, []);
 
-  useLayoutEffect(() => {
-    const location = nextLocation.current;
-    nextLocation.current = undefined;
-    if (location) moveToMessage(scrollport.current, location);
-  }, [conversation]);
-
-  function answer(index: number, value: Answer, text?: string, date = asOf || warsawToday()) {
-    const updated = submitAnswer(conversation, index, value, text);
-    if (updated === conversation) return;
-    nextLocation.current = { key: "continue", scrollOnly: text !== undefined };
-    if (!asOf) setAsOf(date);
-    if (updated.answers.stage !== answers.stage) setChecked([]);
-    setSection("timeline");
-    setConversation((previous) =>
-      previous === conversation ? updated : submitAnswer(previous, index, value, text),
-    );
-    const next = updated.messages[updated.prompt];
-    setReaction({
-      kind: next.kind === "plan" || (next.kind === "question" && next.celebrate) ? "smile" : "nod",
-    });
+  function openCase(next: GuideCase, closeMobileCases: CloseMobileCases, focusComposer = false) {
+    const focusAfterClose = focusComposer || next.id !== selection.id ? next.input : undefined;
+    const mobilePanelClosed = closeMobileCases(focusAfterClose);
+    setSelection({ id: next.id, focusComposer: focusComposer && !mobilePanelClosed });
   }
 
-  function edit(question: QuestionId) {
-    nextLocation.current = { key: "continue" };
-    setConversation((previous) => reviseAnswer(previous, question));
-  }
-
-  function cancelEdit() {
-    nextLocation.current = { key: "continue" };
-    setConversation(cancelRevision);
-  }
-
-  function send(text: string) {
-    const date = asOf || warsawToday();
-    const reply = context ? readTextAnswer(context, text, date, profile.birthDate) : undefined;
-    if (reply && "value" in reply) {
-      answer(activeIndex, reply.value, text, date);
-    } else {
-      void ask(text, reply ? { text: reply.clarification } : undefined);
-    }
-  }
-
-  async function ask(question: string, clarification?: HelpAnswer) {
-    const id = nextHelpId.current++;
-    const known = clarification ?? findHelpAnswer(question, context);
-    const previous = messages.at(-1);
-    const previousSourceIds =
-      previous?.kind === "help" ? previous.exchange.answer?.sourceIds : undefined;
-    const key = `help-${id}`;
-    nextLocation.current = { key, scrollOnly: true };
-    setConversation((previous) => appendHelp(previous, { id, question, answer: known }));
-    if (known) {
-      setReaction({ kind: "blink" });
+  function openDraft(closeMobileCases: CloseMobileCases) {
+    const latest = conversations[conversations.length - 1];
+    if (latest.title === undefined) {
+      openCase(latest, closeMobileCases, true);
       return;
     }
-    setReaction(undefined);
-
-    const response = await fetch("/api/guide-help", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question, context, previousSourceIds }),
-      signal: AbortSignal.timeout(15_000),
-    }).catch(() => null);
-    const reply: HelpAnswer = response?.ok
-      ? await response.json().catch(() => unavailableHelpAnswer)
-      : unavailableHelpAnswer;
-    const region = scrollport.current;
-    if (
-      region &&
-      region.scrollHeight - region.scrollTop - region.clientHeight <= 40 &&
-      region.querySelector(`[data-chat-focus="${key}"]`)?.closest("[data-chat-scroll]")
-        ?.nextElementSibling === null
-    ) {
-      nextLocation.current ??= { key, scrollOnly: true };
-    }
-    setConversation((previous) => resolveHelp(previous, id, reply));
-  }
-
-  function toggleTask(id: string) {
-    setChecked((previous) =>
-      previous.includes(id) ? previous.filter((task) => task !== id) : [...previous, id],
-    );
+    const next = { id: latest.id + 1, input: createRef<HTMLTextAreaElement>() };
+    setConversations((previous) => [...previous, next]);
+    openCase(next, closeMobileCases, true);
   }
 
   return (
     <GuideLayout
-      report={
-        plan.kind === "plan" ? (
-          <PlanReport
-            stage={plan.stage}
-            profile={profile}
-            period={period}
-            asOf={asOf}
-            interests={answers.planInterests}
-            section={section}
-            checked={checked}
-            onSectionChange={setSection}
-            onToggle={toggleTask}
-          />
-        ) : (
-          <ScrollArea renderViewport={<section />} aria-label="Stan raportu">
-            <p className={styles.reportEmpty}>
-              Twój raport pojawi się tutaj po zakończeniu pytań Mili.
-            </p>
-          </ScrollArea>
-        )
+      cases={
+        <CaseHistory
+          history={history}
+          selected={selection.id}
+          onNewCase={openDraft}
+          onSelect={openCase}
+        />
       }
     >
-      <ScrollArea
-        rootClassName={styles.chatScrollArea}
-        renderViewport={<section ref={scrollport} />}
-        className={styles.scrollport}
-        contentClassName={styles.scrollContent}
-        aria-label="Rozmowa z Milą"
-        data-chat
-        tabIndex={0}
-      >
-        <div className={styles.thread} role="log" aria-label="Wiadomości">
-          {messages.map((message, index) => {
-            switch (message.kind) {
-              case "question":
-                return (
-                  <QuestionTurn
-                    key={`question-${index}-${message.question}`}
-                    id={message.question}
-                    text={message.text}
-                    previousAnswer={message.previousAnswer}
-                    asOf={asOf}
-                    birthDate={profile.birthDate}
-                    onAnswer={index === activeIndex ? (value) => answer(index, value) : undefined}
-                    onCancel={index === revision ? cancelEdit : undefined}
-                  />
-                );
-              case "answer":
-                return (
-                  <UserMessage
-                    key={`answer-${index}`}
-                    question={guideQuestions[message.question].label}
-                    onEdit={
-                      editable.get(message.question) === index &&
-                      !(revision !== undefined && message.question === context)
-                        ? () => edit(message.question)
-                        : undefined
-                    }
-                  >
-                    {message.text}
-                  </UserMessage>
-                );
-              case "help":
-                return (
-                  <GuideHelpReply key={`help-${message.exchange.id}`} exchange={message.exchange} />
-                );
-              case "plan":
-                return (
-                  <PlanTurn
-                    key={`plan-${index}`}
-                    stage={message.stage}
-                    active={index === activeIndex}
-                  />
-                );
-            }
-          })}
-        </div>
-        <footer ref={footer} className={styles.footer}>
-          <div className={styles.dock}>
-            <ChatComposer
-              reaction={reaction}
-              thinking={thinking}
-              onSend={send}
-              awaitingAnswer={Boolean(context)}
-            />
-          </div>
-        </footer>
-      </ScrollArea>
+      {conversations.map(({ id, input }) => (
+        <CaseConversation
+          key={id}
+          id={id}
+          input={input}
+          selection={selection.id === id ? selection : null}
+          uploadAllowed={uploadAllowed}
+          onSummary={setCaseSummary}
+        />
+      ))}
     </GuideLayout>
   );
 }
 
-function moveToMessage(region: HTMLElement | null, { key, scrollOnly }: MessageLocation) {
-  const target = region?.querySelector<HTMLElement>(`[data-chat-focus="${key}"]`);
-  if (!target || !region) return;
-  if (!scrollOnly) target.focus({ preventScroll: true });
-  const turn = target.closest<HTMLElement>("[data-chat-scroll]");
-  const { scrollPaddingBlockStart, scrollPaddingBlockEnd } = getComputedStyle(region);
-  const availableHeight =
-    region.clientHeight - parseFloat(scrollPaddingBlockStart) - parseFloat(scrollPaddingBlockEnd);
-  const visible = turn && turn.offsetHeight <= availableHeight ? turn : target;
-  visible.scrollIntoView({ block: "nearest" });
+function CaseHistory({
+  history,
+  selected,
+  onNewCase,
+  onSelect,
+}: {
+  history: GuideCase[];
+  selected: number;
+  onNewCase: (closeMobileCases: CloseMobileCases) => void;
+  onSelect: (item: GuideCase, closeMobileCases: CloseMobileCases) => void;
+}) {
+  const { closeMobileCases } = useGuidePanels();
+  const headingId = useId();
+  return (
+    <div className={styles.sidebar}>
+      <Button
+        className={styles.sidebarOption}
+        variant="outline"
+        onClick={() => onNewCase(closeMobileCases)}
+      >
+        <Icon name="circlePlus" />
+        Nowa sprawa
+      </Button>
+      {history.length ? (
+        <nav aria-labelledby={headingId} className={styles.history}>
+          <h2 id={headingId} className={styles.historyHeading}>
+            Historia spraw
+          </h2>
+          <ul>
+            {history.map((item) => (
+              <li key={item.id}>
+                <Button
+                  aria-current={item.id === selected ? "true" : undefined}
+                  className={styles.sidebarOption}
+                  variant="ghost"
+                  onClick={() => onSelect(item, closeMobileCases)}
+                >
+                  <span className={styles.historyTitle} title={item.title}>
+                    {item.title}
+                  </span>
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      ) : null}
+    </div>
+  );
 }

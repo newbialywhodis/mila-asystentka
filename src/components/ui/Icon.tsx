@@ -34,9 +34,18 @@ const paths = {
   arrow: <path d="M4 12h15m-6-6 6 6-6 6" />,
   arrowUpRight: <path d="M6 18 18 6M9 6h9v9" />,
   send: <path d="M12 20V5m-6 6 6-6 6 6" />,
+  paperclip: (
+    <path d="m21 11-9 9a5.65 5.65 0 0 1-8-8l9-9a3.54 3.54 0 0 1 5 5L9 17a1.77 1.77 0 0 1-2.5-2.5L15 6" />
+  ),
   back: <path d="M20 12H5m6-6-6 6 6 6" />,
   chevron: <path d="m9 6 6 6-6 6" />,
   close: <path d="m6 6 12 12M18 6 6 18" />,
+  circlePlus: (
+    <>
+      <circle cx="12" cy="12" r="10.5" fill="currentColor" stroke="none" />
+      <path d="M8 12h8m-4-4v8" stroke="var(--surface)" />
+    </>
+  ),
   pencil: <path d="M4 20l4.5-1L20 7.5a2.8 2.8 0 0 0-4-4L4.5 15 4 20ZM14.5 5l4 4" />,
   copy: (
     <path

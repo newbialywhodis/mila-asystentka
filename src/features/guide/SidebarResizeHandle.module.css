@@ -1,0 +1,23 @@
+.resizeHandle {
+  position: absolute;
+  z-index: 2;
+  inset-block: 0;
+  inset-inline-end: 0;
+  width: var(--space-3);
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.resizeHandle:is(:hover, :focus-visible, [data-dragging="true"]) {
+  outline: none;
+  border-inline-end: 2px solid var(--focus);
+}
+
+.resizeHandle[data-side="right"] {
+  inset-inline: 0 auto;
+}
+
+.resizeHandle[data-side="right"]:is(:hover, :focus-visible, [data-dragging="true"]) {
+  border-inline-start: 2px solid var(--focus);
+  border-inline-end: 0;
+}

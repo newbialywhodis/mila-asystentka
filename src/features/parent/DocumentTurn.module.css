@@ -1,0 +1,198 @@
+.card {
+  display: grid;
+  min-inline-size: 0;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.file {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.fileIcon {
+  display: grid;
+  place-items: center;
+  inline-size: var(--icon-button-size-lg);
+  block-size: var(--icon-button-size-lg);
+  border-radius: var(--radius-sm);
+  background: var(--accent-surface);
+  color: var(--primary);
+}
+
+.fileText {
+  display: grid;
+  gap: 2px;
+}
+
+.fileName {
+  overflow: hidden;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.caption,
+.factLabel {
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.benefit {
+  margin: 0;
+  font-weight: 600;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
+  column-gap: var(--space-4);
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.facts li {
+  display: flex;
+  min-inline-size: 0;
+  align-items: center;
+  gap: var(--space-1);
+  border-block-start: 1px solid var(--line);
+}
+
+.fact {
+  display: flex;
+  min-inline-size: 0;
+  min-block-size: var(--control-touch-size);
+  flex: 1;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+  cursor: pointer;
+}
+
+.fact input {
+  flex: none;
+  margin: 0;
+  accent-color: var(--primary);
+}
+
+.factText {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--space-2);
+  font-size: 0.875rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.page {
+  flex: none;
+  padding-block: var(--space-2);
+  padding-inline-start: var(--space-2);
+  padding-inline-end: 0;
+  border: 0;
+  background: none;
+  color: var(--primary);
+  font: inherit;
+  font-size: 0.8125rem;
+  text-decoration: underline;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.pages {
+  display: flex;
+  max-inline-size: 35%;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.resolve {
+  display: grid;
+  min-inline-size: 0;
+  flex: 1;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  font-size: 0.875rem;
+}
+
+.resolve select {
+  inline-size: 100%;
+  min-block-size: var(--icon-button-size-md);
+  padding: var(--space-1);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-xs);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.progress {
+  display: grid;
+  gap: var(--space-1);
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.progress progress {
+  inline-size: 100%;
+  accent-color: var(--primary);
+}
+
+.scope {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--space-2);
+}
+
+.scope label {
+  display: grid;
+  gap: var(--space-1);
+  font-size: 0.875rem;
+}
+
+.scope input {
+  inline-size: 6rem;
+  min-block-size: var(--control-touch-size);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-xs);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
+
+.scope p {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--danger);
+  font-size: 0.875rem;
+}
+
+.decisions {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.decisions summary {
+  cursor: pointer;
+}
+
+.decisions ul {
+  margin-block-end: 0;
+}

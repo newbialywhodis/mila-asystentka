@@ -1,0 +1,123 @@
+.conversation {
+  --guide-width: 44rem;
+  --guide-inset: clamp(16px, 4vw, 28px);
+  --composer-inline-padding: var(--space-2);
+  --composer-mascot-size: 48px;
+  --composer-column-gap: var(--space-2);
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+@media (max-width: 480px) {
+  .conversation {
+    --composer-inline-padding: 6px;
+  }
+}
+
+.chatScrollArea {
+  height: 100%;
+  min-height: 0;
+}
+
+.scrollport {
+  scroll-padding-block-start: var(--corner-clearance);
+  scroll-padding-block-end: calc(var(--space-4) + var(--composer-height, 0px));
+}
+
+.scrollContent {
+  display: flex;
+  flex-direction: column;
+  min-block-size: 100%;
+}
+
+.thread,
+.dock {
+  width: min(100%, calc(var(--guide-width) + 2 * var(--guide-inset)));
+  padding-inline: var(--guide-inset);
+  margin-inline: auto;
+}
+
+.thread {
+  display: grid;
+  flex: none;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-5);
+  padding-block: clamp(var(--corner-clearance), 9dvh, 76px) var(--space-6);
+}
+
+.thread [tabindex="-1"]:focus {
+  outline: none;
+}
+
+.footer {
+  position: sticky;
+  z-index: 1;
+  bottom: 0;
+  flex: none;
+  padding-block: var(--space-2) max(var(--space-3), env(safe-area-inset-bottom));
+  margin-block-start: auto;
+  background: linear-gradient(transparent, var(--canvas) var(--space-3));
+  pointer-events: none;
+}
+
+.conversation[data-empty="true"] .scrollContent {
+  display: grid;
+  grid-template-rows: minmax(var(--corner-clearance), 1fr) auto minmax(min-content, 1fr);
+}
+
+.conversation[data-empty="true"] .footer {
+  position: static;
+  grid-row: 2;
+  padding-block: 0;
+  margin-block: 0;
+  background: none;
+}
+
+.emptyHeading {
+  width: min(100%, calc(var(--guide-width) + 2 * var(--guide-inset)));
+  padding-inline: var(--guide-inset);
+  margin: 0 auto var(--space-4);
+  color: var(--ink);
+  font-size: clamp(1.5rem, 3vw, 1.75rem);
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1.2;
+  text-align: center;
+  text-wrap: balance;
+}
+
+.conversation[data-empty="true"] .thread {
+  display: none;
+}
+
+.conversation[data-empty="true"] .footer + section {
+  grid-row: 3;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .emptyHeading {
+    animation: welcome-in 220ms ease-out both;
+  }
+
+  @keyframes welcome-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+.emptyAttachments {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  overflow: auto;
+  place-items: safe center;
+  padding: 0 var(--space-3) var(--space-4);
+}

@@ -11,25 +11,49 @@ export function Sheet({
   open,
   onOpenChange,
   initialFocus,
+  finalFocus,
+  wide,
+  keepMounted,
+  side,
+  popupClassName,
 }: {
   title: string;
   description?: string;
-  trigger: ReactElement;
+  trigger?: ReactElement;
   children?: ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   initialFocus?: Dialog.Popup.Props["initialFocus"];
+  finalFocus?: Dialog.Popup.Props["finalFocus"];
+  wide?: boolean;
+  keepMounted?: boolean;
+  side?: "left" | "right";
+  popupClassName?: string;
 }) {
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Trigger render={trigger} />
-      <Dialog.Portal>
-        <Dialog.Backdrop className={styles.backdrop} />
-        <Dialog.Viewport className={styles.viewport}>
-          <Dialog.Popup className={styles.popup} initialFocus={initialFocus}>
+      {trigger ? <Dialog.Trigger render={trigger} /> : null}
+      <Dialog.Portal keepMounted={keepMounted}>
+        <Dialog.Backdrop className={styles.backdrop} data-side={side} />
+        <Dialog.Viewport className={styles.viewport} data-side={side}>
+          <Dialog.Popup
+            className={[styles.popup, popupClassName].filter(Boolean).join(" ")}
+            aria-modal="true"
+            initialFocus={initialFocus}
+            finalFocus={finalFocus}
+            data-wide={wide}
+          >
             <div className={styles.header}>
               <Dialog.Title className={styles.title}>{title}</Dialog.Title>
-              <Dialog.Close render={<IconButton icon="close" label="Zamknij okno" />} />
+              <Dialog.Close
+                render={
+                  <IconButton
+                    icon="close"
+                    label="Zamknij okno"
+                    tooltip={side ? false : undefined}
+                  />
+                }
+              />
             </div>
             {description ? (
               <Dialog.Description className={styles.description}>{description}</Dialog.Description>
