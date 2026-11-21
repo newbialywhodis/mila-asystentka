@@ -158,26 +158,6 @@
   line-height: 1.75;
 }
 
-.footer {
-  display: flex;
-  justify-content: space-between;
-  gap: 32px;
-  padding-block: 36px max(32px, env(safe-area-inset-bottom));
-  color: var(--muted);
-  font-size: 0.8125rem;
-  line-height: 1.7;
-}
-
-.footer > p:last-child {
-  max-inline-size: 56ch;
-}
-
-.footerBrand {
-  margin-inline-end: 10px;
-  color: var(--primary);
-  font-weight: 650;
-}
-
 @media (hover: hover) {
   .brand:hover {
     color: var(--primary-hover);
@@ -220,12 +200,6 @@
   .trust,
   .privacy {
     padding-block: 36px;
-  }
-
-  .footer {
-    flex-direction: column;
-    gap: 12px;
-    padding-block-start: 28px;
   }
 }
 

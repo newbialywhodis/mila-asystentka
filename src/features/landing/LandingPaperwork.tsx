@@ -1,8 +1,8 @@
-import { ButtonLink } from "../../components/ui/Button";
-import { Icon } from "../../components/ui/Icon";
-import { PaperworkScene } from "./PaperworkScene";
-import sectionStyles from "./LandingSection.module.css";
-import styles from "./LandingPaperwork.module.css";
+import { ButtonLink } from '../../components/ui/Button'
+import { Icon } from '../../components/ui/Icon'
+import { PaperworkScene } from './PaperworkScene'
+import sectionStyles from './LandingSection.module.css'
+import styles from './LandingPaperwork.module.css'
 
 export function LandingPaperwork() {
   return (
@@ -21,11 +21,11 @@ export function LandingPaperwork() {
         <PaperworkScene />
         <div className={sectionStyles.action}>
           <ButtonLink href="/chat" variant="brand" size="xl">
-            Zacznij z Milą <Icon name="arrow" />
+            Porozmawiaj z Milą <Icon name="arrow" />
           </ButtonLink>
         </div>
         <p className={styles.note}>Ty podejmujesz kolejne kroki. Mila pomaga je uporządkować.</p>
       </div>
     </section>
-  );
+  )
 }

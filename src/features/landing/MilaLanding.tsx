@@ -1,18 +1,19 @@
-import Link from "next/link";
-import localFont from "next/font/local";
-import { LandingFaq } from "./LandingFaq";
-import { LandingFamilyHug } from "./LandingFamilyHug";
-import { LandingHero } from "./LandingHero";
-import { LandingTopics } from "./LandingTopics";
-import { LandingHowItWorks } from "./LandingHowItWorks";
-import { LandingPaperwork } from "./LandingPaperwork";
-import styles from "./MilaLanding.module.css";
+import Link from 'next/link'
+import localFont from 'next/font/local'
+import { LandingFaq } from './LandingFaq'
+import { LandingFooter } from './LandingFooter'
+import { LandingFamilyHug } from './LandingFamilyHug'
+import { LandingHero } from './LandingHero'
+import { LandingTopics } from './LandingTopics'
+import { LandingHowItWorks } from './LandingHowItWorks'
+import { LandingPaperwork } from './LandingPaperwork'
+import styles from './MilaLanding.module.css'
 
 const landingFont = localFont({
-  src: "./fonts/Manrope-Variable.ttf",
-  display: "swap",
-  weight: "400 800",
-});
+  src: './fonts/Manrope-Variable.ttf',
+  display: 'swap',
+  weight: '400 800',
+})
 
 export function MilaLanding() {
   return (
@@ -40,19 +41,11 @@ export function MilaLanding() {
         <LandingHero />
         <LandingTopics />
         <LandingHowItWorks />
+        <LandingFaq />
         <LandingPaperwork />
         <LandingFamilyHug />
-        <LandingFaq />
       </main>
-      <footer className={`${styles.container} ${styles.footer}`}>
-        <p>
-          <span className={styles.footerBrand} translate="no">
-            Mila
-          </span>{" "}
-          Przewodnik przyszłej mamy
-        </p>
-        <p>Niezależny prototyp na HackNation.</p>
-      </footer>
+      <LandingFooter />
     </div>
-  );
+  )
 }
