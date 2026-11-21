@@ -1,0 +1,175 @@
+.preview {
+  min-inline-size: 0;
+  max-inline-size: 450px;
+  margin: 0;
+}
+
+.greeting {
+  position: relative;
+  display: flex;
+  block-size: 170px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.mascot {
+  display: block;
+  inline-size: 176px;
+  block-size: 176px;
+  flex: none;
+}
+
+.mascot svg {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  overflow: visible;
+}
+
+.bubble {
+  position: relative;
+  padding: 14px 18px;
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius-md) var(--radius-md) var(--radius-md) 4px;
+  margin-block-end: 32px;
+  background: var(--surface);
+  color: var(--primary);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.plan {
+  position: relative;
+  padding: 28px;
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-composer);
+}
+
+.planHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-block-end: 22px;
+  border-block-end: 1px solid var(--line);
+}
+
+.planLabel {
+  margin-block-end: 6px;
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.planHeading h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.35;
+}
+
+.planIcon {
+  display: grid;
+  inline-size: 40px;
+  block-size: 40px;
+  flex: none;
+  place-items: center;
+  border-radius: var(--radius-sm);
+  background: var(--accent-surface);
+  color: var(--primary);
+}
+
+.items {
+  display: grid;
+  gap: 24px;
+  padding: 24px 0;
+  margin: 0;
+  list-style: none;
+}
+
+.items li {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.items li > div {
+  min-inline-size: 0;
+}
+
+.itemIcon {
+  display: flex;
+  flex: none;
+  padding-block-start: 2px;
+  color: var(--primary);
+}
+
+.items h3 {
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.items p {
+  margin-block-start: 4px;
+  color: var(--muted);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.planNote {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-block-start: 18px;
+  border-block-start: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+}
+
+.planNote svg {
+  flex: none;
+  color: var(--primary);
+}
+
+.preview figcaption {
+  margin-block-start: 14px;
+  color: var(--quiet);
+  font-size: 0.75rem;
+  line-height: 1.6;
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  .mascot {
+    inline-size: 140px;
+    block-size: 140px;
+  }
+
+  .greeting {
+    block-size: 148px;
+    gap: 0;
+  }
+
+  .bubble {
+    padding: 12px;
+    font-size: 0.8125rem;
+  }
+
+  .plan {
+    padding: 22px;
+  }
+}
+
+@media (max-width: 760px) {
+  .preview {
+    inline-size: 100%;
+    justify-self: center;
+  }
+
+  .plan {
+    padding: 24px;
+  }
+}

@@ -1,5 +1,5 @@
-import { MilaGuide } from "../features/guide/MilaGuide";
+import { MilaLanding } from "../features/landing/MilaLanding";
 
 export default function Home() {
-  return <MilaGuide />;
+  return <MilaLanding />;
 }

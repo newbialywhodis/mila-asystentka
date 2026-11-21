@@ -1,6 +1,6 @@
 import { createContext, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import type { CSSProperties, KeyboardEvent, PointerEvent, ReactNode } from "react";
-import { IconButton } from "../../components/ui/Button";
+import { ButtonLink, IconButton } from "../../components/ui/Button";
 import type { IconName } from "../../components/ui/Icon";
 import styles from "./MilaGuide.module.css";
 
@@ -104,6 +104,8 @@ export function GuideLayout({ children, report }: { children: ReactNode; report:
 
   return (
     <main
+      id="chat-main"
+      tabIndex={-1}
       ref={layout}
       className={styles.layout}
       data-compact={compact}
@@ -116,7 +118,21 @@ export function GuideLayout({ children, report }: { children: ReactNode; report:
         } as CSSProperties
       }
     >
+      <a className={styles.skipLink} href="#chat-conversation">
+        Przejdź do rozmowy
+      </a>
+      <h1 className={styles.visuallyHidden}>Rozmowa z Milą</h1>
       <div className={styles.toolbar}>
+        <ButtonLink
+          href="/"
+          variant="ghost"
+          size="lg"
+          className={styles.homeLink}
+          aria-label="Mila — strona główna"
+          translate="no"
+        >
+          Mila
+        </ButtonLink>
         {sides.map((side) => {
           const panel = panels[side];
           const open = visibleSides.includes(side);

@@ -1,7 +1,8 @@
-import { animateMascot, createMascot } from "mascotz";
-import type { MascotController, Mood } from "mascotz";
+import { animateMascot } from "mascotz";
+import type { MascotController } from "mascotz";
 import { useEffect, useId, useMemo, useRef, useSyncExternalStore } from "react";
 import type { RefObject } from "react";
+import { createMilaFace } from "./createMilaFace";
 import styles from "./MilaMascot.module.css";
 
 export type MascotReaction = { kind: "nod" | "blink" | "smile" };
@@ -12,16 +13,6 @@ function subscribeMotion(notify: () => void) {
   const media = window.matchMedia(motionQuery);
   media.addEventListener("change", notify);
   return () => media.removeEventListener("change", notify);
-}
-
-function drawFace(id: string, mood: Mood) {
-  const color = "#ffadd0";
-  return createMascot({ seed: "Mila", id, body: "round", eyes: "dot", color, mood, label: false })
-    .replace(`fill="${color}"`, `fill="url(#${id}-pink)"`)
-    .replace(
-      "<defs>",
-      `<defs><linearGradient id="${id}-pink" x2=".28" y2="1"><stop stop-color="#ffdaec"/><stop offset="1" stop-color="#f891bc"/></linearGradient>`,
-    );
 }
 
 export function MilaMascot({
@@ -42,7 +33,7 @@ export function MilaMascot({
     () => true,
   );
   const mood = reaction?.kind === "smile" ? "happy" : thinking ? "thinking" : "idle";
-  const markup = useMemo(() => ({ __html: drawFace(id, mood) }), [id, mood]);
+  const markup = useMemo(() => ({ __html: createMilaFace(id, mood) }), [id, mood]);
 
   useEffect(() => {
     if (reduced || !face.current) return;

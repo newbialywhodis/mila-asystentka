@@ -11,7 +11,7 @@ bun install --frozen-lockfile
 bun run dev
 ```
 
-Otwórz [localhost:3000](http://localhost:3000). Rozmowa, raport i gotowe nagrania działają bez kluczy API. Zmiany sprawdzisz poleceniem `bun run check`.
+Otwórz [localhost:3000](http://localhost:3000), aby zobaczyć stronę główną Mili. Przycisk „Rozpocznij rozmowę” prowadzi do [/chat](http://localhost:3000/chat). Rozmowa, raport i gotowe nagrania działają bez kluczy API. Odpowiedzi są przechowywane w bieżącej sesji; odświeżenie strony rozpoczyna rozmowę od nowa. Zmiany sprawdzisz poleceniem `bun run check`.
 
 ## Opcjonalne klucze
 

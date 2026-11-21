@@ -184,6 +184,7 @@ export function MilaGuide() {
       }
     >
       <ScrollArea
+        id="chat-conversation"
         rootClassName={styles.chatScrollArea}
         renderViewport={<section ref={scrollport} />}
         className={styles.scrollport}
