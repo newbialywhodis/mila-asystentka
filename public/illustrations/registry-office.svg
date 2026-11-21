@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="430" viewBox="0 0 480 430" fill="none">
+  <g stroke="#e2e5df" stroke-width="1.4" stroke-linejoin="round">
+    <path d="M3 395V121h106v274M17 121V98h78v23M28 98V78h56v20" fill="#f5f6f2"/>
+    <path d="M23 150h20v34H23zm48 0h20v34H71zM23 210h20v34H23zm48 0h20v34H71zM23 270h20v34H23zm48 0h20v34H71z" fill="#fdfcf9"/>
+    <path d="M327 395V209h64v186m-52-161h12v25h-12zm25 0h12v25h-12zm-25 47h12v25h-12zm25 0h12v25h-12z"/>
+  </g>
+  <g stroke="#655e60" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M-22 173 137 76l159 97v224H-22Z" fill="#fdfcf9"/>
+    <path d="M296 173h57v224h-57Z" fill="#eeeee7"/>
+    <path d="M-30 168 137 65l169 104-10 12-159-96L-22 181Z" fill="#e6eade"/>
+    <path d="M306 169h57l-10 12h-57m-303 9h289m-289 7h289"/>
+    <path d="M122 128a15 15 0 1 1 30 0 15 15 0 0 1-30 0Z" fill="#fdfcf9"/>
+    <path d="M137 118v11l7 4"/>
+    <path d="M20 218h47v62H20zm83 0h47v62h-47zm83 0h47v62h-47z" fill="#f0f2ea"/>
+    <path d="M43.5 219v60m83-60v60m83-60v60M21 250h45m38 0h45m38 0h45M16 285h55m28 0h55m28 0h55"/>
+    <path d="M21 224h12m74 0h10m74 0h10" stroke="#fff" stroke-width="3"/>
+    <path d="M102 397v-64a35 35 0 0 1 70 0v64" fill="#e4e8de"/>
+    <path d="M111 397v-63a26 26 0 0 1 52 0v63m-26-88v88m-26-63h52"/>
+    <path d="M129 359v10m16-10v10" stroke-width="2.5"/>
+    <path d="M93 397h88v8H93zm-9 8h106v9H84z" fill="#fdfcf9"/>
+    <path d="M17 320h48v54H17zm175 0h48v54h-48z" fill="#f0f2ea"/>
+    <path d="M41 321v52m175-52v52M18 345h46m129 0h46M12 380h59m116 0h59"/>
+    <path d="M272 207h10m-10 8h10m-10 8h10m-10 8h10m-10 8h10m-10 8h10M273 305h10m-10 8h10m-10 8h10m-10 8h10m-10 8h10m-10 8h10" stroke="#c9c8bf"/>
+    <path d="M310 220h25v60h-25zm0 100h25v54h-25z" fill="#f5f6f1"/>
+    <path d="M322 221v58m0 42v52m-11-123h23m-23 96h23"/>
+    <path d="M200 292h53v17h-53Z" fill="#fdfcf9"/>
+    <path d="M207 298h23m-23 5h35" stroke="#a29b99"/>
+    <path d="M73 190v-21h128v21" fill="#fdfcf9"/>
+    <path d="M-15 397h107m90 0h173"/>
+    <path d="M365 403c-11-8-8-20 2-21-7-14 3-26 14-22 2-21 26-22 30-5 16-6 28 6 22 19 13 0 22 15 12 29" fill="#e6eade"/>
+    <path d="M387 400c-1-19 3-39 8-48m-8 33-11-11m13 3 14-12m-15 29 20-11" stroke="#9aab94"/>
+    <path d="M343 411h122M1 414h70m133 0h127" stroke="#c7c8be"/>
+  </g>
+  <text x="137" y="184" fill="#655e60" font-family="sans-serif" font-size="8" letter-spacing="1.6" text-anchor="middle">URZĄD STANU CYWILNEGO</text>
+</svg>

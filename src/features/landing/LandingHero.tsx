@@ -1,32 +1,27 @@
 import { ButtonLink } from "../../components/ui/Button";
 import { Icon } from "../../components/ui/Icon";
-import { PlanPreview } from "./PlanPreview";
-import styles from "./MilaLanding.module.css";
+import { HeroScene } from "./HeroScene";
+import styles from "./LandingHero.module.css";
 
 export function LandingHero() {
   return (
-    <section className={`${styles.container} ${styles.hero}`} aria-labelledby="hero-title">
+    <section className={styles.hero} aria-labelledby="hero-title">
       <div className={styles.heroCopy}>
-        <p className={styles.introduction}>Poznaj Milę, przewodniczkę przyszłej mamy</p>
         <h1 id="hero-title">
-          Więcej spokoju.
-          <br />
-          Mniej formalności.
+          <span>Mniej formalności.</span> <span>Więcej czasu dla Was.</span>
         </h1>
         <p className={styles.heroDescription}>
-          Przygotowujesz się na dziecko? Mila pomoże Ci poukładać świadczenia, terminy i sprawy do
-          załatwienia. Krok po kroku, z uwagą na Twoją sytuację.
+          Mila pomoże Ci odnaleźć się w świadczeniach, dokumentach i ważnych terminach związanych z
+          narodzinami dziecka.
         </p>
         <div className={styles.heroActions}>
-          <ButtonLink href="/chat" variant="brand" size="lg">
-            Rozpocznij rozmowę
+          <ButtonLink href="/chat" variant="brand" size="xl">
+            Porozmawiaj z Milą <Icon name="arrow" />
           </ButtonLink>
-          <p className={styles.reassurance}>
-            <Icon name="check" size="sm" /> Bez zakładania konta
-          </p>
         </div>
+        <p className={styles.reassurance}>Bez zakładania konta.</p>
       </div>
-      <PlanPreview />
+      <HeroScene />
     </section>
   );
 }

@@ -7,7 +7,7 @@ import { DateChoice, MultiChoice, SingleChoice } from "./QuestionControls";
 import type { SubmitAnswer } from "./QuestionControls";
 import { getFullQuestionText } from "./questionText";
 import { canSkipQuestion, getDateBounds, guideQuestions } from "./flow";
-import type { Answer, QuestionId } from "./flow";
+import type { Answer, PlanInterest, QuestionId } from "./flow";
 import styles from "./QuestionTurn.module.css";
 import messageStyles from "./ThreadMessage.module.css";
 
@@ -15,6 +15,7 @@ export function QuestionTurn({
   id,
   text,
   previousAnswer,
+  suggestedInterests,
   asOf,
   birthDate,
   onAnswer,
@@ -23,6 +24,7 @@ export function QuestionTurn({
   id: QuestionId;
   text: string;
   previousAnswer?: Answer;
+  suggestedInterests?: readonly PlanInterest[];
   asOf: string;
   birthDate?: string;
   onAnswer?: SubmitAnswer;
@@ -125,7 +127,7 @@ export function QuestionTurn({
             <MultiChoice
               options={question.options}
               labelledBy={messageId}
-              selected={previousAnswer}
+              selected={previousAnswer !== undefined ? previousAnswer : suggestedInterests}
               onAnswer={selectAnswer}
             />
           ) : (

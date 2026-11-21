@@ -1,0 +1,19 @@
+.context {
+  padding: 14px 18px;
+  border-inline-start: 2px solid var(--primary);
+  border-radius: 0 var(--radius-xs) var(--radius-xs) 0;
+  margin-block-end: 28px;
+  background: var(--accent-surface);
+  color: var(--muted);
+  font-size: 0.8125rem;
+  line-height: 1.65;
+}
+
+.context strong {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.context p + p {
+  margin-block-start: 6px;
+}

@@ -7,7 +7,7 @@
 .greeting {
   position: relative;
   display: flex;
-  block-size: 170px;
+  min-block-size: 170px;
   align-items: center;
   justify-content: center;
   gap: 8px;
@@ -29,6 +29,7 @@
 
 .bubble {
   position: relative;
+  min-inline-size: 0;
   padding: 14px 18px;
   border: 1px solid var(--accent-border);
   border-radius: var(--radius-md) var(--radius-md) var(--radius-md) 4px;

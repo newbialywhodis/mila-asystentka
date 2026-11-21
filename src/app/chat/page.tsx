@@ -1,11 +1,17 @@
 import type { Metadata } from "next";
 import { MilaGuide } from "../../features/guide/MilaGuide";
+import { parseStartTopics } from "../../features/guide/startTopics";
 
 export const metadata: Metadata = {
   title: "Rozmowa z Milą — Twój plan",
   description: "Odpowiedz na krótkie pytania i ułóż plan świadczeń, terminów i formalności.",
 };
 
-export default function ChatPage() {
-  return <MilaGuide />;
+export default async function ChatPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const { topics } = await searchParams;
+  return <MilaGuide initialTopics={parseStartTopics(topics)} />;
 }

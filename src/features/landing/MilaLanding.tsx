@@ -1,13 +1,23 @@
 import Link from "next/link";
-import { ButtonLink } from "../../components/ui/Button";
+import localFont from "next/font/local";
 import { LandingFaq } from "./LandingFaq";
 import { LandingHero } from "./LandingHero";
-import { LandingSteps } from "./LandingSteps";
+import { LandingTopics } from "./LandingTopics";
+import { LandingHowItWorks } from "./LandingHowItWorks";
+import { LandingPaperwork } from "./LandingPaperwork";
+import { LandingTrust } from "./LandingTrust";
+import { LandingPrivacy } from "./LandingPrivacy";
 import styles from "./MilaLanding.module.css";
+
+const landingFont = localFont({
+  src: "./fonts/Manrope-Variable.ttf",
+  display: "swap",
+  weight: "400 800",
+});
 
 export function MilaLanding() {
   return (
-    <div className={styles.page}>
+    <div className={`${styles.page} ${landingFont.className}`}>
       <a className={styles.skipLink} href="#main">
         Przejdź do treści
       </a>
@@ -19,30 +29,22 @@ export function MilaLanding() {
           <a className={styles.sectionLink} href="#jak-to-dziala">
             Jak to działa
           </a>
+          <a className={styles.sectionLink} href="#przykladowy-plan">
+            Przykładowy plan
+          </a>
           <a className={styles.sectionLink} href="#pytania">
             Pytania i odpowiedzi
           </a>
-          <ButtonLink href="/chat" variant="outline" size="lg">
-            Rozpocznij rozmowę
-          </ButtonLink>
         </nav>
       </header>
       <main id="main" tabIndex={-1}>
         <LandingHero />
-        <LandingSteps />
+        <LandingTopics />
+        <LandingHowItWorks />
+        <LandingPaperwork />
+        <LandingTrust />
+        <LandingPrivacy />
         <LandingFaq />
-        <section
-          className={`${styles.container} ${styles.invitation}`}
-          aria-labelledby="start-title"
-        >
-          <div>
-            <h2 id="start-title">Zacznij od jednej rozmowy.</h2>
-            <p>Resztę poukładacie razem z Milą. W Twoim tempie.</p>
-          </div>
-          <ButtonLink href="/chat" variant="brand" size="lg">
-            Rozpocznij rozmowę
-          </ButtonLink>
-        </section>
       </main>
       <footer className={`${styles.container} ${styles.footer}`}>
         <p>
@@ -52,7 +54,8 @@ export function MilaLanding() {
           Przewodnik przyszłej mamy
         </p>
         <p>
-          Prototyp na HackNation. Mila pomaga się przygotować; nie zastępuje informacji z urzędu.
+          Niezależny prototyp na HackNation. <a href="#zrodla">Źródła i ograniczenia</a>.{" "}
+          <a href="#dane">Informacja o danych</a>.
         </p>
       </footer>
     </div>

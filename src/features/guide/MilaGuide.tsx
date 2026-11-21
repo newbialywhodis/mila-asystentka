@@ -27,13 +27,16 @@ import { QuestionTurn } from "./QuestionTurn";
 import { readTextAnswer } from "./textInput";
 import { UserMessage } from "./ThreadMessage";
 import styles from "./MilaGuide.module.css";
+import { StartTopicContext } from "./StartTopicContext";
+import { preferredPlanSection, suggestedPlanInterests } from "./startTopics";
+import type { StartTopic } from "./startTopics";
 
 type MessageLocation = { key: string; scrollOnly?: boolean };
 
-export function MilaGuide() {
+export function MilaGuide({ initialTopics = [] }: { initialTopics?: readonly StartTopic[] }) {
   const [conversation, setConversation] = useState(initialConversation);
   const [asOf, setAsOf] = useState("");
-  const [section, setSection] = useState<PlanSection>("timeline");
+  const [section, setSection] = useState<PlanSection>(() => preferredPlanSection(initialTopics));
   const [checked, setChecked] = useState<string[]>([]);
   const [reaction, setReaction] = useState<MascotReaction>();
   const scrollport = useRef<HTMLElement>(null);
@@ -87,7 +90,7 @@ export function MilaGuide() {
     nextLocation.current = { key: "continue", scrollOnly: text !== undefined };
     if (!asOf) setAsOf(date);
     if (updated.answers.stage !== answers.stage) setChecked([]);
-    setSection("timeline");
+    setSection(preferredPlanSection(initialTopics));
     setConversation((previous) =>
       previous === conversation ? updated : submitAnswer(previous, index, value, text),
     );
@@ -194,6 +197,7 @@ export function MilaGuide() {
         tabIndex={0}
       >
         <div className={styles.thread} role="log" aria-label="Wiadomości">
+          <StartTopicContext topics={initialTopics} />
           {messages.map((message, index) => {
             switch (message.kind) {
               case "question":
@@ -203,6 +207,7 @@ export function MilaGuide() {
                     id={message.question}
                     text={message.text}
                     previousAnswer={message.previousAnswer}
+                    suggestedInterests={suggestedPlanInterests(initialTopics)}
                     asOf={asOf}
                     birthDate={profile.birthDate}
                     onAnswer={index === activeIndex ? (value) => answer(index, value) : undefined}

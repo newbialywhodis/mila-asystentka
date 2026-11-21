@@ -2,7 +2,7 @@ import { animateMascot } from "mascotz";
 import type { MascotController } from "mascotz";
 import { useEffect, useId, useMemo, useRef, useSyncExternalStore } from "react";
 import type { RefObject } from "react";
-import { createMilaFace } from "./createMilaFace";
+import { createMilaFace } from "../../components/mascot/createMilaFace";
 import styles from "./MilaMascot.module.css";
 
 export type MascotReaction = { kind: "nod" | "blink" | "smile" };

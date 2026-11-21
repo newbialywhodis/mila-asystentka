@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="160" viewBox="0 0 180 160" fill="none">
+  <!-- Mila: Mascotz seed "Mila", round body, dot eyes, idle mood.
+       Original body and face proportions retained in an editorial line-art adaptation. -->
+  <ellipse cx="89" cy="147" rx="64" ry="5" fill="#eeeee7"/>
+  <g stroke="#655e60" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M30 82a60 60 0 1 1 120 0 60 60 0 1 1-120 0Z" fill="#ffcee1"/>
+    <path d="M44 56c4-9 10-15 18-18" stroke="#fff5f9" stroke-width="4"/>
+    <path d="M31 93c-11 3-17-3-15-11m134 8c10-1 16-8 16-17"/>
+    <path d="m162 75 4-5 4 3"/>
+    <path d="M65 139c-1 5-4 7-9 7m58-7c1 5 4 7 9 7"/>
+  </g>
+  <g fill="#292927">
+    <circle cx="67" cy="77" r="10.8"/>
+    <circle cx="113" cy="77" r="10.8"/>
+  </g>
+  <g fill="#eeadca">
+    <ellipse cx="53" cy="99" rx="8" ry="4"/>
+    <ellipse cx="127" cy="99" rx="8" ry="4"/>
+  </g>
+</svg>

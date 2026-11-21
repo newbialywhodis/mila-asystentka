@@ -1,14 +1,12 @@
 import { Icon } from "../../components/ui/Icon";
-import { createMilaFace } from "../guide/createMilaFace";
+import { createMilaFace } from "../../components/mascot/createMilaFace";
+import { formatDate } from "../guide/flow";
+import { exampleRegistration } from "./exampleCase";
 import styles from "./PlanPreview.module.css";
 
-const previewItems = [
-  { icon: "layers", title: "Świadczenia", description: "Możliwości wsparcia dla Twojej rodziny" },
-  { icon: "calendar", title: "Terminy", description: "Ważne daty zebrane w jednym miejscu" },
-  { icon: "tasks", title: "Formalności", description: "Lista spraw do załatwienia, krok po kroku" },
-] as const;
-
 export function PlanPreview() {
+  const { procedure, deadlines } = exampleRegistration;
+  const deadline = deadlines[0];
   return (
     <figure className={styles.preview} aria-labelledby="preview-caption">
       <div className={styles.greeting}>
@@ -26,8 +24,8 @@ export function PlanPreview() {
       <div className={styles.plan}>
         <div className={styles.planHeading}>
           <div>
-            <p className={styles.planLabel}>Po naszej rozmowie</p>
-            <h2>Twój osobisty plan</h2>
+            <p className={styles.planLabel}>Przykład · fikcyjne dane</p>
+            <h2>Plan Anny po narodzinach</h2>
           </div>
           <span className={styles.planIcon}>
             <Icon name="contract" />
@@ -35,24 +33,36 @@ export function PlanPreview() {
         </div>
         {/* oxlint-disable-next-line jsx-a11y/no-redundant-roles -- Safari drops list semantics with list-style: none. */}
         <ul className={styles.items} role="list">
-          {previewItems.map((item) => (
-            <li key={item.title}>
-              <span className={styles.itemIcon}>
-                <Icon name={item.icon} />
-              </span>
-              <div>
-                <h3>{item.title}</h3>
-                <p>{item.description}</p>
-              </div>
-            </li>
-          ))}
+          <li>
+            <span className={styles.itemIcon}>
+              <Icon name="calendar" />
+            </span>
+            <div>
+              <h3>{procedure.title}</h3>
+              <p>{deadline.title}</p>
+              <p>
+                {deadline.date ? (
+                  <time dateTime={deadline.date}>Do {formatDate(deadline.date)}</time>
+                ) : null}
+              </p>
+            </div>
+          </li>
+          <li>
+            <span className={styles.itemIcon}>
+              <Icon name="tasks" />
+            </span>
+            <div>
+              <h3>Najbliższa czynność</h3>
+              <p>{procedure.steps[0]}</p>
+            </div>
+          </li>
         </ul>
         <p className={styles.planNote}>
           <Icon name="shield" size="sm" /> Z odnośnikami do oficjalnych źródeł
         </p>
       </div>
       <figcaption id="preview-caption">
-        Przykładowy widok planu. Twój dopasujemy do Ciebie.
+        Fragment planu. <a href="#przykladowy-plan">Zobacz sytuację Anny i szczegóły</a>.
       </figcaption>
     </figure>
   );

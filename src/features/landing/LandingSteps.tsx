@@ -2,19 +2,19 @@ import styles from "./MilaLanding.module.css";
 
 const steps = [
   {
-    title: "Opowiedz, na jakim jesteś etapie",
+    title: "Podaj kilka informacji o sobie",
     description:
-      "Planujesz ciążę, czekasz na dziecko lub jesteś już mamą? Zacznij od tego, co jest teraz ważne dla Ciebie.",
+      "Wybierz etap: planowanie ciąży, ciąża lub okres po narodzinach. Na etapie planowania otrzymasz listę tematów do przygotowania.",
   },
   {
     title: "Odpowiedz na krótkie pytania",
     description:
-      "Mila zapyta o Twoją sytuację i dopasuje kolejne pytania do odpowiedzi. Bez przedzierania się przez długie formularze.",
+      "Kolejne pytania zależą od Twoich odpowiedzi. Większość możesz pominąć — potrzebne są wybór etapu i, jeśli padnie to pytanie, sytuacja zawodowa.",
   },
   {
-    title: "Sprawdź swój plan",
+    title: "Sprawdź plan i kolejny krok",
     description:
-      "Zobacz możliwe świadczenia, ważne terminy i listę formalności. Wróć do odpowiedzi, jeśli zechcesz coś zmienić.",
+      "Zobacz możliwe świadczenia, terminy i zadania. Możesz poprawić wcześniejsze odpowiedzi; Mila uwzględni zmianę i zapyta o brakujące informacje.",
   },
 ];
 
@@ -26,11 +26,7 @@ export function LandingSteps() {
       aria-labelledby="steps-title"
     >
       <div className={styles.sectionHeading}>
-        <h2 id="steps-title">
-          Od „od czego zacząć?”
-          <br />
-          do „wiem, co dalej”.
-        </h2>
+        <h2 id="steps-title">Jak to działa</h2>
         <p>
           Nie musisz znać nazw świadczeń ani urzędowych procedur. Wystarczy, że zaczniesz rozmowę.
         </p>
@@ -47,15 +43,6 @@ export function LandingSteps() {
           </li>
         ))}
       </ol>
-      <div className={styles.sources}>
-        <p>W planie znajdziesz odnośniki do źródeł, żeby łatwo sprawdzić szczegóły.</p>
-        {/* oxlint-disable-next-line jsx-a11y/no-redundant-roles -- Safari drops list semantics with list-style: none. */}
-        <ul aria-label="Wybrane źródła w katalogu Mili" role="list">
-          <li>gov.pl</li>
-          <li>ZUS</li>
-          <li>Państwowa Inspekcja Pracy</li>
-        </ul>
-      </div>
     </section>
   );
 }

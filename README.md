@@ -15,6 +15,10 @@ Otwórz [localhost:3000](http://localhost:3000), aby zobaczyć stronę główną
 
 ## Opcjonalne klucze
 
+Podgląd udostępniania korzysta z lokalnej grafiki Open Graph. Gdy znasz docelowy publiczny adres,
+ustaw `MILA_SITE_URL` na jego pełną wartość (z `https://`), aby metadane wskazywały właściwą domenę.
+Bez tej zmiennej landing nie deklaruje adresu canonical. Nie ustawiaj jej na przykładową domenę.
+
 Wpisz potrzebne klucze w `.env.local` w katalogu projektu.
 
 - `AI_GATEWAY_API_KEY` włącza odpowiedzi AI na otwarte pytania. Po dodaniu klucza uruchom ponownie serwer.

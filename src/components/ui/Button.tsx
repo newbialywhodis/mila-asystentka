@@ -13,7 +13,7 @@ type ButtonVariant =
   | "link"
   | "brand";
 type IconButtonSize = "icon-xs" | "icon-sm" | "icon" | "icon-lg";
-type ButtonSize = "xs" | "sm" | "default" | "lg" | IconButtonSize;
+type ButtonSize = "xs" | "sm" | "default" | "lg" | "xl" | IconButtonSize;
 
 type ButtonProps = ComponentPropsWithRef<"button"> & {
   variant?: ButtonVariant;
