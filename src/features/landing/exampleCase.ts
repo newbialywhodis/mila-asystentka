@@ -1,4 +1,3 @@
-import version from "../../data/version.json";
 import { generatePlan } from "../../engine/plan";
 import { getProfile } from "../guide/flow";
 import type { Answers } from "../guide/flow";
@@ -23,4 +22,3 @@ function exampleResult(id: string) {
 
 export const exampleRegistration = exampleResult("BIRTH_REGISTRATION");
 export const exampleAllowance = exampleResult("MATERNITY_ALLOWANCE");
-export const exampleVersion = version.rulesetVersion;

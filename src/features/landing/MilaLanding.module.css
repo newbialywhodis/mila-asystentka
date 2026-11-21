@@ -89,15 +89,6 @@
   line-height: 1.75;
 }
 
-.exampleBackdrop {
-  background: var(--landing-ground);
-}
-
-.stepsSection {
-  padding-block: 70px 0;
-  border-block-start: 1px solid var(--line);
-}
-
 .sectionHeading {
   display: grid;
   grid-template-columns: 1.12fr 1fr;
@@ -114,40 +105,6 @@
 
 .sectionHeading > p {
   max-inline-size: 40ch;
-  color: var(--muted);
-  line-height: 1.75;
-}
-
-.steps {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 44px;
-  padding: 0;
-  margin-block: 44px 56px;
-  list-style: none;
-}
-
-.stepNumber {
-  display: grid;
-  inline-size: 36px;
-  block-size: 36px;
-  place-items: center;
-  border-radius: 50%;
-  margin-block-end: 18px;
-  background: var(--accent-surface);
-  color: var(--primary);
-  font-size: 0.875rem;
-  font-weight: 600;
-}
-
-.steps h3 {
-  margin-block-end: 10px;
-  font-size: 1.0625rem;
-  font-weight: 600;
-  line-height: 1.5;
-}
-
-.steps p {
   color: var(--muted);
   line-height: 1.75;
 }
@@ -256,25 +213,6 @@
   line-height: 1.75;
 }
 
-.invitation {
-  display: flex;
-  inline-size: calc(100% - 48px);
-  max-inline-size: 1120px;
-  align-items: center;
-  justify-content: space-between;
-  gap: 32px;
-  padding: 40px 44px;
-  border: 1px solid var(--accent-border);
-  border-radius: var(--radius-lg);
-  background: var(--accent-surface);
-}
-
-.invitation p {
-  margin-block-start: 12px;
-  color: var(--muted);
-  line-height: 1.75;
-}
-
 .footer {
   display: flex;
   justify-content: space-between;
@@ -314,10 +252,6 @@
     gap: 20px;
   }
 
-  .steps {
-    gap: 28px;
-  }
-
   .faq {
     gap: 40px;
   }
@@ -344,27 +278,6 @@
     gap: 24px;
   }
 
-  .stepsSection {
-    padding-block-start: 44px;
-  }
-
-  .steps {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 28px;
-    margin-block: 32px 40px;
-  }
-
-  .steps li {
-    position: relative;
-    padding-inline-start: 54px;
-  }
-
-  .stepNumber {
-    position: absolute;
-    inset-block-start: 0;
-    inset-inline-start: 0;
-  }
-
   .trust,
   .privacy {
     padding-block: 36px;
@@ -381,14 +294,6 @@
 
   .questions details > p {
     padding-inline-end: 0;
-  }
-
-  .invitation {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 24px;
-    padding: 28px 24px;
-    border-radius: var(--radius-md);
   }
 
   .footer {
