@@ -7,12 +7,14 @@ import type { QuestionId } from "../../../features/guide/flow";
 import {
   aboutMilaAnswer,
   findHelpAnswer,
+  maxHelpAnswerLength,
   maxHelpQuestionLength,
   maxHelpSources,
   missingHelpAnswer,
   unavailableHelpAnswer,
 } from "../../../features/guide/helpAnswers";
 import { getHelpKnowledge } from "../../../features/guide/helpKnowledge";
+import { createSpeechToken } from "../../../features/guide/milaVoice";
 
 export const maxDuration = 20;
 
@@ -21,7 +23,6 @@ const openAIReasoningEffort = new Map<string, "minimal" | "none">([
   [defaultModel, "minimal"],
   ["openai/gpt-6-luna", "none"],
 ]);
-const maxHelpAnswerLength = 1_200;
 const sourceId = z.enum(Object.keys(sources));
 const helpRequest = z.strictObject({
   question: z.string().trim().min(1).max(maxHelpQuestionLength),
@@ -106,7 +107,12 @@ export async function POST(request: Request) {
     ) {
       return Response.json(missingHelpAnswer);
     }
-    return Response.json({ text, sourceIds }, { headers: { "Cache-Control": "no-store" } });
+    const speechKey = process.env.ELEVENLABS_API_KEY?.trim();
+    const speechToken = speechKey ? await createSpeechToken(text, speechKey) : null;
+    return Response.json(
+      { text, sourceIds, speechToken },
+      { headers: { "Cache-Control": "no-store" } },
+    );
   } catch (error) {
     if (!request.signal.aborted) {
       const reason = error instanceof Error ? error.name : "UnknownError";

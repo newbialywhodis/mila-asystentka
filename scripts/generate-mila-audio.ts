@@ -5,12 +5,10 @@ import { join } from "node:path";
 import { guideQuestions } from "../src/features/guide/flow";
 import type { Answers, QuestionId } from "../src/features/guide/flow";
 import { getStaticHelpTexts } from "../src/features/guide/helpAnswers";
+import { format, modelId, requestMilaSpeech, voiceId } from "../src/features/guide/milaVoice";
 import { planNotices } from "../src/features/guide/planNotice";
 import { getFullQuestionText, getQuestionText } from "../src/features/guide/questionText";
 
-const voiceId = "QWxjfoFYJP0TtqPaCcTu";
-const modelId = "eleven_multilingual_v2";
-const format = "mp3_44100_128";
 const audioDir = join("public", "audio", "mila");
 const manifestPath = join("src", "features", "guide", "audioManifest.json");
 
@@ -83,15 +81,7 @@ async function main() {
   await mkdir(audioDir, { recursive: true });
   let generated = 0;
   for (const [file, payload] of pending) {
-    const response = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=${format}`,
-      {
-        method: "POST",
-        headers: { "xi-api-key": apiKey, "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(60_000),
-      },
-    );
+    const response = await requestMilaSpeech(payload.text, apiKey, AbortSignal.timeout(60_000));
     if (!response.ok) {
       const body: { detail?: { status?: unknown; message?: unknown } } | null = await response
         .json()

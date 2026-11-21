@@ -12,16 +12,30 @@ const segmenter = typeof Intl.Segmenter === "function" ? new Intl.Segmenter() : 
 const recordings = new Map<string, string>(Object.entries(audioManifest));
 let stopActiveReading: (() => void) | null = null;
 
+async function fetchGeneratedAudio(text: string, token: string, signal: AbortSignal) {
+  const response = await fetch("/api/guide-speech", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text, token }),
+    signal,
+  });
+  if (!response.ok) throw new Error("Mila audio is unavailable");
+  return response.arrayBuffer();
+}
+
 export function MilaMessageActions({
   text,
   speechText = text,
+  speechToken,
   leadingActions,
 }: {
   text: string;
   speechText?: string;
+  speechToken?: string | null;
   leadingActions?: ReactNode;
 }) {
   const stopReading = useRef<((updateState?: boolean) => void) | null>(null);
+  const generatedAudio = useRef<ArrayBuffer>(null);
   const [reading, setReading] = useState(false);
   const [failed, setFailed] = useState(false);
 
@@ -40,12 +54,14 @@ export function MilaMessageActions({
     setReading(true);
 
     const recording = recordings.get(speechText);
-    if (recording) {
+    if (speechToken) {
+      void playGeneratedAudio(speechToken);
+    } else if (recording) {
       const audio = new Audio(`/audio/mila/${recording}`);
       cancelPlayback = stopAudio;
       audio.onended = () => finish();
-      audio.onerror = fallBackToSpeech;
-      void audio.play().catch(fallBackToSpeech);
+      audio.onerror = handleRecordingError;
+      void audio.play().catch(handleRecordingError);
 
       function stopAudio() {
         audio.onended = null;
@@ -55,14 +71,49 @@ export function MilaMessageActions({
         audio.load();
       }
 
-      function fallBackToSpeech() {
+      function handleRecordingError() {
         if (stopReading.current !== stop || cancelPlayback !== stopAudio) return;
         stopAudio();
         cancelPlayback = undefined;
-        speak();
+        readWithoutRecording();
       }
     } else {
-      speak();
+      readWithoutRecording();
+    }
+
+    function readWithoutRecording() {
+      if (speechToken === undefined) speak();
+      else finish(true);
+    }
+
+    async function playGeneratedAudio(token: string) {
+      try {
+        const context = new AudioContext();
+        const controller = new AbortController();
+        cancelPlayback = () => {
+          controller.abort();
+          void context.close().catch(() => undefined);
+        };
+
+        // Resume within the button gesture, before waiting for the MP3.
+        const resumed = context.resume();
+        const [audio] = await Promise.all([
+          generatedAudio.current ?? fetchGeneratedAudio(speechText, token, controller.signal),
+          resumed,
+        ]);
+        if (stopReading.current !== stop) return;
+        const decoded = await context.decodeAudioData(audio.slice(0));
+        if (stopReading.current !== stop) return;
+        generatedAudio.current = audio;
+
+        const playback = context.createBufferSource();
+        playback.buffer = decoded;
+        playback.connect(context.destination);
+        playback.onended = () => finish();
+        playback.start();
+      } catch {
+        finish(true);
+      }
     }
 
     function speak() {
@@ -119,11 +170,13 @@ export function MilaMessage({
   children,
   copyText,
   speechText,
+  speechToken,
   leadingActions,
 }: {
   children: ReactNode;
   copyText?: string;
   speechText?: string;
+  speechToken?: string | null;
   leadingActions?: ReactNode;
 }) {
   return (
@@ -135,6 +188,7 @@ export function MilaMessage({
           key={speechText ?? copyText}
           text={copyText}
           speechText={speechText}
+          speechToken={speechToken}
           leadingActions={leadingActions}
         />
       ) : null}

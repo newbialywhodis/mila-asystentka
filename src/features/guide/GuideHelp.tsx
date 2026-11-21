@@ -18,6 +18,7 @@ export function GuideHelpReply({ exchange }: { exchange: HelpExchange }) {
       <MilaMessage
         copyText={copyText}
         speechText={answer?.text}
+        speechToken={answer?.speechToken ?? null}
         leadingActions={citations.length ? <GuideSources citations={citations} /> : null}
       >
         <output className={styles.reply} tabIndex={-1} data-chat-focus={`help-${exchange.id}`}>

@@ -2,11 +2,13 @@ import type { QuestionId } from "./flow";
 import { normalizeGuideText } from "./textInput";
 
 export const maxHelpQuestionLength = 2_000;
+export const maxHelpAnswerLength = 1_200;
 export const maxHelpSources = 4;
 
 export type HelpAnswer = {
   text: string;
   sourceIds?: readonly string[];
+  speechToken?: string | null;
 };
 
 const trimesterDefinition = {
@@ -149,7 +151,11 @@ export const unavailableHelpAnswer: HelpAnswer = {
 };
 
 export function getStaticHelpTexts(): string[] {
-  return [...helpTopics, ...Object.values(explanations), aboutMilaAnswer, missingHelpAnswer].map(
-    ({ text }) => text,
-  );
+  return [
+    ...helpTopics,
+    ...Object.values(explanations),
+    aboutMilaAnswer,
+    missingHelpAnswer,
+    unavailableHelpAnswer,
+  ].map(({ text }) => text);
 }
