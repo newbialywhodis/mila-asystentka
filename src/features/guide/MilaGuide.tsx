@@ -9,10 +9,17 @@ import type { CaseSelection } from "./CaseConversation";
 import { GuideLayout, useGuidePanels } from "./GuideLayout";
 import type { CloseMobileCases } from "./GuideLayout";
 import styles from "./MilaGuide.module.css";
+import type { StartTopic } from "./startTopics";
 
 type GuideCase = { id: number; title?: string; input: RefObject<HTMLTextAreaElement | null> };
 
-export function MilaGuide({ uploadAllowed = false }: { uploadAllowed?: boolean }) {
+export function MilaGuide({
+  initialTopics = [],
+  uploadAllowed = false,
+}: {
+  initialTopics?: readonly StartTopic[];
+  uploadAllowed?: boolean;
+}) {
   const [conversations, setConversations] = useState<GuideCase[]>(() => [
     { id: 1, input: createRef<HTMLTextAreaElement>() },
   ]);
@@ -58,6 +65,7 @@ export function MilaGuide({ uploadAllowed = false }: { uploadAllowed?: boolean }
           id={id}
           input={input}
           selection={selection.id === id ? selection : null}
+          initialTopics={id === 1 ? initialTopics : undefined}
           uploadAllowed={uploadAllowed}
           onSummary={setCaseSummary}
         />

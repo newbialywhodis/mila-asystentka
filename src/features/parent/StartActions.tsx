@@ -5,6 +5,8 @@ import { Icon } from "../../components/ui/Icon";
 import type { IconName } from "../../components/ui/Icon";
 import { warsawToday } from "../../engine/dates";
 import type { ActionGaze } from "../guide/ActionGaze";
+import { StartTopicContext } from "../guide/StartTopicContext";
+import type { StartTopic } from "../guide/startTopics";
 import { AdminCard, SimulationCard } from "./ParentExtras";
 import { caseExamples } from "./parent-examples";
 import type { ParentWorkspace } from "./useParentWorkspace";
@@ -23,12 +25,14 @@ const headings = {
 export function StartActions({
   workspace,
   page,
+  topics = [],
   actionGaze,
   setPage,
   onChoosePdf,
 }: {
   workspace: ParentWorkspace;
   page: StartPage;
+  topics?: readonly StartTopic[];
   actionGaze: RefObject<ActionGaze>;
   setPage: (page: StartPage) => void;
   onChoosePdf: () => void;
@@ -59,6 +63,15 @@ export function StartActions({
             icon: "tasks",
             onClick: workspace.requestBenefit,
           },
+          ...(topics.length
+            ? [
+                {
+                  label: "Zobacz plan formalności",
+                  icon: "calendar" as const,
+                  onClick: () => workspace.open("formalities", "Zobacz plan formalności"),
+                },
+              ]
+            : []),
           { label: "Wypróbuj przykład", icon: "sparkles", onClick: () => setPage("examples") },
           {
             label: "Sprawdź sprawę z PDF-u",
@@ -74,6 +87,7 @@ export function StartActions({
 
   return (
     <section ref={section} tabIndex={-1} aria-label={headings[page]} className={styles.actions}>
+      {page === "start" ? <StartTopicContext topics={topics} /> : null}
       <div key={page} className={styles.page}>
         {page !== "start" ? (
           <div className={styles.toolbar}>

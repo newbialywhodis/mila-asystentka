@@ -11,7 +11,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import type { ComponentProps, CSSProperties, ReactNode, RefObject } from "react";
-import { IconButton } from "../../components/ui/Button";
+import { ButtonLink, IconButton } from "../../components/ui/Button";
 import { Sheet } from "../../components/ui/Sheet";
 import { SidebarResizeHandle } from "./SidebarResizeHandle";
 import {
@@ -223,6 +223,19 @@ export function GuideLayout({ cases, children }: { cases: ReactNode; children: R
             : undefined
         }
       >
+        <a className={styles.skipLink} href="#chat-main">
+          Przejdź do rozmowy
+        </a>
+        <ButtonLink
+          className={styles.homeLink}
+          href="/"
+          variant="ghost"
+          size="sm"
+          aria-label="Mila — strona główna"
+          translate="no"
+        >
+          Mila
+        </ButtonLink>
         <GuidePanel
           panel={panels.cases}
           toggle={casesToggle}
@@ -243,7 +256,9 @@ export function GuideLayout({ cases, children }: { cases: ReactNode; children: R
         >
           {cases}
         </GuidePanel>
-        <main className={styles.content}>{children}</main>
+        <main id="chat-main" className={styles.content} tabIndex={-1}>
+          {children}
+        </main>
         <GuidePanel
           panel={panels.attachments}
           toggle={attachmentsToggle}

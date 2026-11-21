@@ -1,0 +1,413 @@
+.family {
+  --hug-duration: 2.75s;
+  inline-size: 100%;
+  pointer-events: none;
+  user-select: none;
+}
+.illustration {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+}
+.illustration g {
+  transform-box: view-box;
+  transform-origin: 0 0;
+}
+
+/* Choreography from mila-css-zrodla/animation.css, expressed as local deltas.
+   The SVG keeps every base translation/rotation. One-shots end at identity.
+   0–15%: anticipation; 15–57%: approach; 57–89%: embrace; 89–100%: settle. */
+.carryingParent {
+  animation: mother-walk var(--hug-duration) cubic-bezier(0.24, 0.05, 0.16, 1) both;
+}
+@keyframes mother-walk {
+  0%,
+  14% {
+    transform: translate(-45px, 0px);
+  }
+  32% {
+    transform: translate(-28px, -3px);
+  }
+  58% {
+    transform: translate(-4px, 0px);
+  }
+  76%,
+  100% {
+    transform: translate(0px, 0px);
+  }
+}
+
+.joiningParent {
+  animation: father-walk var(--hug-duration) cubic-bezier(0.24, 0.05, 0.15, 1) both;
+}
+@keyframes father-walk {
+  0%,
+  13% {
+    transform: translate(134px, 0px);
+  }
+  35% {
+    transform: translate(91px, -2px);
+  }
+  61% {
+    transform: translate(19px, 0px);
+  }
+  81%,
+  100% {
+    transform: translate(0px, 0px);
+  }
+}
+
+.olderChild {
+  animation: child-run var(--hug-duration) cubic-bezier(0.2, 0.03, 0.2, 1) both;
+}
+@keyframes child-run {
+  0%,
+  13% {
+    transform: translate(184px, 0px);
+  }
+  30% {
+    transform: translate(147px, -13px);
+  }
+  43% {
+    transform: translate(101px, 1px);
+  }
+  54% {
+    transform: translate(58px, -14px);
+  }
+  70% {
+    transform: translate(6px, 0px);
+  }
+  86%,
+  100% {
+    transform: translate(0px, 0px);
+  }
+}
+
+.farEmbrace {
+  animation: far-arm-arrive var(--hug-duration) cubic-bezier(0.3, 0, 0.22, 1) both;
+}
+@keyframes far-arm-arrive {
+  0%,
+  48% {
+    transform: translate(134px, 0px);
+    opacity: 0;
+  }
+  54% {
+    opacity: 0;
+  }
+  72% {
+    transform: translate(10px, 0px);
+    opacity: 0.65;
+  }
+  88%,
+  100% {
+    transform: translate(0px, 0px);
+    opacity: 1;
+  }
+}
+
+.farShoulder {
+  animation: far-shoulder var(--hug-duration) ease-in-out both;
+}
+@keyframes far-shoulder {
+  0%,
+  42% {
+    transform: translate(0px, 0px) rotate(-73deg);
+  }
+  67% {
+    transform: translate(0px, 0px) rotate(-22deg);
+  }
+  86%,
+  100% {
+    transform: translate(0px, 0px) rotate(0deg);
+  }
+}
+
+.farElbow {
+  animation: far-elbow var(--hug-duration) ease-in-out both;
+}
+@keyframes far-elbow {
+  0%,
+  54% {
+    transform: translate(0px, 0px) rotate(30deg);
+  }
+  80%,
+  100% {
+    transform: translate(0px, 0px) rotate(0deg);
+  }
+}
+
+.joiningTorso {
+  animation: father-lean var(--hug-duration) ease-in-out both;
+}
+@keyframes father-lean {
+  0%,
+  42% {
+    transform: translate(0px, 0px) rotate(7deg);
+  }
+  67% {
+    transform: translate(0px, 0px) rotate(4deg);
+  }
+  85%,
+  100% {
+    transform: translate(0px, 0px) rotate(0deg);
+  }
+}
+
+.joiningHead {
+  animation: father-head var(--hug-duration) ease-in-out both;
+}
+@keyframes father-head {
+  0%,
+  40% {
+    transform: translate(0px, 0px) rotate(12deg);
+  }
+  70% {
+    transform: translate(0px, 0px) rotate(5deg);
+  }
+  90%,
+  100% {
+    transform: translate(0px, 0px) rotate(0deg);
+  }
+}
+
+.joiningFrontShoulder {
+  animation: shoulder-wrap var(--hug-duration) cubic-bezier(0.4, 0, 0.15, 1) both;
+}
+@keyframes shoulder-wrap {
+  0%,
+  48% {
+    transform: translate(0px, 0px) rotate(5deg);
+  }
+  64% {
+    transform: translate(0px, 0px) rotate(-5deg);
+  }
+  88%,
+  100% {
+    transform: translate(0px, 0px) rotate(0deg);
+  }
+}
+
+.joiningFrontElbow {
+  animation: forearm-wrap var(--hug-duration) cubic-bezier(0.4, 0, 0.15, 1) both;
+}
+@keyframes forearm-wrap {
+  0%,
+  48% {
+    transform: translate(0px, 0px) rotate(-75deg);
+  }
+  59% {
+    transform: translate(0px, 0px) rotate(-45deg);
+  }
+  79% {
+    transform: translate(0px, 0px) rotate(6deg);
+  }
+  91%,
+  100% {
+    transform: translate(0px, 0px) rotate(0deg);
+  }
+}
+
+.carrierTorso {
+  animation: mother-lean var(--hug-duration) ease-in-out both;
+}
+@keyframes mother-lean {
+  0%,
+  44% {
+    transform: translate(0px, 0px) rotate(0deg);
+  }
+  77% {
+    transform: translate(0px, 0px) rotate(1deg);
+  }
+  90%,
+  100% {
+    transform: translate(0px, 0px) rotate(0deg);
+  }
+}
+
+.carrierHead {
+  animation: mother-head var(--hug-duration) ease-in-out both;
+}
+@keyframes mother-head {
+  0%,
+  39% {
+    transform: translate(0px, 0px) rotate(-6deg);
+  }
+  72% {
+    transform: translate(0px, 0px) rotate(3deg);
+  }
+  92%,
+  100% {
+    transform: translate(0px, 0px) rotate(0deg);
+  }
+}
+
+.childTorso {
+  animation: child-lean var(--hug-duration) ease-in-out both;
+}
+@keyframes child-lean {
+  0%,
+  38% {
+    transform: translate(0px, 0px) rotate(8deg);
+  }
+  58% {
+    transform: translate(0px, 0px) rotate(-6deg);
+  }
+  83%,
+  100% {
+    transform: translate(0px, 0px) rotate(0deg);
+  }
+}
+
+.childHead {
+  animation: child-look var(--hug-duration) ease-in-out both;
+}
+@keyframes child-look {
+  0%,
+  38% {
+    transform: translate(0px, 0px) rotate(10deg);
+  }
+  68% {
+    transform: translate(0px, 0px) rotate(-5deg);
+  }
+  88%,
+  100% {
+    transform: translate(0px, 0px) rotate(0deg);
+  }
+}
+
+.childFarArm {
+  animation: child-arm-far var(--hug-duration) ease-in-out both;
+}
+@keyframes child-arm-far {
+  0%,
+  53% {
+    transform: translate(0px, 0px) rotate(51deg);
+  }
+  73% {
+    transform: translate(0px, 0px) rotate(-10deg);
+  }
+  91%,
+  100% {
+    transform: translate(0px, 0px) rotate(0deg);
+  }
+}
+
+.childFarElbow {
+  animation: child-elbow-far var(--hug-duration) ease-in-out both;
+}
+@keyframes child-elbow-far {
+  0%,
+  55% {
+    transform: translate(0px, 0px) rotate(24deg);
+  }
+  89%,
+  100% {
+    transform: translate(0px, 0px) rotate(0deg);
+  }
+}
+
+.childNearShoulder {
+  animation: child-arm-near var(--hug-duration) ease-in-out both;
+}
+@keyframes child-arm-near {
+  0%,
+  49% {
+    transform: translate(0px, 0px) rotate(-37deg);
+  }
+  77% {
+    transform: translate(0px, 0px) rotate(6deg);
+  }
+  92%,
+  100% {
+    transform: translate(0px, 0px) rotate(0deg);
+  }
+}
+
+.childNearElbow {
+  animation: child-elbow-near var(--hug-duration) ease-in-out both;
+}
+@keyframes child-elbow-near {
+  0%,
+  53% {
+    transform: translate(0px, 0px) rotate(-182deg);
+  }
+  76% {
+    transform: translate(0px, 0px) rotate(15deg);
+  }
+  93%,
+  100% {
+    transform: translate(0px, 0px) rotate(0deg);
+  }
+}
+
+.infant {
+  animation: infant-gentle var(--hug-duration) ease-in-out both;
+}
+@keyframes infant-gentle {
+  0%,
+  42% {
+    transform: translate(0px, 0px) rotate(3deg);
+  }
+  70% {
+    transform: translate(0px, 0px) rotate(-3deg);
+  }
+  90%,
+  100% {
+    transform: translate(0px, 0px) rotate(0deg);
+  }
+}
+
+/* Independent breathing wrappers never overwrite a character's settled pose. */
+.breatheCarrier {
+  animation: breathe-mother 5.4s ease-in-out var(--hug-duration) infinite both;
+}
+.breatheJoining {
+  animation: breathe-father 5.9s ease-in-out var(--hug-duration) infinite both;
+}
+.breatheChild {
+  animation: breathe-kid 6.3s ease-in-out var(--hug-duration) infinite both;
+}
+@keyframes breathe-mother {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(1.35px);
+  }
+}
+@keyframes breathe-father {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(1.1px);
+  }
+}
+@keyframes breathe-kid {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(1.6px);
+  }
+}
+
+/* Static final SVG pose is the fallback without JavaScript or observer support.
+   Pausing preserves the first frame, delays and choreography when visibility starts it. */
+.family:not([data-motion]) g {
+  animation: none;
+}
+
+.family[data-motion="waiting"] g {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .family g {
+    animation: none;
+  }
+}

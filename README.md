@@ -11,7 +11,7 @@ bun install --frozen-lockfile
 bun run dev
 ```
 
-Otwórz [localhost:3000](http://localhost:3000). Kalkulator, przykłady i podgląd PDF-u działają bez kluczy API. Spinacz przy polu wiadomości dodaje PDF do bieżącej sprawy. Przykład „Przykładowy PDF” pokazuje potwierdzenie odczytanych danych na fikcyjnym wniosku. Menu po lewej przełącza sprawy zachowane w pamięci otwartej karty. Zmiany sprawdzisz poleceniem `bun run check`.
+Strona główna jest na [localhost:3000](http://localhost:3000), a przycisk „Porozmawiaj z Milą” prowadzi do [/chat](http://localhost:3000/chat). Kalkulator, przykłady i podgląd PDF-u działają bez kluczy API. Spinacz przy polu wiadomości dodaje PDF do bieżącej sprawy. Przykład „Przykładowy PDF” pokazuje potwierdzenie odczytanych danych na fikcyjnym wniosku. Menu po lewej przełącza sprawy zachowane w pamięci otwartej karty. Zmiany sprawdzisz poleceniem `bun run check`.
 
 ## Próba na sprawie ZUS
 
@@ -23,6 +23,7 @@ Jeśli Mila rozpozna kilka wniosków, wybierz jeden okres. Przy pliku powyżej 3
 
 Wpisz potrzebne klucze w `.env.local` w katalogu projektu.
 
+- `MILA_SITE_URL` ustawia domenę adresu kanonicznego i grafiki udostępniania strony głównej. Podaj pełny publiczny adres z `https://`.
 - `AI_GATEWAY_API_KEY` włącza wybór narzędzi na podstawie rozmowy i odpowiedzi z katalogu. Model wyboru narzędzi ustawisz przez `MILA_INTENT_MODEL`. Domyślnie jest to `google/gemini-2.5-flash`. Po zmianie konfiguracji uruchom ponownie serwer.
 - `MILA_PDF_UPLOAD_ALLOWED=1` razem z kluczem AI udostępnia dodatkowy **Odczyt z AI w chmurze** dla PDF-ów do 3,5 MB. Akcja **Wyślij do odczytu** przekazuje plik do zewnętrznej usługi. Domyślny model to `google/gemini-2.5-flash`, a jego konfiguracja to `MILA_PDF_MODEL`. Odczyt lokalny działa bez tych ustawień.
 - `ELEVENLABS_API_KEY` z uprawnieniem Text to Speech włącza odczyt wygenerowanych odpowiedzi głosem Mili. Po kliknięciu odtwarzania serwer wysyła do ElevenLabs tekst odpowiedzi. Ten klucz pozwala też uzupełnić gotowe nagrania poleceniem `bun run audio:generate`.

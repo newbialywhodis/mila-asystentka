@@ -1,0 +1,314 @@
+.scene {
+  position: relative;
+  isolation: isolate;
+  max-inline-size: 1160px;
+  block-size: 27.5rem;
+  margin: 42px auto 20px;
+}
+
+.connection {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  stroke: var(--landing-illustration-line);
+  stroke-width: 1.7px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.chaos {
+  position: absolute;
+  inset: 14px auto auto 0;
+  inline-size: 37%;
+}
+
+.chaos img {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+}
+
+.mila {
+  position: absolute;
+  inset: 120px auto auto calc(50% - 110px);
+  inline-size: 220px;
+  text-align: center;
+}
+
+.mila > p {
+  inline-size: fit-content;
+  padding: 12px 17px;
+  border: 1px solid var(--accent-border);
+  border-radius: 16px 16px 16px 4px;
+  margin-inline: auto;
+  background: var(--surface);
+  color: var(--landing-ink);
+  font-size: 0.875rem;
+  transform: rotate(-5deg);
+}
+
+.mila > img {
+  display: block;
+  inline-size: 200px;
+  block-size: auto;
+  margin: 8px auto 0;
+}
+
+.order {
+  position: absolute;
+  inset: 80px 35px auto auto;
+  inline-size: 320px;
+  transform: rotate(3deg);
+  /* Enlarged text must not move the top edge and calendar towards the viewport edge. */
+  transform-origin: top right;
+}
+
+.calendar {
+  position: absolute;
+  z-index: -1;
+  inset: -58px -32px auto auto;
+  inline-size: 134px;
+  block-size: auto;
+  transform: rotate(11deg);
+}
+
+.paper {
+  padding: 25px 25px 44px;
+  border: 1px solid var(--landing-illustration-line);
+  border-radius: 7px;
+  background: var(--surface);
+  box-shadow: 7px 7px 0 var(--landing-sage);
+}
+
+.exampleLabel {
+  color: var(--primary);
+  font-size: 0.6875rem;
+}
+
+.paper h3 {
+  max-inline-size: 17ch;
+  margin-block: 8px 23px;
+  color: var(--landing-ink);
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1.35;
+}
+
+.task {
+  display: flex;
+  gap: 11px;
+  margin-block-start: 20px;
+}
+
+.checkbox {
+  flex: none;
+  inline-size: 15px;
+  block-size: 15px;
+  border: 1px solid var(--landing-illustration-line);
+  border-radius: 3px;
+  margin-block-start: 2px;
+}
+
+.task p,
+.benefit p {
+  font-size: 0.8125rem;
+  font-weight: 550;
+  line-height: 1.5;
+}
+
+.task div > span,
+.benefit div > span {
+  display: block;
+  margin-block-start: 5px;
+  color: var(--muted);
+  font-size: 0.6875rem;
+  line-height: 1.6;
+}
+
+.benefit {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  inline-size: 270px;
+  padding: 17px;
+  border: 1px solid var(--landing-illustration-line);
+  border-radius: 7px;
+  margin: -20px -18px 0 auto;
+  background: var(--landing-selected);
+  box-shadow: var(--landing-card-shadow);
+  transform: rotate(-7deg);
+}
+
+.benefit > svg {
+  flex: none;
+  margin-block-start: 2px;
+  color: var(--primary);
+}
+
+.benefit div > span {
+  color: var(--primary);
+}
+
+.caption {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+@media (min-width: 801px) and (max-width: 1100px) {
+  .scene {
+    block-size: calc(33.125rem - 100px);
+  }
+
+  .chaos {
+    inset-block-start: 35px;
+    inline-size: 36%;
+  }
+
+  .mila {
+    inset-inline-start: calc(49% - 100px);
+    inline-size: 180px;
+  }
+
+  .mila > img {
+    inline-size: 170px;
+  }
+
+  .mila > p {
+    font-size: 0.75rem;
+  }
+
+  .order {
+    inset-inline-end: 16px;
+    inline-size: 290px;
+  }
+
+  .calendar {
+    inset-inline-end: -14px;
+  }
+}
+
+@media (min-width: 601px) and (max-width: 800px) {
+  .scene {
+    max-inline-size: 700px;
+    block-size: 33.125rem;
+  }
+
+  .chaos {
+    inset: 0 auto auto 0;
+    inline-size: 44%;
+  }
+
+  .mila {
+    inset: 235px auto auto 9%;
+    inline-size: 200px;
+  }
+
+  .mila > img {
+    inline-size: 175px;
+  }
+
+  .order {
+    inset: 160px 24px auto auto;
+    inline-size: 300px;
+  }
+
+  .connection {
+    display: none;
+  }
+}
+
+@media (min-width: 601px) and (max-width: 700px) {
+  .mila {
+    inset-inline-start: 0;
+    inline-size: 180px;
+  }
+}
+
+@media (max-width: 600px) {
+  .scene {
+    display: flex;
+    max-inline-size: 360px;
+    block-size: auto;
+    flex-direction: column;
+    align-items: center;
+    margin-block: 28px 48px;
+  }
+
+  .connection {
+    display: none;
+  }
+
+  .chaos,
+  .mila,
+  .order {
+    position: relative;
+    inset: auto;
+  }
+
+  .chaos {
+    inline-size: 100%;
+    max-inline-size: 320px;
+  }
+
+  .chaos img {
+    aspect-ratio: 320 / 164;
+  }
+
+  .mila {
+    display: flex;
+    inline-size: 100%;
+    flex-direction: row-reverse;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    margin-block: -4px 35px;
+  }
+
+  .mila > p {
+    max-inline-size: 135px;
+    padding: 12px;
+    margin: 0;
+    font-size: 0.8125rem;
+    line-height: 1.6;
+    text-align: start;
+    transform: rotate(3deg);
+  }
+
+  .mila > img {
+    inline-size: 145px;
+    margin: 0;
+  }
+
+  .order {
+    inline-size: calc(100% - 28px);
+    max-inline-size: 310px;
+    margin-inline-start: -8px;
+    transform: rotate(1deg);
+    transform-origin: center;
+  }
+
+  .calendar {
+    inset: -56px -20px auto auto;
+    inline-size: 100px;
+  }
+
+  .paper {
+    padding: 23px 22px 40px;
+  }
+
+  .paper h3 {
+    max-inline-size: 16ch;
+  }
+
+  .benefit {
+    inline-size: 255px;
+    margin-inline-end: -13px;
+    transform: rotate(-4deg);
+  }
+}

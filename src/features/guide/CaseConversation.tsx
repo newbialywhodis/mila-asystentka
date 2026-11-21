@@ -17,18 +17,21 @@ import type { ActionGaze } from "./ActionGaze";
 import { ChatComposer } from "./ChatComposer";
 import { useGuidePanels } from "./GuideLayout";
 import styles from "./CaseConversation.module.css";
+import type { StartTopic } from "./startTopics";
 
 export type CaseSelection = { id: number; focusComposer: boolean };
 
 export function CaseConversation({
   id,
   selection,
+  initialTopics,
   uploadAllowed,
   input,
   onSummary,
 }: {
   id: number;
   selection: CaseSelection | null;
+  initialTopics?: readonly StartTopic[];
   uploadAllowed: boolean;
   input: RefObject<HTMLTextAreaElement | null>;
   onSummary: (id: number, title: string) => void;
@@ -188,13 +191,14 @@ export function CaseConversation({
             <StartActions
               workspace={workspace}
               page={startPage}
+              topics={initialTopics}
               setPage={setStartPage}
               actionGaze={actionGaze}
               onChoosePdf={choosePdf}
             />
           ) : null}
         </ScrollArea>
-        <CaseTools workspace={workspace} active={active} />
+        <CaseTools workspace={workspace} active={active} topics={initialTopics} />
       </div>
       {active ? (
         <input

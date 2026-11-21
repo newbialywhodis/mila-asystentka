@@ -1,0 +1,26 @@
+.preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-block-size: 100svh;
+  padding: 32px 16px;
+  background: var(--landing-canvas);
+  color: var(--landing-ink);
+  text-align: center;
+}
+
+.preview h1 {
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  font-weight: 600;
+  letter-spacing: -0.04em;
+}
+
+.preview p {
+  margin-block-start: 8px;
+  color: var(--muted);
+}
+
+.stage {
+  inline-size: min(100%, 560px);
+  margin-block: 16px;
+}

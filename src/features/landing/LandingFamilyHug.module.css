@@ -1,0 +1,34 @@
+.section {
+  padding-block: 64px 0;
+  background: var(--landing-ground);
+}
+
+.illustration {
+  position: relative;
+  inline-size: min(100%, 360px);
+  margin: 28px auto 0;
+}
+
+.illustration::after {
+  position: absolute;
+  inset: auto 0 0;
+  block-size: 28%;
+  background: radial-gradient(
+    ellipse 75% 100% at 50% 100%,
+    var(--landing-ground) 45%,
+    transparent 100%
+  );
+  content: "";
+  pointer-events: none;
+}
+
+@media (max-width: 600px) {
+  .section {
+    padding-block: 48px 0;
+  }
+
+  .illustration {
+    inline-size: min(100%, 280px);
+    margin-block-start: 20px;
+  }
+}

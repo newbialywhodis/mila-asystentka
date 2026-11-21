@@ -1,14 +1,10 @@
-import { MilaGuide } from "../features/guide/MilaGuide";
+import type { Metadata } from "next";
+import { MilaLanding } from "../features/landing/MilaLanding";
 
-export const dynamic = "force-dynamic";
+export const metadata: Metadata = process.env.MILA_SITE_URL
+  ? { alternates: { canonical: "/" } }
+  : {};
 
 export default function Home() {
-  return (
-    <MilaGuide
-      uploadAllowed={
-        process.env.MILA_PDF_UPLOAD_ALLOWED === "1" &&
-        Boolean(process.env.AI_GATEWAY_API_KEY?.trim())
-      }
-    />
-  );
+  return <MilaLanding />;
 }

@@ -4,12 +4,22 @@ import type { Profile } from "../../types/profile";
 import type { CaseFacts } from "../../engine/parent-case";
 import type { PlanSection } from "../guide/PlanNavigation";
 import { PlanReport } from "../guide/PlanReport";
+import { preferredPlanSection, suggestedPlanInterests } from "../guide/startTopics";
+import type { StartTopic } from "../guide/startTopics";
 import { AdminCard, FamilyPlanner, SimulationCard } from "./ParentExtras";
 import { CaseFactsList } from "./ParentResult";
 import type { ParentWorkspace } from "./useParentWorkspace";
 import styles from "./ParentCard.module.css";
 
-export function CaseTools({ workspace, active }: { workspace: ParentWorkspace; active: boolean }) {
+export function CaseTools({
+  workspace,
+  active,
+  topics = [],
+}: {
+  workspace: ParentWorkspace;
+  active: boolean;
+  topics?: readonly StartTopic[];
+}) {
   const { expanded, setExpanded, session } = workspace;
   const close = (open: boolean) => {
     if (!open) setExpanded(null);
@@ -38,7 +48,7 @@ export function CaseTools({ workspace, active }: { workspace: ParentWorkspace; a
         wide
         keepMounted
       >
-        <Formalities facts={session.family.facts} asOf={session.asOf} />
+        <Formalities facts={session.family.facts} asOf={session.asOf} topics={topics} />
       </Sheet>
       {expanded === "facts" ? (
         <Sheet title="Zmień dane sprawy" open={active} onOpenChange={close}>
@@ -77,9 +87,18 @@ export function CaseTools({ workspace, active }: { workspace: ParentWorkspace; a
   );
 }
 
-function Formalities({ facts, asOf }: { facts: CaseFacts; asOf: string }) {
-  const [section, setSection] = useState<PlanSection>("timeline");
+function Formalities({
+  facts,
+  asOf,
+  topics,
+}: {
+  facts: CaseFacts;
+  asOf: string;
+  topics: readonly StartTopic[];
+}) {
+  const [section, setSection] = useState<PlanSection>(() => preferredPlanSection(topics));
   const [checked, setChecked] = useState<string[]>([]);
+  const interests = suggestedPlanInterests(topics);
   const profile: Profile = {
     stage: facts.birth ? "born" : facts.dueDate ? "pregnant" : undefined,
     dueDate: facts.dueDate,
@@ -101,6 +120,7 @@ function Formalities({ facts, asOf }: { facts: CaseFacts; asOf: string }) {
         profile={profile}
         stage={profile.stage ?? "planning"}
         asOf={asOf}
+        interests={interests.length ? interests : undefined}
         section={section}
         checked={checked}
         onSectionChange={setSection}
