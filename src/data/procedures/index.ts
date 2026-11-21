@@ -314,7 +314,7 @@ export const procedures: readonly Procedure[] = [
         "becikowe",
         "12 miesięcy od urodzenia na wniosek rodzica",
         { type: "offset", field: "birthDate", value: 12, unit: "months" },
-        "Wniosek złożony po terminie pozostawia się bez rozpoznania.",
+        "Po terminie urząd nie rozpatrzy wniosku.",
         "familyLaw",
         "becikowe",
       ),
