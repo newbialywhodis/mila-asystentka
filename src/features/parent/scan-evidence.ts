@@ -12,6 +12,9 @@ type Application = {
   from?: string;
   through?: string;
 };
+export type ScanReference = { page: number; label: string };
+const decisionWords =
+  /\b(?:decyzj\w*|rozstrzygnieci\w*|przyznano|odmowiono|wyplacono|przyznajaca|odmawiajaca)\b/;
 
 const numericDate =
   /\b(?:20\d{2}[ \t./-]+\d{1,2}[ \t./-]+\d{1,2}|\d{1,2}[ \t./-]+\d{1,2}[ \t./-]+20\d{2})\b/g;
@@ -46,11 +49,14 @@ function applicationsOn(page: ScanPage): Application[] {
   const header = page.text.split("\n").filter(Boolean).slice(0, 18).join(" ");
   if (
     isCoverageReply(header) ||
-    /wniosek o poswiadczenie ubezpieczenia|\b(?:decyzja|adnotacja o rozstrzygnieciu)\b/.test(header)
+    /wniosek o poswiadczenie ubezpieczenia/.test(header) ||
+    decisionWords.test(header.slice(0, 160))
   )
     return [];
   const requests: Application[] = [];
-  const fields = page.text.split(/\b(?:wnioskuje\s+o|wnosze\s+o|wnioskowany okres)\b/).slice(1);
+  const fields = page.text
+    .split(/\b(?:wnioskuj[ea]\s+o|wnosze\s+o|prosze\s+o\s+wyplate|wnioskowany okres)\b/)
+    .slice(1);
   for (const field of fields) {
     const window = field.slice(0, 190);
     const interval = window.match(/\bod[\s:]+([^\n]{4,30}?)\s+do[\s:]+([^\n]{4,32})/);
@@ -72,14 +78,25 @@ function applicationsOn(page: ScanPage): Application[] {
 
   // These forms have a unique purpose even when the filled dates are unreadable.
   const benefit =
-    /\bzao\b.*\bwniosek\b|\bwniosek o zasilek macierzynski za okres urlopu ojcowsk/.test(header)
+    /\bzao\b.{0,130}\b(?:wniosek|ojcowsk\w*)\b|\bwniosek o zasilek macierzynski za okres urlopu ojcowsk/.test(
+      header,
+    )
       ? "paternity"
-      : /\bzur\b.*\bwniosek\b|\bwniosek o zasilek macierzynski za okres urlopu rodzicielsk/.test(
+      : /\bzur\b.{0,130}\b(?:wniosek|rodzicielsk\w*)\b|\bwniosek o zasilek macierzynski za okres urlopu rodzicielsk/.test(
             header,
           )
         ? "parental"
         : null;
-  return benefit ? [{ page: page.number, benefit }] : [];
+  if (!benefit) return [];
+  for (const text of [page.text, page.sparse].filter((value) => value !== undefined)) {
+    const clause = text.match(
+      /\b(?:wnioskuje|prosze)\s+o\b[\s\S]{0,200}?\bod\s*[:.]*\s*([^\n]{3,45})\s+do\s*[:.]*\s*([^\n]{3,45})/,
+    );
+    const from = clause && datesIn(clause[1])[0];
+    const through = clause && datesIn(clause[2])[0];
+    if (from && through && from <= through) return [{ page: page.number, benefit, from, through }];
+  }
+  return [{ page: page.number, benefit }];
 }
 
 export function isBirthRecord(text: string) {
@@ -113,6 +130,27 @@ function isCoverageReply(text: string) {
   return /\bodpowiedz\s+na\s+wniosek\b[\s\S]{0,85}\b(?:poswiadcz\w*|potwierdz\w*)\s+ubezpieczen/.test(
     text,
   );
+}
+
+function scanReferences(pages: ScanPage[]): ScanReference[] {
+  return pages.flatMap(({ number, text, sparse }) => {
+    const header = text.slice(0, 350);
+    const label =
+      isBirthRecord(header) || (sparse && isBirthRecord(sparse.slice(0, 250)))
+        ? "Akt urodzenia"
+        : /\bpo[ds]wiadcz\w*\s+ubezpieczen|okres podlegania/.test(text)
+          ? "Informacja o ubezpieczeniu"
+          : /\bskladniki wynagrodzenia|wynagrodzenie miesieczne|podstawa wymiaru zasilku/.test(text)
+            ? "Wynagrodzenie lub podstawa"
+            : /\b(?:z[ -]+3[ab]?|zas[ -]+12)\b/.test(header)
+              ? "Zaświadczenie płatnika"
+              : decisionWords.test(header.slice(0, 160))
+                ? "Rozstrzygnięcie do porównania"
+                : applicationsOn({ number, text, sparse }).length
+                  ? "Wniosek o świadczenie"
+                  : undefined;
+    return label ? [{ page: number, label }] : [];
+  });
 }
 
 function insuranceOn(text: string, day: string) {
@@ -151,6 +189,7 @@ function basisOn(text: string) {
 export function readScanPages(rawPages: ScanPage[]): {
   applications: DocumentApplication[];
   fallback: DocumentRead;
+  references: ScanReference[];
 } {
   const normalizeLines = (text: string) => text.split("\n").map(normalizeGuideText).join("\n");
   const pages = rawPages.map(({ number, text, sparse }) => ({
@@ -170,7 +209,13 @@ export function readScanPages(rawPages: ScanPage[]): {
             other.from === app.from &&
             other.through === app.through,
         ) &&
-      (app.from || !recognized.some((other) => other.from && other.page === app.page)),
+      (app.from ||
+        !recognized.some(
+          (other) =>
+            other.from &&
+            (other.page === app.page ||
+              (other.benefit === app.benefit && Math.abs(other.page - app.page) === 1)),
+        )),
   );
 
   function evidence(app?: Application): DocumentRead {
@@ -215,7 +260,7 @@ export function readScanPages(rawPages: ScanPage[]): {
           datesIn(text).includes(app.through)
         )
           candidate("employment", "contract", number);
-        if (!/\b(?:decyzja|rozstrzygniecie|przyznano|odmowiono|wyplacono)\b/.test(text)) {
+        if (!decisionWords.test(text)) {
           candidate("basis", basisOn(text), number);
           const payer = text.match(/\bplatnik zasilku\s*:\s*([^\n]+)/)?.[1];
           if (payer && /\bzus\b|zaklad ubezpieczen spolecznych/.test(payer))
@@ -257,5 +302,6 @@ export function readScanPages(rawPages: ScanPage[]): {
   return {
     applications: applications.map((app) => ({ page: app.page, read: evidence(app) })),
     fallback: evidence(),
+    references: scanReferences(pages),
   };
 }

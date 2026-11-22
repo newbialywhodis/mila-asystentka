@@ -22,13 +22,19 @@ import { factValue, fields } from "./case-fields";
 import type { AttachedDocument, CaseSession } from "./case-session";
 import { demoDocumentRead } from "./demo-document";
 import type { ScanProgress, ScanRange } from "./local-document";
+import type { ScanReference } from "./scan-evidence";
 import styles from "./DocumentTurn.module.css";
 
 type ReadState =
   | { kind: "reading"; progress?: ScanProgress; cloud?: true }
   | { kind: "scope"; total: number; maxPages: number }
   | { kind: "error"; text: string }
-  | { kind: "ready"; read: DocumentRead; applications?: DocumentApplication[] };
+  | {
+      kind: "ready";
+      read: DocumentRead;
+      applications?: DocumentApplication[];
+      references?: ScanReference[];
+    };
 
 const kindLabels: Record<DocumentRead["kind"], string> = {
   application: "Wniosek",
@@ -89,7 +95,12 @@ export function DocumentTurn({
           setState(
             result.kind === "scope"
               ? result
-              : { kind: "ready", read: result.fallback, applications: result.applications },
+              : {
+                  kind: "ready",
+                  read: result.fallback,
+                  applications: result.applications,
+                  references: result.references,
+                },
           );
         }
       } catch (error) {
@@ -398,6 +409,24 @@ export function DocumentTurn({
         <p className={styles.caption}>
           Chorobowe można przenieść razem z potwierdzoną datą i tytułem z poświadczenia.
         </p>
+      ) : null}
+      {state.kind === "ready" && state.references?.length ? (
+        <details className={styles.decisions}>
+          <summary>Strony do sprawdzenia ręcznie</summary>
+          <ul>
+            {state.references.map(({ page, label }) => (
+              <li key={page}>
+                <button
+                  type="button"
+                  className={styles.page}
+                  onClick={() => onPreview(document, page)}
+                >
+                  {label} · s. {page}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </details>
       ) : null}
       {active && mode === "read" && state.kind !== "reading" ? (
         <details className={styles.decisions}>

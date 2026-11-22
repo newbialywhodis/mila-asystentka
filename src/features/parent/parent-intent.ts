@@ -2,9 +2,8 @@ import { z } from "zod";
 import { benefitSchema, caseFactsSchema, casePatchSchema } from "../../engine/parent-case";
 import { maxHelpQuestionLength } from "../guide/helpAnswers";
 
-export const caseToolSchema = z.enum([
+const caseToolSchema = z.enum([
   "documents",
-  "plan",
   "facts",
   "examples",
   "support",
@@ -13,26 +12,70 @@ export const caseToolSchema = z.enum([
   "formalities",
 ]);
 export type CaseTool = z.infer<typeof caseToolSchema>;
-export const goalSchema = z.enum(["calculation", "application"]);
+const goalSchema = z.enum(["calculation", "application"]);
 export type CaseGoal = z.infer<typeof goalSchema>;
-export const factKeySchema = caseFactsSchema.keyof();
+const factKeySchema = caseFactsSchema.keyof();
+const firstStepsTimingSchema = z.enum(["beforeBirth", "afterBirth"]);
+export type FirstStepsTiming = z.infer<typeof firstStepsTimingSchema>;
+const replyChoiceSchema = z.enum([...firstStepsTimingSchema.options, "benefit"]);
+export type ReplyChoice = z.infer<typeof replyChoiceSchema>;
+const replyTextSchema = z.string().trim().min(1).max(400);
 
-export const caseActionSchema = z.discriminatedUnion("kind", [
+const assessmentSchema = z.strictObject({
+  kind: z.enum(["assess"]),
+  benefit: benefitSchema.nullable(),
+  goal: goalSchema,
+});
+
+const replyActionSchema = z.strictObject({
+  kind: z.enum(["reply"]),
+  text: replyTextSchema,
+  choices: z.array(replyChoiceSchema),
+});
+
+const conversationActions = [
+  z.strictObject({ kind: z.enum(["chooseBenefit"]), goal: goalSchema }),
+  z.strictObject({ kind: z.enum(["open"]), tool: caseToolSchema }),
+  z.strictObject({ kind: z.enum(["compareCare"]), workPercent: z.literal([0, 25, 50]).nullable() }),
+  z.strictObject({ kind: z.enum(["unknownFact"]) }),
+  z
+    .strictObject({
+      kind: z.enum(["urgentPregnancyCare"]),
+      text: replyTextSchema
+        .max(180)
+        .describe("Jedno krótkie zdanie w odpowiedzi na zgłoszenie. Bez instrukcji i numerów."),
+    })
+    .describe("Tylko pilna pomoc wynikająca z najnowszej wiadomości rozmówcy."),
   z.strictObject({
-    kind: z.literal("assess"),
-    benefit: benefitSchema.nullable(),
-    goal: goalSchema,
-    facts: casePatchSchema,
-  }),
-  z.strictObject({ kind: z.literal("open"), tool: caseToolSchema }),
-  z.strictObject({ kind: z.literal("unknownFact") }),
-  z.strictObject({
-    kind: z.literal("help"),
+    kind: z.enum(["help"]),
     question: z.string().trim().min(1).max(maxHelpQuestionLength),
   }),
-  z.strictObject({ kind: z.literal("clarify"), text: z.string().trim().min(1).max(400) }),
+  z.strictObject({
+    kind: z.enum(["firstSteps"]),
+    timing: firstStepsTimingSchema,
+    intro: z.string().trim().max(180),
+  }),
+] as const;
+
+export const caseActionSchema = z.discriminatedUnion("kind", [
+  assessmentSchema.extend({ facts: casePatchSchema }),
+  replyActionSchema.extend({ choices: replyActionSchema.shape.choices.max(2) }),
+  ...conversationActions,
 ]);
 export type CaseAction = z.infer<typeof caseActionSchema>;
+export type CaseReply = Extract<CaseAction, { kind: "reply" }>;
+
+// Bounded arrays make the provider's JSON grammar more complex. Limit choices
+// and proposed facts when converting the model response to a chat action.
+export const modelIntentSchema = z.strictObject({
+  action: z.union([
+    assessmentSchema.extend({
+      facts: z.array(z.strictObject({ key: factKeySchema, value: z.string() })),
+    }),
+    replyActionSchema,
+    ...conversationActions,
+  ]),
+});
 
 export const assistantRequestSchema = z.strictObject({
   messages: z
@@ -48,11 +91,27 @@ export const assistantRequestSchema = z.strictObject({
   context: z.strictObject({
     benefit: benefitSchema.nullable(),
     goal: goalSchema,
-    pending: z.strictObject({ key: factKeySchema, question: z.string().max(400) }).nullable(),
-    confirmed: z.array(factKeySchema).max(50),
+    pending: factKeySchema.nullable(),
+    confirmed: z.array(factKeySchema).max(factKeySchema.options.length),
   }),
 });
 export type AssistantRequest = z.infer<typeof assistantRequestSchema>;
+
+export function caseActionFromIntent(
+  { action }: z.infer<typeof modelIntentSchema>,
+  context: AssistantRequest["context"],
+): CaseAction {
+  if (action.kind === "reply") {
+    return { ...action, choices: [...new Set(action.choices)].slice(0, 2) };
+  }
+  if (action.kind !== "assess") return action;
+  const sameBenefit = action.benefit === null || action.benefit === context.benefit;
+  return {
+    ...action,
+    goal: action.goal === "calculation" && sameBenefit ? context.goal : action.goal,
+    facts: proposedFacts(action.facts),
+  };
+}
 
 export function proposedFacts(entries: { key: z.infer<typeof factKeySchema>; value: string }[]) {
   const facts = {};

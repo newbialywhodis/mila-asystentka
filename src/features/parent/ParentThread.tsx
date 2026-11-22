@@ -5,8 +5,10 @@ import type { CaseFacts, FactKey } from "../../engine/parent-case";
 import { GuideHelpReply } from "../guide/GuideHelp";
 import { MilaMessage, UserMessage } from "../guide/ThreadMessage";
 import { BenefitAssessment, BenefitSelection } from "./BenefitTurn";
+import { CareComparison } from "./CareComparison";
 import type { OpenPdfPreview } from "./AttachmentPreview";
 import { factValue, fields } from "./case-fields";
+import { replyChoiceLabels } from "./case-replies";
 import type { CaseAnswer, CaseTurn } from "./case-session";
 import { DocumentTurn } from "./DocumentTurn";
 import { FactControl } from "./FactControl";
@@ -18,7 +20,6 @@ import type { ExpandedTool, ParentWorkspace } from "./useParentWorkspace";
 import styles from "./ParentCard.module.css";
 
 const toolLabels: Record<ExpandedTool, string> = {
-  plan: "Porównaj warianty opieki",
   formalities: "Zobacz plan formalności",
   facts: "Zmień dane",
   services: "Symulacje usług",
@@ -39,7 +40,8 @@ export function ParentThread({
   const [edit, setEdit] = useState<{ answer: CaseAnswer; at: CaseTurn | undefined }>();
   const editTrigger = useRef<HTMLButtonElement>(null);
   const waiting = latest?.kind === "propose" || latest?.kind === "document";
-  const activeBenefit = waiting ? undefined : benefitTurn;
+  const lastReply = thinking ? session.turns.at(-2) : latest;
+  const activeBenefit = waiting || lastReply?.kind === "pregnancyConcern" ? undefined : benefitTurn;
 
   function cancelEdit() {
     setEdit(undefined);
@@ -175,6 +177,7 @@ function Turn({
   onChoosePdf: () => void;
 }) {
   if (turn.kind === "help") return <GuideHelpReply answer={turn.answer} />;
+  if (turn.kind === "compareCare") return <CareComparison turn={turn} />;
   if (turn.kind === "chooseBenefit")
     return <BenefitSelection turn={turn} active={activeBenefit} workspace={workspace} />;
   if (turn.kind === "assessment")
@@ -214,6 +217,19 @@ function Turn({
             </div>
           ) : null}
         </div>
+      </div>
+    ) : turn.kind === "reply" && controls && turn.choices.length ? (
+      <div className={styles.actions}>
+        {turn.choices.map((choice) => (
+          <Button
+            key={choice}
+            size="sm"
+            variant="outline"
+            onClick={() => workspace.chooseReply(turn, choice)}
+          >
+            {replyChoiceLabels[choice]}
+          </Button>
+        ))}
       </div>
     ) : turn.kind === "tool" && (controls || isExpanded(turn.tool)) ? (
       <div className={styles.turnControls}>

@@ -9,24 +9,27 @@ type BenefitDocument = {
   source: string;
   deadline?: string;
   href?: string;
+  form?: "leave" | "benefit";
 };
 export type BenefitResult = {
   status: Status;
   reason: string;
   projected?: true;
+  demoParametersApplied?: true;
   missing?: FactKey;
   coverageDay?: string;
   period?: { from: string; through: string; days: number };
   rate?: number;
   maximumDays?: number;
   extensionDays?: number;
+  extension?: { through: string; workPercent: number; money?: { daily: number; total: number } };
   money?: { basis: number; daily: number; total: number };
   payer?: "zus" | "employer";
   documents: BenefitDocument[];
   source: string;
 };
 
-export type DemoRate = { from: string; parental: number };
+export type DemoRate = { from: string; parental: number; singleChildWeeks?: number };
 
 const minimumPay = [
   { from: "2024-01-01", through: "2024-06-30", debtLimit: 4242 },
@@ -39,10 +42,19 @@ const minimumPay = [
 
 const maternityWeeks = [20, 31, 33, 35, 37];
 const paternityDurations = [7, 14];
+function careMaternityDays(from: Date, ageLimits: Date[]) {
+  let days = 0;
+  while (days < 259) {
+    const eligibleChildren = ageLimits.filter((limit) => addDays(from, days) < limit).length;
+    if (!eligibleChildren || days >= maternityWeeks[Math.min(eligibleChildren, 5) - 1] * 7) break;
+    days++;
+  }
+  return Math.max(63, days);
+}
 const rehabDocuments =
   "https://www.zus.pl/swiadczenia/zasilki/swiadczenie-rehabilitacyjne/z-ubezpieczenia-chorobowego/niezbedne-dokumenty";
-export function parentalPool(children: number, certificate: boolean) {
-  return (certificate ? (children === 1 ? 65 : 67) : children === 1 ? 41 : 43) * 7;
+export function parentalPool(children: number, certificate: boolean, override?: number) {
+  return (certificate ? (children === 1 ? 65 : 67) : children === 1 ? (override ?? 41) : 43) * 7;
 }
 
 export function benefitMoney(
@@ -53,7 +65,7 @@ export function benefitMoney(
   employmentPercent = 100,
 ) {
   const fullDaily = Math.round((Math.round(basis / 30) * rate) / 10_000);
-  const daily = Math.round((fullDaily * (employmentPercent - workPercent)) / employmentPercent);
+  const daily = fullDaily - Math.round((fullDaily * workPercent) / employmentPercent);
   return { basis, daily, total: daily * days };
 }
 
@@ -82,6 +94,24 @@ function documentsFor(benefit: Benefit, f: CaseFacts, asOf: string, from: Date):
   const documents: BenefitDocument[] = [];
   const payer = f.payer === "employer" ? "Pracodawca" : "ZUS";
   const currentForms = asOf >= "2026-10-24";
+  if (benefit === "pregnancyAfterEmployment") {
+    return [
+      {
+        title: "Wniosek ZAS-55 przez eZUS, pocztą lub w placówce",
+        recipient: "ZUS",
+        source: "maternityDocs",
+        form: "benefit",
+        href: "https://www.zus.pl/-/jak-uzyskac-zasilek-w-wysokosci-zasilku-macierzynskiego",
+      },
+      {
+        title:
+          "Zaświadczenie o ciąży w okresie zatrudnienia, świadectwo pracy i oświadczenie o niezapewnieniu innego zatrudnienia",
+        recipient: "ZUS",
+        source: "maternityDocs",
+      },
+      { title: "Z-3 od płatnika składek", recipient: "ZUS", source: "z3" },
+    ];
+  }
   if (
     f.employment === "employee" &&
     benefit !== "sickness" &&
@@ -89,17 +119,35 @@ function documentsFor(benefit: Benefit, f: CaseFacts, asOf: string, from: Date):
     benefit !== "lossMaternity" &&
     benefit !== "rehabilitation"
   ) {
-    const lead = benefit === "paternity" ? 7 : benefit === "supplement" ? 22 : 21;
+    const lead =
+      benefit === "paternity" || benefit === "adoptivePaternity"
+        ? 7
+        : benefit === "supplement"
+          ? 22
+          : benefit === "maternityTransfer"
+            ? 14
+            : 21;
     documents.push({
       title: {
         paternity: "Wniosek o urlop ojcowski",
+        adoptivePaternity: "Wniosek o urlop ojcowski po przysposobieniu",
         parental: "Wniosek o urlop rodzicielski",
+        careParental: "Wniosek o urlop rodzicielski po przyjęciu na wychowanie",
         supplement: "Wniosek o uzupełniający urlop macierzyński",
         careMaternity: "Wniosek o urlop na warunkach macierzyńskiego",
+        maternityTransfer: "Wniosek ojca o część urlopu macierzyńskiego",
       }[benefit],
       recipient: "Pracodawca",
       source: "laborLaw",
-      deadline: benefit === "careMaternity" ? undefined : isoDate(addDays(from, -lead)),
+      form: "leave",
+      href: "https://eli.gov.pl/eli/DU/2025/322/ogl",
+      deadline:
+        benefit === "careMaternity" ||
+        (benefit === "maternityTransfer" &&
+          f.transferReason !== "return" &&
+          f.transferReason !== "incapacity")
+          ? undefined
+          : isoDate(addDays(from, -lead)),
     });
   }
   if (benefit === "rehabilitation") {
@@ -108,6 +156,7 @@ function documentsFor(benefit: Benefit, f: CaseFacts, asOf: string, from: Date):
       recipient: "ZUS",
       source: "benefitsLaw",
       href: rehabDocuments,
+      form: "benefit",
     });
   } else if (benefit === "sickness") {
     documents.push({
@@ -120,40 +169,95 @@ function documentsFor(benefit: Benefit, f: CaseFacts, asOf: string, from: Date):
         title: "Wniosek o zasiłek chorobowy (ZAS-53), gdy potrzebny",
         recipient: "ZUS",
         source: "sicknessDocs",
+        form: "benefit",
       });
+    if (f.insured === false || (f.employmentEnded && f.employmentEnded < isoDate(from))) {
+      documents.push({
+        title: "Z-10: oświadczenie o prawie po ustaniu tytułu ubezpieczenia",
+        recipient: "ZUS",
+        source: "sicknessDocs",
+      });
+    }
   } else {
     if (f.payer === "zus") {
       const historicalForms = {
         maternity: "ZAM",
         paternity: "ZAO",
+        adoptivePaternity: "ZAO",
         parental: "ZUR",
+        careParental: "ZUR",
         supplement: "wniosek wraz z zaświadczeniem szpitala",
         careMaternity: "ZAM",
         lossMaternity: "ZAM",
+        maternityTransfer: "ZAM",
       };
       const form = currentForms ? "ZAM" : historicalForms[benefit];
       documents.push({
         title: "Wniosek o wypłatę (" + form + ")",
         recipient: payer,
         source: currentForms ? "zam" : "maternityDocs",
+        form: "benefit",
+      });
+    } else {
+      documents.push({
+        title: "Wniosek o wypłatę zasiłku do płatnika",
+        recipient: payer,
+        source: "maternityDocs",
+        form: "benefit",
       });
     }
     documents.push({
       title:
         benefit === "supplement"
           ? "Zaświadczenie szpitala"
-          : benefit === "careMaternity"
-            ? f.careKind === "adoption"
-              ? "Dokument przyjęcia dziecka i potwierdzenie wystąpienia do sądu o przysposobienie"
-              : "Postanowienie sądu lub dokument o umieszczeniu w rodzinie zastępczej"
-            : benefit === "lossMaternity"
-              ? "Dokument potwierdzający martwe urodzenie dziecka"
-              : currentForms && (benefit === "maternity" || benefit === "paternity")
-                ? "Dane dziecka i drugiego rodzica (urodzenie w Polsce)"
-                : "Dokument potwierdzający urodzenie dziecka",
+          : benefit === "adoptivePaternity"
+            ? "Prawomocne postanowienie o przysposobieniu i oświadczenie o wcześniejszym ojcowskim"
+            : benefit === "careMaternity" || benefit === "careParental"
+              ? f.careKind === "adoption"
+                ? "Dokument przyjęcia dziecka i potwierdzenie wystąpienia do sądu o przysposobienie"
+                : "Postanowienie sądu lub dokument o umieszczeniu w rodzinie zastępczej"
+              : benefit === "lossMaternity"
+                ? f.childDeath === f.birth
+                  ? "Dokument potwierdzający martwe urodzenie dziecka"
+                  : "Odpis aktu zgonu dziecka"
+                : currentForms && (benefit === "maternity" || benefit === "paternity")
+                  ? "Dane dziecka i drugiego rodzica (urodzenie w Polsce)"
+                  : "Dokument potwierdzający urodzenie dziecka",
       recipient: payer,
       source: benefit === "supplement" ? "supplement" : "maternityDocs",
     });
+    if (benefit === "maternityTransfer") {
+      const evidence = {
+        return: "Oświadczenie matki o rezygnacji i potwierdzenie końca jej urlopu lub wypłaty",
+        incapacity:
+          "Orzeczenie o niezdolności do samodzielnej egzystencji i dokumenty dotyczące okresu pobranego przez matkę",
+        hospital:
+          "Zaświadczenie o pobycie matki w szpitalu i potwierdzenie przerwania jej urlopu lub wypłaty",
+        death: "Dowód zgonu matki i dokumenty dotyczące wykorzystanego przez nią okresu",
+        abandonment:
+          "Oświadczenie o porzuceniu dziecka i dokumenty dotyczące wykorzystanego przez matkę okresu",
+        newEmployment:
+          "Potwierdzenie podjęcia przez matkę zatrudnienia w wymiarze co najmniej połowy etatu",
+      };
+      if (f.transferReason)
+        documents.push({
+          title: evidence[f.transferReason],
+          recipient: payer,
+          source: "maternityDocs",
+        });
+    }
+    if ((benefit === "maternity" || benefit === "lossMaternity") && f.insured === false) {
+      documents.push({
+        title:
+          f.termination === "extended"
+            ? "Świadectwo pracy potwierdzające przedłużenie umowy do porodu"
+            : f.termination === "unlawful"
+              ? "Zaświadczenie o ciąży w czasie zatrudnienia i prawomocny wyrok sądu"
+              : "Zaświadczenie o ciąży w czasie zatrudnienia i dokument potwierdzający powód ustania zatrudnienia",
+        recipient: "ZUS",
+        source: "maternityDocs",
+      });
+    }
   }
   if (f.payer === "zus" && (f.employment === "employee" || f.employment === "contract")) {
     const employee = f.employment === "employee";
@@ -173,8 +277,14 @@ export function assessBenefit(
   demoRate?: DemoRate,
 ): BenefitResult {
   const birth = parseDate(f.birth);
+  const beforeBirth = benefit === "pregnancyAfterEmployment";
+  const transfer = benefit === "maternityTransfer";
+  const employmentEnded = parseDate(f.employmentEnded);
   const dueDate = benefit === "maternity" && !birth ? parseDate(f.dueDate) : undefined;
-  const projected = benefit === "maternity" && !birth && (f.birthStage === "expected" || dueDate);
+  const projected =
+    (benefit === "maternity" || beforeBirth) &&
+    !birth &&
+    (f.birthStage === "expected" || f.birthStage === "expectedEarly" || Boolean(f.dueDate));
   const projection = projected ? ({ projected: true } as const) : {};
   const source =
     benefit === "sickness" ? "sickness" : benefit === "supplement" ? "supplement" : "benefitsLaw";
@@ -193,8 +303,17 @@ export function assessBenefit(
   const sickness = benefit === "sickness";
   const rehab = benefit === "rehabilitation";
   const care = benefit === "careMaternity";
+  const adoptivePaternity = benefit === "adoptivePaternity";
+  const paternity = benefit === "paternity" || adoptivePaternity;
+  const careParental = benefit === "careParental";
+  const parental = benefit === "parental" || careParental;
   const loss = benefit === "lossMaternity";
-  const requested = projected ? undefined : parseDate(f.from);
+  const requested = parseDate(f.from);
+  if (benefit === "maternity" && dueDate && f.birthStage === "expectedEarly" && !requested)
+    return need(
+      "from",
+      "Podaj planowany początek, maksymalnie sześć tygodni przed przewidywaną datą porodu.",
+    );
   const explicitEnd = projected ? undefined : parseDate(f.through);
   const planDays = projected || explicitEnd ? undefined : f.requestedDays;
   if (f.exception)
@@ -203,24 +322,158 @@ export function assessBenefit(
     );
   if (!sickness && !rehab && f.birth && f.birth > asOf)
     return need("birth", "Data urodzenia może przypadać najpóźniej dzisiaj.");
-  if (benefit === "paternity" && planDays !== undefined && !paternityDurations.includes(planDays))
+  if (paternity && planDays !== undefined && !paternityDurations.includes(planDays))
     return need("requestedDays", "Wpisz 7 dni albo 14 dni ojcowskiego.");
   if (!requested && planDays !== undefined && benefit !== "maternity" && !loss) return need("from");
-  if (!sickness && !rehab && !birth && !dueDate) {
+  if (!sickness && !rehab && !beforeBirth && !birth && !dueDate) {
     if (projected) return need("dueDate");
     return need(benefit === "maternity" && !f.birthStage ? "birthStage" : "birth");
   }
-  if (benefit !== "maternity" && !loss && !requested) return need("from");
-  const from = requested ?? birth ?? dueDate;
+  if (benefit !== "maternity" && !loss && !beforeBirth && !transfer && !requested)
+    return need("from");
+  let legalEnd: Date | undefined;
+  let transferStart: Date | undefined;
+  if (beforeBirth) {
+    if (!f.employment) return need("employment");
+    if (f.employment !== "employee")
+      return deny("To świadczenie przysługuje po ustaniu umowy o pracę.");
+    if (!f.termination) return need("termination");
+    if (f.termination !== "employerClosed") {
+      return deny(
+        "Zasiłek do dnia poprzedzającego poród wymaga śmierci, upadłości lub likwidacji pracodawcy. Po urodzeniu dziecka można osobno sprawdzić prawo do macierzyńskiego.",
+      );
+    }
+    if (!employmentEnded) return need("employmentEnded");
+    if (f.alternativeEmployment === undefined) return need("alternativeEmployment");
+    if (f.alternativeEmployment)
+      return deny(
+        "Zapewniono inne zatrudnienie, więc warunek tego świadczenia nie jest spełniony.",
+      );
+    if (f.pregnancyProof === undefined)
+      return need(
+        "pregnancyProof",
+        "Potrzebne jest zaświadczenie potwierdzające ciążę w czasie zatrudnienia.",
+      );
+    if (!f.pregnancyProof) return review("Potwierdź z lekarzem stan ciąży w okresie zatrudnienia.");
+    if (!birth && !f.birthStage && !f.dueDate) return need("birthStage");
+    const delivery = birth ?? parseDate(f.dueDate);
+    if (!delivery) return need(projected ? "dueDate" : "birth");
+    if (delivery <= addDays(employmentEnded, 1))
+      return deny("Między ustaniem zatrudnienia a porodem nie ma dni objętych tym świadczeniem.");
+    legalEnd = addDays(delivery, -1);
+  }
+  if (transfer && birth) {
+    if (!f.transferReason) return need("transferReason");
+    const voluntary = f.transferReason === "return" || f.transferReason === "hospital";
+    const jobStart = f.transferReason === "newEmployment";
+    const insuredMother = jobStart ? false : voluntary || f.motherInsured;
+    if (insuredMother === undefined) return need("motherInsured");
+    if (!f.children) return need("children");
+    const totalDays = maternityWeeks[Math.min(f.children, 5) - 1] * 7;
+    const motherBefore = insuredMother ? f.motherDaysBeforeBirth : 0;
+    const motherAfter = insuredMother ? f.motherDaysAfterBirth : 0;
+    if (motherBefore === undefined) return need("motherDaysBeforeBirth");
+    if (motherAfter === undefined) return need("motherDaysAfterBirth");
+    if (jobStart) {
+      if (f.motherJobPercent === undefined) return need("motherJobPercent");
+      if (f.motherJobPercent < 50)
+        return deny(
+          "W tym trybie matka musi podjąć zatrudnienie w wymiarze co najmniej połowy etatu.",
+        );
+    }
+    const minimum = f.transferReason === "return" ? 98 : f.transferReason === "death" ? 0 : 56;
+    if (insuredMother && motherAfter < minimum)
+      return deny(
+        `Przejęcie z tej przyczyny wymaga co najmniej ${minimum} dni macierzyńskiego matki po porodzie.`,
+      );
+    if (motherBefore + motherAfter >= totalDays)
+      return deny("Wykorzystano już cały podstawowy okres macierzyńskiego.");
+    const next = addDays(birth, motherAfter);
+    const anchored =
+      !insuredMother ||
+      f.transferReason === "hospital" ||
+      f.transferReason === "death" ||
+      f.transferReason === "abandonment" ||
+      f.transferReason === "incapacity";
+    const event = parseDate(f.transferEvent);
+    if (anchored && !event) return need("transferEvent");
+    if (
+      anchored &&
+      event &&
+      ((event < birth && f.transferReason !== "incapacity") || isoDate(event) > asOf)
+    )
+      return need("transferEvent", "Podaj datę zdarzenia od dnia urodzenia do dziś.");
+    let first =
+      anchored && event
+        ? addDays(event, f.transferReason === "hospital" || jobStart ? 0 : 1)
+        : next;
+    if (!insuredMother && f.transferReason === "incapacity" && first < birth) first = birth;
+    if (insuredMother && (first > next || (f.transferReason === "death" && first < next)))
+      return need(
+        "motherDaysAfterBirth",
+        "Podana liczba dni pozostawia lukę przed zdarzeniem. Sprawdź faktycznie wykorzystany okres.",
+      );
+    transferStart = insuredMother ? next : first;
+    legalEnd = addDays(birth, totalDays - motherBefore - 1);
+    const motherJobEnds = jobStart ? parseDate(f.motherJobEnds) : undefined;
+    if (motherJobEnds && motherJobEnds < transferStart)
+      return need(
+        "motherJobEnds",
+        "Koniec zatrudnienia musi przypadać w dniu jego rozpoczęcia albo później.",
+      );
+    if (motherJobEnds && motherJobEnds < legalEnd) legalEnd = motherJobEnds;
+    if (f.transferReason === "hospital") {
+      const hospitalEnd = parseDate(f.transferThrough);
+      if (!hospitalEnd) return need("transferThrough");
+      if (hospitalEnd < transferStart)
+        return deny("Pobyt matki w szpitalu skończył się przed dniem możliwego przejęcia.");
+      if (hospitalEnd < legalEnd) legalEnd = hospitalEnd;
+    }
+    if (transferStart > legalEnd)
+      return deny("Zdarzenie przypada po zakończeniu podstawowego okresu macierzyńskiego.");
+    if (requested && requested.getTime() !== transferStart.getTime())
+      return need(
+        "from",
+        "Początek musi pokrywać się z dniem przejęcia: " + isoDate(transferStart) + ".",
+      );
+  }
+  let from =
+    beforeBirth && employmentEnded
+      ? addDays(employmentEnded, 1)
+      : (transferStart ?? requested ?? birth ?? dueDate);
   if (!from) return need("from");
-  if (birth && !sickness && !rehab && from < birth)
+  const startsBeforeBirth = benefit === "maternity" && from < (birth ?? dueDate ?? from);
+  if (f.birthStage === "expectedEarly" && dueDate && from >= dueDate)
+    return need(
+      "from",
+      "Przy wcześniejszym macierzyńskim początek musi przypadać przed przewidywanym porodem.",
+    );
+  if (startsBeforeBirth) {
+    const certified = dueDate ?? parseDate(f.certifiedDueDate);
+    if (!certified) return need("certifiedDueDate");
+    if (from < addDays(certified, -42))
+      return need(
+        "from",
+        "Macierzyński może rozpocząć się najwcześniej sześć tygodni przed przewidywaną datą porodu.",
+      );
+  }
+  if (birth && !sickness && !rehab && !beforeBirth && !startsBeforeBirth && from < birth)
     return review("Okres przed porodem wymaga osobnego ustalenia zasad i dat.");
-  const coverageDay = isoDate((benefit === "maternity" || loss) && birth ? birth : from);
+  const coverageDay = isoDate(
+    beforeBirth && employmentEnded
+      ? employmentEnded
+      : ((benefit === "maternity" && !startsBeforeBirth) || loss) && birth
+        ? birth
+        : from,
+  );
   if (coverageDay < "2023-04-26")
     return review("Tę datę obejmują wcześniejsze reguły. Sprawdź je w ZUS.");
   if (!f.employment) return { ...need("employment"), coverageDay };
   if (f.insured === undefined) return { ...need("insured"), coverageDay };
   const standardDecision = (reason: string) => ({ ...deny(reason), coverageDay });
+  let postEmployment = false;
+  const afterInsurance =
+    sickness && (f.insured === false || (employmentEnded && from > employmentEnded));
   if (!f.insured) {
     if (rehab)
       return review(
@@ -230,19 +483,51 @@ export function assessBenefit(
       !projected &&
       (benefit === "maternity" || loss) &&
       f.employment === "employee" &&
-      f.exception === undefined
-    )
-      return need(
-        "exception",
-        "W określonych sytuacjach świadczenie może przysługiwać także po ustaniu zatrudnienia.",
-      );
-    if (benefit === "parental" || benefit === "supplement")
+      f.exception !== false
+    ) {
+      if (!f.termination) return { ...need("termination"), coverageDay };
+      if (f.termination !== "ordinary") {
+        if (!employmentEnded) return { ...need("employmentEnded"), coverageDay };
+        if (
+          !birth ||
+          (f.termination === "extended"
+            ? employmentEnded.getTime() !== birth.getTime()
+            : employmentEnded >= birth)
+        )
+          return {
+            ...need("employmentEnded", "Sprawdź relację między końcem umowy a datą porodu."),
+            coverageDay,
+          };
+        if (f.termination !== "extended") {
+          if (f.pregnancyProof === undefined)
+            return {
+              ...need(
+                "pregnancyProof",
+                "Potrzebne jest potwierdzenie ciąży w okresie zatrudnienia.",
+              ),
+              coverageDay,
+            };
+          if (!f.pregnancyProof)
+            return { ...review("Ustal, czy ciąża trwała w dniu końca zatrudnienia."), coverageDay };
+        }
+        postEmployment = true;
+      }
+    }
+    if (parental || benefit === "supplement")
       return review("Sprawdź w ZUS, czy do tego okresu zachowujesz wcześniej nabyte prawo.");
-    return standardDecision(
-      projected
-        ? "Przy założeniu braku ubezpieczenia w dniu porodu podstawowe warunki zasiłku nie będą spełnione. Szczególne okoliczności możesz sprawdzić z ZUS."
-        : "W dniu istotnym dla tego świadczenia brak ubezpieczenia chorobowego z podanego tytułu.",
-    );
+    if (!postEmployment && !afterInsurance)
+      return standardDecision(
+        projected
+          ? "Przy założeniu braku ubezpieczenia w dniu porodu podstawowe warunki zasiłku nie będą spełnione. Szczególne okoliczności możesz sprawdzić z ZUS."
+          : "W dniu istotnym dla tego świadczenia brak ubezpieczenia chorobowego z podanego tytułu.",
+      );
+  }
+  if (transfer) {
+    if (f.personalCare === undefined) return { ...need("personalCare"), coverageDay };
+    if (!f.personalCare)
+      return standardDecision(
+        "Przejęcie wymaga osobistej opieki i skorzystania z urlopu lub przerwania działalności zarobkowej.",
+      );
   }
   if (f.employment === "business" || f.employment === "collaborator") {
     const rule = minimumPay.find(
@@ -265,20 +550,70 @@ export function assessBenefit(
     }
   }
   if (sickness) {
-    if (f.qualifying === undefined) return need("qualifying");
-    if (!f.qualifying)
+    const waitingDays = f.employment === "employee" ? 30 : 90;
+    if (f.qualifying === undefined && f.qualifyingDays === undefined) return need("qualifying");
+    if (
+      f.qualifying === undefined &&
+      f.qualifyingDays !== undefined &&
+      f.qualifyingDays < waitingDays
+    ) {
+      if (f.waitingException === undefined) return need("waitingException");
+      if (!f.waitingException)
+        return standardDecision(
+          `Wymagany okres wyczekiwania wynosi ${waitingDays} dni. Podana liczba go nie osiąga.`,
+        );
+    }
+    if (f.qualifying === false)
       return standardDecision(
         "Według podanych danych wymagany okres wyczekiwania jeszcze nie upłynął.",
       );
     if (f.pregnancyProof === undefined) return need("pregnancyProof");
     if (!f.pregnancyProof)
       return review("Do obliczenia stawki dla ciąży potrzebne jest potwierdzenie ciąży.");
-    if (f.employment === "employee" && f.employerSickPayEnded !== true) {
-      return f.employerSickPayEnded === undefined
-        ? need("employerSickPayEnded")
-        : review(
-            "Najpierw ustal z pracodawcą, które dni obejmuje wynagrodzenie chorobowe i od kiedy zaczyna się zasiłek.",
+    if (afterInsurance) {
+      if (!employmentEnded) return need("employmentEnded");
+      if (from <= employmentEnded)
+        return need(
+          "employmentEnded",
+          "W dniu wskazanego początku umowa już nie trwała. Sprawdź daty.",
+        );
+      const illness = parseDate(f.illnessStart);
+      if (!illness || illness > from) return need("illnessStart");
+      if (f.postInsuranceExcluded === undefined) return need("postInsuranceExcluded");
+      if (f.postInsuranceExcluded)
+        return standardDecision(
+          "Podane wyłączenie z art. 13 uniemożliwia wypłatę po ustaniu ubezpieczenia z tego tytułu.",
+        );
+      if (illness > employmentEnded) {
+        if (illness > addDays(employmentEnded, 14)) {
+          if (f.lateOnsetCode === undefined) return need("lateOnsetCode");
+          if (!f.lateOnsetCode || illness > addMonths(employmentEnded, 3))
+            return standardDecision("Niezdolność powstała zbyt późno po ustaniu ubezpieczenia.");
+        }
+        const sickThrough =
+          explicitEnd ?? (planDays === undefined ? undefined : addDays(from, planDays - 1));
+        if (!sickThrough) return need("through");
+        if (daysBetween(illness, sickThrough) + 1 < 30)
+          return standardDecision(
+            "Niezdolność powstała po ustaniu ubezpieczenia i trwała krócej niż 30 dni.",
           );
+      }
+      postEmployment = true;
+    }
+    if (f.employment === "employee" && !afterInsurance && f.employerSickPayEnded !== true) {
+      if (f.employerSickPayEnded === undefined) return need("employerSickPayEnded");
+      if (f.sickPayDaysRemaining === undefined) return need("sickPayDaysRemaining");
+      if (f.sickPayDaysRemaining > 0) {
+        const end =
+          explicitEnd ?? (planDays === undefined ? undefined : addDays(from, planDays - 1));
+        if (!end) return need("through");
+        from = addDays(from, f.sickPayDaysRemaining);
+        if (from > end)
+          return standardDecision(
+            "Podany okres obejmuje wynagrodzenie chorobowe od pracodawcy. Zasiłek chorobowy jeszcze się nie rozpoczyna.",
+          );
+        legalEnd = end;
+      }
     }
     if (f.sickDaysUsed === undefined) return need("sickDaysUsed");
   }
@@ -309,13 +644,38 @@ export function assessBenefit(
   let rate = 10_000;
   const periodField = planDays === undefined ? "through" : "requestedDays";
   let through = explicitEnd ?? (planDays === undefined ? undefined : addDays(from, planDays - 1));
+  if (sickness) {
+    if (legalEnd) through = legalEnd;
+    if (birth && from >= birth)
+      return standardDecision(
+        "Chorobowe w ciąży kończy się przed porodem. Sprawdź macierzyński od dnia porodu.",
+      );
+    if (birth && through && through >= birth) through = addDays(birth, -1);
+  }
   const requestedDays = through ? daysBetween(from, through) + 1 : undefined;
   if (requestedDays !== undefined && requestedDays <= 0)
     return need(periodField, "Koniec musi przypadać w dniu rozpoczęcia albo później.");
-  if (benefit === "paternity" && birth) {
-    if (from >= addMonths(birth, 12) || (through && through >= addMonths(birth, 12))) {
+  if (legalEnd && !sickness) {
+    extent = daysBetween(from, legalEnd) + 1;
+    if (beforeBirth) through = legalEnd;
+  }
+  if (paternity && birth) {
+    const adoptionFinal = parseDate(f.adoptionFinal);
+    if (adoptivePaternity && !adoptionFinal) return need("adoptionFinal");
+    if (adoptivePaternity && adoptionFinal && (adoptionFinal < birth || from < adoptionFinal))
+      return need(
+        "adoptionFinal",
+        "Prawomocne przysposobienie musi nastąpić po urodzeniu, najpóźniej w dniu rozpoczęcia ojcowskiego.",
+      );
+    const ageLimit = addMonths(birth, adoptivePaternity ? 168 : 12);
+    const adoptionLimit =
+      adoptivePaternity && adoptionFinal ? addDays(addMonths(adoptionFinal, 12), 1) : ageLimit;
+    const limit = ageLimit < adoptionLimit ? ageLimit : adoptionLimit;
+    if (from >= limit || (through && through >= limit)) {
       return standardDecision(
-        "W tej sprawie cały okres musi przypadać przed ukończeniem przez dziecko 12 miesięcy.",
+        adoptivePaternity
+          ? "Cały okres musi przypadać przed 14. urodzinami dziecka i w ciągu 12 miesięcy od prawomocnego przysposobienia."
+          : "W tej sprawie cały okres musi przypadać przed ukończeniem przez dziecko 12 miesięcy.",
       );
     }
     if (f.paternityUsed === undefined) return need("paternityUsed");
@@ -343,47 +703,120 @@ export function assessBenefit(
   }
   if (loss && birth) {
     if (from.getTime() !== birth.getTime())
-      return need("from", "Początek tego okresu przypada w dniu martwego urodzenia.");
+      return need("from", "Początek tego okresu przypada w dniu porodu.");
     if (!f.children) return need("children");
-    if (f.children !== 1)
-      return review("Przy porodzie mnogim znaczenie ma liczba dzieci, które pozostały przy życiu.");
-    extent = 56;
+    const death = parseDate(f.childDeath);
+    if (!death || death < birth || isoDate(death) > asOf)
+      return need("childDeath", "Podaj datę od dnia porodu do dziś.");
+    if (f.children > 1 && f.survivingChildren === undefined) return need("survivingChildren");
+    const survivors = f.children === 1 ? 0 : (f.survivingChildren ?? 0);
+    if (survivors >= f.children)
+      return need(
+        "survivingChildren",
+        "Liczba dzieci pozostałych przy życiu musi być mniejsza niż liczba dzieci urodzonych.",
+      );
+    const lived = daysBetween(birth, death);
+    if (lived >= maternityWeeks[Math.min(f.children, 5) - 1] * 7)
+      return standardDecision("Zdarzenie nastąpiło po zakończeniu podstawowego macierzyńskiego.");
+    const survivingExtent = survivors ? maternityWeeks[Math.min(survivors, 5) - 1] * 7 : 0;
+    extent = Math.max(survivingExtent, lived < 56 && !survivors ? 56 : 0, lived + 8);
   }
-  if (care && birth) {
+  let parentalAgeLimit: string | undefined;
+  let careAnchor: Date | undefined;
+  let carePool: number | undefined;
+  if ((care || careParental) && birth) {
     if (!f.careKind) return need("careKind");
     if (f.careKind === "professional")
       return standardDecision(
         "Zasiłek z tego tytułu nie przysługuje rodzinie zastępczej zawodowej.",
       );
-    if (f.previousCareBenefit === undefined) return need("previousCareBenefit");
-    if (f.previousCareBenefit)
-      return review("Ustal z ZUS wymiar po odjęciu okresu już wykorzystanego na to dziecko.");
     if (!f.children) return need("children", "Ile dzieci przyjęto jednocześnie na wychowanie?");
-    if (f.children > 1)
-      return review(
-        "Przy jednoczesnym przyjęciu kilkorga dzieci trzeba porównać daty i wiek każdego dziecka.",
+    if (f.children > 1 && f.sameCareAgeLimit === undefined) return need("sameCareAgeLimit");
+    const mixed = f.children > 1 && f.sameCareAgeLimit === false;
+    if (mixed && f.careChildren?.length !== f.children)
+      return need(
+        "careChildren",
+        "Potrzebna jest data i informacja o odroczeniu dla każdego przyjętego dziecka.",
       );
+    const accepted = parseDate(f.careAccepted);
+    if (!accepted && (careParental || f.previousCareBenefit === undefined))
+      return need("careAccepted");
+    careAnchor = accepted ?? from;
     if (f.careKind === "adoption") {
       if (!f.courtApplication) return need("courtApplication");
-      if (f.courtApplication > isoDate(from))
-        return need(
-          "from",
-          "Początek okresu musi przypadać w dniu wystąpienia do sądu albo później.",
-        );
+      const courtApplication = parseDate(f.courtApplication);
+      if (courtApplication && courtApplication > careAnchor) careAnchor = courtApplication;
     }
-    if (f.careKind === "foster" && from >= addMonths(birth, 84) && f.schoolDeferral === undefined)
+    if (careAnchor > from)
+      return need(
+        "from",
+        "Początek okresu musi przypadać w dniu przyjęcia dziecka oraz po złożeniu wymaganego wniosku do sądu.",
+      );
+    if (care && daysBetween(careAnchor, from) > 21 && f.employment === "employee")
+      return review(
+        "Sprawdź skuteczność wniosku o urlop rozpoczynający się później niż 21 dni od przyjęcia na wychowanie lub złożenia wniosku do sądu.",
+      );
+    const regularMaternityDays = maternityWeeks[Math.min(f.children, 5) - 1] * 7;
+    if (
+      !mixed &&
+      f.careKind === "foster" &&
+      addDays(careAnchor, regularMaternityDays) > addMonths(birth, 84) &&
+      f.schoolDeferral === undefined
+    )
       return need("schoolDeferral");
-    const birthdayLimit = addMonths(
-      birth,
-      (f.careKind === "adoption" ? 14 : f.schoolDeferral ? 10 : 7) * 12,
-    );
-    if (from >= birthdayLimit)
+    const childLimits = mixed
+      ? (f.careChildren ?? []).flatMap(({ birth, schoolDeferral }) => {
+          const born = parseDate(birth);
+          return born && accepted && born <= accepted
+            ? [addMonths(born, (f.careKind === "adoption" ? 14 : schoolDeferral ? 10 : 7) * 12)]
+            : [];
+        })
+      : Array.from({ length: f.children }, () =>
+          addMonths(birth, (f.careKind === "adoption" ? 14 : f.schoolDeferral ? 10 : 7) * 12),
+        );
+    if (childLimits.length !== f.children)
+      return need(
+        "careChildren",
+        "Sprawdź, czy każde dziecko urodziło się najpóźniej w dniu przyjęcia na wychowanie.",
+      );
+    const anchor = careAnchor;
+    const ageLimits = childLimits
+      .filter((limit) => anchor < limit)
+      .sort((a, b) => a.getTime() - b.getTime());
+    const birthdayLimit = ageLimits.at(-1);
+    if (!birthdayLimit)
       return standardDecision(
         "W dniu podanym w sprawie dziecko osiągnęło już granicę wieku dla tego trybu przyjęcia.",
       );
-    extent = Math.max(63, Math.min(140, daysBetween(from, birthdayLimit)));
+    const maternityDays = careMaternityDays(care ? from : careAnchor, ageLimits);
+    if (care) {
+      if (f.previousCareBenefit === undefined) return need("previousCareBenefit");
+      if (f.previousCareBenefit && f.previousCareDays === undefined)
+        return need("previousCareDays");
+      extent = maternityDays - (f.previousCareBenefit ? (f.previousCareDays ?? 0) : 0);
+      if (extent < 1)
+        return standardDecision("Wcześniej wykorzystany okres wyczerpuje wymiar zasiłku.");
+    } else {
+      if (f.careCertificate === undefined) return need("careCertificate");
+      const youngerChildren = ageLimits.filter((limit) => from < limit).length;
+      const plannedEnd = through;
+      if (
+        mixed &&
+        youngerChildren > 1 &&
+        plannedEnd &&
+        ageLimits.some((limit) => from < limit && limit <= plannedEnd)
+      )
+        return review(
+          "W trakcie wybranego rodzicielskiego zmienia się liczba dzieci w wymaganym wieku. Ten konkretny podział okresów trzeba potwierdzić z ZUS.",
+        );
+      const normalPool = parentalPool(youngerChildren || ageLimits.length, f.careCertificate);
+      const remainingAgeDays = daysBetween(addDays(careAnchor, maternityDays), birthdayLimit);
+      const reduced = remainingAgeDays < normalPool;
+      carePool = reduced ? (f.careCertificate ? 62 : 38) * 7 : normalPool;
+      parentalAgeLimit = reduced ? undefined : isoDate(addDays(birthdayLimit, -1));
+    }
   }
-  if (benefit === "parental" && birth) {
+  if (parental && birth) {
     if (f.parts === undefined) return need("parts");
     if (f.parts >= 5)
       return standardDecision(
@@ -395,34 +828,75 @@ export function assessBenefit(
     if (f.otherParentDays === undefined) return need("otherParentDays");
     if (f.soleParent === undefined) return need("soleParent");
     if (f.reserved === undefined) return need("reserved");
+    const override =
+      demoRate && coverageDay >= demoRate.from ? demoRate.singleChildWeeks : undefined;
     const available =
-      parentalPool(f.children, f.careCertificate) -
+      (carePool ?? parentalPool(f.children, f.careCertificate, override)) -
       f.usedDays -
       Math.max(f.otherParentDays, f.soleParent ? 0 : 63);
     cap = Math.max(0, f.reserved ? Math.min(available, Math.max(0, 63 - f.usedDays)) : available);
     if (!cap) return standardDecision("W podanym wariancie dostępny wymiar został wykorzystany.");
-    if (from < addDays(birth, maternityWeeks[Math.min(f.children, 5) - 1] * 7)) {
-      return review(
-        "Sprawdź, kiedy kończy się podstawowy okres macierzyński. Ten przypadek wymaga ustalenia kolejności okresów.",
-      );
+    const presumedStart = addDays(birth, maternityWeeks[Math.min(f.children, 5) - 1] * 7);
+    const actualEnd = parseDate(f.maternityEnd);
+    if (!careParental && from < presumedStart && !actualEnd && f.motherInsured !== false) {
+      if (f.motherInsured === undefined)
+        return need(
+          "motherInsured",
+          "Ten początek jest wcześniejszy niż standardowy koniec macierzyńskiego.",
+        );
+      return need("maternityEnd", "Podaj rzeczywisty ostatni dzień macierzyńskiego.");
     }
-    const limit = birth.getUTCFullYear() + 6 + "-12-31";
-    if (isoDate(from) > limit || (through && isoDate(through) > limit))
+    if (actualEnd && from <= actualEnd)
+      return need(
+        "from",
+        "Początek rodzicielskiego musi przypadać po wskazanym okresie macierzyńskiego.",
+      );
+    if (!careParental) parentalAgeLimit = birth.getUTCFullYear() + 6 + "-12-31";
+    if (
+      parentalAgeLimit &&
+      (isoDate(from) > parentalAgeLimit || (through && isoDate(through) > parentalAgeLimit))
+    )
       return standardDecision(
-        "Okres wykracza poza koniec roku, w którym dziecko kończy sześć lat.",
+        careParental
+          ? "Okres wykracza poza granicę wieku dziecka dla tej formy opieki."
+          : "Okres wykracza poza koniec roku, w którym dziecko kończy sześć lat.",
       );
     rate = demoRate && coverageDay >= demoRate.from ? demoRate.parental : 7000;
   }
   if (benefit === "supplement" && birth) {
+    if (coverageDay < "2025-03-19")
+      return standardDecision("Uzupełniający macierzyński obowiązuje od 19 marca 2025 r.");
     if (!f.children) return need("children");
+    if (f.children > 1 && f.combinedHospitalEvidence === undefined)
+      return need("combinedHospitalEvidence");
+    if (f.children > 1 && f.combinedHospitalEvidence === false)
+      return review(
+        "Potrzebne są najniższa masa urodzeniowa oraz pobyty najdłużej hospitalizowanego dziecka.",
+      );
     if (f.gestationalWeeks === undefined) return need("gestationalWeeks");
     if (!f.birthWeightGrams) return need("birthWeightGrams");
-    if (!f.hospitalFrom) return need("hospitalFrom");
-    if (!f.hospitalThrough) return need("hospitalThrough");
+    const stays = f.hospitalRanges?.split(",").flatMap((entry) => {
+      const [start, end, excess] = entry.trim().split("/");
+      const from = start?.trim();
+      const through = end?.trim();
+      return excess === undefined && parseDate(from) && parseDate(through)
+        ? [{ from, through }]
+        : [];
+    });
+    if (stays && stays.length !== f.hospitalRanges?.split(",").length)
+      return need("hospitalRanges", "Sprawdź format wszystkich okresów pobytu.");
+    if (!stays && !f.hospitalFrom) return need("hospitalFrom");
+    if (!stays && !f.hospitalThrough) return need("hospitalThrough");
+    const precedingEnd = parseDate(f.maternityEnd);
     if (
-      from.getTime() !== addDays(birth, maternityWeeks[Math.min(f.children, 5) - 1] * 7).getTime()
+      from.getTime() !==
+      (precedingEnd
+        ? addDays(precedingEnd, 1)
+        : addDays(birth, maternityWeeks[Math.min(f.children, 5) - 1] * 7)
+      ).getTime()
     )
-      return review(
+      return need(
+        "maternityEnd",
         "Uzupełniający okres powinien następować bezpośrednio po ustalonym macierzyńskim. Sprawdź datę końca macierzyńskiego.",
       );
     const supplement = calculateSupplement(
@@ -432,13 +906,21 @@ export function assessBenefit(
         gestationalWeeks: f.gestationalWeeks,
         birthWeightGrams: f.birthWeightGrams,
         hospitalized: true,
-        hospitalStays: [{ from: f.hospitalFrom, through: f.hospitalThrough }],
+        hospitalStays:
+          stays ??
+          (f.hospitalFrom && f.hospitalThrough
+            ? [{ from: f.hospitalFrom, through: f.hospitalThrough }]
+            : []),
       },
       asOf,
+      f.combinedHospitalEvidence,
     );
     if (supplement.state === "review") return review(supplement.reason);
     if (supplement.state !== "calculated")
-      return need("hospitalThrough", "Sprawdź daty rzeczywistego pobytu dziecka w szpitalu.");
+      return need(
+        stays ? "hospitalRanges" : "hospitalThrough",
+        "Sprawdź daty rzeczywistego pobytu dziecka w szpitalu.",
+      );
     if (supplement.weeks === 0)
       return standardDecision(
         "Podany pobyt nie daje dodatkowych tygodni według reguł hospitalizacji.",
@@ -473,16 +955,23 @@ export function assessBenefit(
     };
   if (!sickness && !projected && f.documentDate && f.documentDate > asOf)
     return review("Data wniosku przypada po dacie oceny.");
-  const rateChoice =
-    !projected && (benefit === "maternity" || care || (benefit === "parental" && !f.reserved));
+  const rateChoice = !projected && (benefit === "maternity" || care || (parental && !f.reserved));
   if (rateChoice && !f.averagedRequest && f.standardRate !== true) return need("standardRate");
-  const rateAnchor = care ? from : birth;
+  const rateAnchor = careAnchor ?? birth;
   if (rateChoice && rateAnchor && f.averagedRequest) {
     if (f.averagedRequest < isoDate(rateAnchor))
       return need("averagedRequest", "Podaj datę po zdarzeniu rozpoczynającym termin.");
-    if (f.averagedRequest <= isoDate(addDays(rateAnchor, 21))) rate = 8150;
+    if (f.averagedRequest <= isoDate(addDays(rateAnchor, 21))) {
+      if (parental && from >= addMonths(rateAnchor, 12)) {
+        if (f.parentalInFirstYear === undefined) return need("parentalInFirstYear");
+        if (f.parentalInFirstYear) rate = 8150;
+      } else {
+        rate = 8150;
+      }
+    }
   }
-  const work = benefit === "parental" ? (f.workPercent ?? 0) : 0;
+  const work = parental ? (f.workPercent ?? 0) : 0;
+  const extensionWork = work > 0 ? (f.extensionWorkPercent ?? 0) : 0;
   if (work > 0 && f.employment !== "employee")
     return review(
       "Przeliczenie łączenia urlopu z pracą dotyczy pracy u pracodawcy udzielającego urlopu.",
@@ -490,6 +979,18 @@ export function assessBenefit(
   if (work > 0 && f.employmentPercent === undefined) return need("employmentPercent");
   if (f.employmentPercent !== undefined && work > f.employmentPercent)
     return need("workPercent", "Podaj wymiar pracy mieszczący się w Twoim zwykłym etacie.");
+  if (f.employmentPercent !== undefined && extensionWork > f.employmentPercent)
+    return need(
+      "extensionWorkPercent",
+      "Podaj wymiar pracy mieszczący się w Twoim zwykłym etacie.",
+    );
+  const extensionDays = Math.floor((Math.floor((days * work) / 100) * 100) / (100 - extensionWork));
+  const extensionEnd = addDays(through, extensionDays);
+  if (extensionDays && parentalAgeLimit && isoDate(extensionEnd) > parentalAgeLimit)
+    return need(
+      "extensionWorkPercent",
+      "Wydłużenie wykracza poza granicę wieku dziecka. Skróć planowany okres lub zmień wymiar pracy w wydłużeniu.",
+    );
   const rule = minimumPay.find(
     ({ from, through }) => from <= coverageDay && coverageDay <= through,
   );
@@ -503,7 +1004,7 @@ export function assessBenefit(
       ? Math.round(f.fixedSalary * 0.8629)
       : undefined);
   const payer =
-    f.employment === "business" || f.employment === "collaborator"
+    beforeBirth || postEmployment || f.employment === "business" || f.employment === "collaborator"
       ? "zus"
       : (f.payer ??
         (f.insuredHeadcount === undefined
@@ -519,10 +1020,21 @@ export function assessBenefit(
         : "Podane dane spełniają warunki tej symulacji.",
     ),
     coverageDay,
+    demoParametersApplied: parental && demoRate && coverageDay >= demoRate.from ? true : undefined,
     period: { from: isoDate(from), through: isoDate(through), days },
     rate,
     maximumDays: cap,
-    extensionDays: work ? Math.floor((days * work) / 100) : undefined,
+    extensionDays: work ? extensionDays : undefined,
+    extension: extensionDays
+      ? {
+          through: isoDate(extensionEnd),
+          workPercent: extensionWork,
+          money:
+            basis === undefined
+              ? undefined
+              : benefitMoney(basis, rate, extensionDays, extensionWork, f.employmentPercent),
+        }
+      : undefined,
     money:
       basis === undefined ? undefined : benefitMoney(basis, rate, days, work, f.employmentPercent),
     missing: basis === undefined ? "basis" : payer ? undefined : "payer",

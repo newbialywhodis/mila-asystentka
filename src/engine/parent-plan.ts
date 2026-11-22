@@ -8,8 +8,20 @@ export type PlanOptions = {
   weeks: number;
   otherWeeks: number;
   otherBasis: number;
+  otherEmployment: NonNullable<CaseFacts["employment"]>;
+  otherInsured: boolean;
+  otherDebt?: number;
   together: boolean;
   workPercent: number;
+  employmentPercent?: number;
+  extensionWorkPercent?: number;
+  maternity?: {
+    motherDays: number;
+    motherInsured: boolean;
+    fatherInsured: boolean;
+    motherDebt?: number;
+    fatherDebt?: number;
+  };
 };
 
 export function compareParentalPlans(
@@ -38,13 +50,65 @@ export function compareParentalPlans(
     return;
   const oneDays = options.weeks * 7;
   const twoDays = options.otherWeeks * 7;
-  if (oneDays + twoDays > parentalPool(facts.children, facts.careCertificate)) return;
+  const override =
+    demoRate && options.start >= demoRate.from ? demoRate.singleChildWeeks : undefined;
+  if (oneDays + twoDays > parentalPool(facts.children, facts.careCertificate, override)) return;
   const common = { ...facts, soleParent: false };
   const previousParts = facts.parts ?? 0;
   const firstUsed = facts.usedDays ?? 0;
   const secondUsed = facts.otherParentDays ?? 0;
+  const otherFinances = {
+    employment: options.otherEmployment,
+    insured: options.otherInsured,
+    debt: options.otherDebt,
+    basis: options.otherBasis,
+  };
+  const birth = parseDate(facts.birth);
+  const maternity = options.maternity;
+  const motherFacts: CaseFacts = {
+    birth: facts.birth,
+    children: facts.children,
+    employment: facts.employment,
+    insured: maternity?.motherInsured,
+    debt: maternity?.motherDebt,
+    basis: facts.basis,
+    standardRate: facts.standardRate,
+    averagedRequest: facts.averagedRequest,
+  };
+  const fullMaternity = maternity && assessBenefit("maternity", motherFacts, asOf);
+  const splitMaternity = maternity &&
+    birth && {
+      mother: assessBenefit(
+        "maternity",
+        {
+          ...motherFacts,
+          through: isoDate(addDays(birth, maternity.motherDays - 1)),
+        },
+        asOf,
+      ),
+      father: assessBenefit(
+        "maternityTransfer",
+        {
+          ...otherFinances,
+          insured: maternity.fatherInsured,
+          debt: maternity.fatherDebt,
+          birth: facts.birth,
+          children: facts.children,
+          motherDaysBeforeBirth: 0,
+          motherDaysAfterBirth: maternity.motherDays,
+          personalCare: true,
+          transferReason: "return",
+        },
+        asOf,
+      ),
+    };
 
-  function compare(from: Date, workPercent: number, together: boolean) {
+  function compare(
+    from: Date,
+    workPercent: number,
+    extensionWorkPercent: number,
+    together: boolean,
+  ) {
     const firstThrough = addDays(from, oneDays - 1);
     const first = assessBenefit(
       "parental",
@@ -57,7 +121,8 @@ export function compareParentalPlans(
         otherParentDays: secondUsed + twoDays,
         reserved: false,
         workPercent,
-        employmentPercent: facts.employmentPercent ?? 100,
+        extensionWorkPercent,
+        employmentPercent: options.employmentPercent ?? facts.employmentPercent,
       },
       asOf,
       demoRate,
@@ -69,50 +134,24 @@ export function compareParentalPlans(
     const second = assessBenefit(
       "parental",
       {
-        ...common,
-        employment: "employee",
-        insured: true,
-        exception: false,
+        birth: facts.birth,
+        children: facts.children,
+        careCertificate: facts.careCertificate,
+        soleParent: false,
+        ...otherFinances,
         from: isoDate(secondFrom),
         through: isoDate(secondThrough),
         parts: previousParts + 1,
         usedDays: secondUsed,
         otherParentDays: firstUsed + oneDays,
-        basis: options.otherBasis,
-        payer: undefined,
-        fixedSalary: undefined,
         standardRate: true,
-        averagedRequest: undefined,
-        documentDate: undefined,
         reserved: false,
         workPercent: 0,
       },
       asOf,
       demoRate,
     );
-    let firstTotal = first.money?.total;
-    if (first.money && extensionDays) {
-      const extension = assessBenefit(
-        "parental",
-        {
-          ...common,
-          from: isoDate(addDays(firstThrough, 1)),
-          through: isoDate(extended),
-          parts: previousParts,
-          usedDays: firstUsed,
-          otherParentDays: secondUsed + twoDays,
-          reserved: false,
-          workPercent: 0,
-        },
-        asOf,
-        demoRate,
-      );
-      // The extension keeps the reduced daily payment from the period worked.
-      firstTotal =
-        extension.status === "eligible"
-          ? first.money.total + first.money.daily * extensionDays
-          : undefined;
-    }
+    const firstTotal = first.money && first.money.total + (first.extension?.money?.total ?? 0);
     return {
       first,
       second,
@@ -121,7 +160,14 @@ export function compareParentalPlans(
     };
   }
   return {
-    standard: compare(start, 0, false),
-    adjusted: compare(start, options.workPercent, options.together),
+    fullMaternity,
+    splitMaternity,
+    standard: compare(start, 0, 0, false),
+    adjusted: compare(
+      start,
+      options.workPercent,
+      options.extensionWorkPercent ?? 0,
+      options.together,
+    ),
   };
 }

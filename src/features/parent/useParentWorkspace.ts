@@ -6,14 +6,24 @@ import type { Benefit, CaseFacts, FactKey, ParentCase } from "../../engine/paren
 import { findHelpAnswer, unavailableHelpAnswer } from "../guide/helpAnswers";
 import type { HelpAnswer } from "../guide/helpAnswers";
 import { normalizeGuideText } from "../guide/textInput";
+import { buildAssistantRequest } from "./case-assistant-context";
 import { pdfUploadLimit } from "./case-documents";
 import type { DocumentData } from "./case-documents";
-import { factValue, fields, readFact } from "./case-fields";
-import { readCaseRequest } from "./case-message";
+import { factValue, fields, readFact, readNarrativeFacts } from "./case-fields";
+import { careComparisonLabel, readCareComparison, readCaseRequest } from "./case-message";
+import {
+  findFirstSteps,
+  getFirstSteps,
+  pregnancyConcernReply,
+  replyChoiceLabels,
+  startingReply,
+} from "./case-replies";
 import {
   append,
   appendAssessment,
+  appendCareComparison,
   askBenefit,
+  continueWithAssessment,
   continueWithDocument,
   continueWithRequest,
   getBenefitTurn,
@@ -34,13 +44,16 @@ import type {
 } from "./case-session";
 import { makeDemoPdf } from "./demo-document";
 import { caseActionSchema } from "./parent-intent";
-import type { AssistantRequest, CaseAction, CaseGoal, CaseTool } from "./parent-intent";
+import type { CaseAction, CaseGoal, CaseReply, CaseTool, ReplyChoice } from "./parent-intent";
 
-const expandedTools = ["plan", "formalities", "facts", "services", "rules"] as const;
+const expandedTools = ["formalities", "facts", "services", "rules"] as const;
 export type ExpandedTool = (typeof expandedTools)[number];
 
-const noConnection =
-  "Nie udało mi się przetworzyć wiadomości. Spróbuj jeszcze raz lub wybierz, co chcesz sprawdzić.";
+const unavailableReply: CaseReply = {
+  kind: "reply",
+  text: "Nie udało mi się teraz odpowiedzieć. Możesz przejść do kalkulatora i uzupełnić dane krok po kroku.",
+  choices: ["benefit"],
+};
 const unknownMessages: Partial<Record<FactKey, string>> = {
   birth: "Datę urodzenia możesz sprawdzić w akcie urodzenia dziecka.",
   dueDate: "Przewidywany termin porodu znajdziesz w karcie ciąży lub w zaświadczeniu od lekarza.",
@@ -60,14 +73,6 @@ function unknownFactHint(key: FactKey) {
 
 export function isExpanded(tool: CaseTool): tool is ExpandedTool {
   return expandedTools.some((item) => item === tool);
-}
-
-function assistantMessage(
-  turn: Exclude<CaseTurn, AttachedDocument>,
-): AssistantRequest["messages"][number] {
-  if (turn.kind === "user") return { role: "user", content: turn.text };
-  if (turn.kind === "help") return { role: "assistant", content: turn.answer.text };
-  return { role: "assistant", content: turn.text };
 }
 
 function recordAnswer(
@@ -97,7 +102,7 @@ function recordAnswer(
     append(next, {
       kind: "user",
       text: correction ? "Poprawiam odpowiedź · " + message : message,
-      local: !text,
+      local: true,
       answer,
     }),
     facts.from !== undefined || facts.requestedDays !== undefined,
@@ -112,7 +117,9 @@ export function useParentWorkspace(uploadAllowed: boolean) {
   const fileSelection = useRef(0);
   const previews = useRef(new Set<string>());
   const benefitTurn = getBenefitTurn(session);
-  const question = benefitTurn?.kind === "assessment" ? benefitTurn.question : undefined;
+  const pregnancyConcern = session.turns.at(-1)?.kind === "pregnancyConcern";
+  const question =
+    benefitTurn?.kind === "assessment" && !pregnancyConcern ? benefitTurn.question : undefined;
 
   useEffect(() => {
     const urls = previews.current;
@@ -144,6 +151,28 @@ export function useParentWorkspace(uploadAllowed: boolean) {
   function askWhichBenefit(text: string) {
     update((previous) =>
       askBenefit(append(previous, { kind: "user", text, local: true }), "calculation"),
+    );
+  }
+
+  function chooseReply(turn: CaseReply, choice: ReplyChoice) {
+    if (pendingRequest.current || session.turns.at(-1) !== turn || !turn.choices.includes(choice))
+      return;
+    const text = replyChoiceLabels[choice];
+    if (choice === "benefit") {
+      askWhichBenefit(text);
+      return;
+    }
+    update((previous) =>
+      append(previous, { kind: "user", text }, { kind: "help", answer: getFirstSteps(choice, "") }),
+    );
+  }
+
+  function compareCare(
+    workPercent: Extract<CaseAction, { kind: "compareCare" }>["workPercent"] = null,
+    text = careComparisonLabel,
+  ) {
+    update((previous) =>
+      appendCareComparison(append(previous, { kind: "user", text, local: true }), workPercent),
     );
   }
 
@@ -317,44 +346,46 @@ export function useParentWorkspace(uploadAllowed: boolean) {
       return;
     }
     update((previous) => {
-      const current = getBenefitTurn(previous);
-      if (action.kind === "clarify") return append(previous, { kind: "note", text: action.text });
+      if (action.kind === "reply") return append(previous, action);
+      if (action.kind === "urgentPregnancyCare")
+        return append(previous, pregnancyConcernReply(action.text));
+      if (action.kind === "compareCare") return appendCareComparison(previous, action.workPercent);
+      if (action.kind === "firstSteps") {
+        return append(previous, {
+          kind: "help",
+          answer: getFirstSteps(action.timing, action.intro),
+        });
+      }
+      if (action.kind === "chooseBenefit") return askBenefit(previous, action.goal);
       if (action.kind === "unknownFact") {
+        const current = getBenefitTurn(previous);
         return current?.kind === "assessment" && current.question
           ? append(previous, {
               ...current,
               deferred: true,
               text: unknownFactHint(current.question.key),
             })
-          : askBenefit(previous, current?.goal ?? "calculation");
+          : append(previous, startingReply);
       }
-      const choosing = current?.kind === "chooseBenefit";
-      const benefit = action.benefit ?? (choosing ? null : previous.benefit);
-      const goal = choosing && action.goal === "calculation" ? current.goal : action.goal;
-      if (!benefit) return askBenefit(previous, goal);
-      const selected = selectBenefit(previous, benefit);
-      const next = { ...selected, goal };
-      const facts = Object.fromEntries(
-        Object.entries(action.facts).filter(
-          ([key, value]) => next.family.facts[key as FactKey] !== value,
-        ),
-      );
-      if (Object.keys(facts).length) {
-        return append(previous, {
-          kind: "propose",
-          benefit,
-          goal,
-          facts,
-          text: "Czy dobrze zrozumiałam? Potwierdź dane, żebym mogła sprawdzić świadczenie.",
-        });
-      }
-      return appendAssessment(next);
+      return continueWithAssessment(previous, action);
     });
   }
 
   async function send(text: string) {
     if (pendingRequest.current) return;
-    const normalized = normalizeGuideText(text).replace(/[.!?]$/, "");
+    const normalized = normalizeGuideText(text).replace(/[.!?]+$/, "");
+    const comparison = readCareComparison(text);
+    if (comparison) {
+      compareCare(comparison.workPercent, text);
+      return;
+    }
+    const firstSteps = findFirstSteps(normalized);
+    if (firstSteps) {
+      update((previous) =>
+        append(previous, { kind: "user", text }, { kind: "help", answer: firstSteps }),
+      );
+      return;
+    }
     if (["dodaj pdf", "dolacz pdf", "otworz pdf"].includes(normalized)) {
       update((previous) =>
         append(
@@ -388,36 +419,48 @@ export function useParentWorkspace(uploadAllowed: boolean) {
         return;
       }
     }
-    const local = readCaseRequest(text, {
+    const localContext = {
       asOf: session.asOf || warsawToday(),
       benefit: benefitTurn?.kind === "chooseBenefit" ? null : session.benefit,
       pending: question?.key,
-    });
+    };
+    const local = readCaseRequest(text, localContext);
     if (local) {
       update((previous) => continueWithRequest(previous, local, text));
+      return;
+    }
+    const narrative = readNarrativeFacts(text);
+    const statements = text.split(/(?<=[.!?])\s+/);
+    if (statements.length > 1 && Object.keys(narrative).length) {
+      const request = statements.map((part) => readCaseRequest(part, localContext)).find(Boolean);
+      if (request) {
+        update((previous) =>
+          continueWithAssessment(append(previous, { kind: "user", text, local: true }), {
+            kind: "assess",
+            benefit: request.benefit,
+            goal: request.goal ?? previous.goal,
+            facts: { ...narrative, ...request.facts },
+          }),
+        );
+        return;
+      }
+    }
+    if (session.turns.some((turn) => turn.kind === "document" && turn.mode !== "demo")) {
+      const known = findHelpAnswer(text);
+      update((previous) =>
+        append(
+          previous,
+          { kind: "user", text, local: true },
+          known ? { kind: "help", answer: known } : unavailableReply,
+        ),
+      );
       return;
     }
     const controller = new AbortController();
     pendingRequest.current = controller;
     setThinking(true);
-    const user: CaseTurn = { kind: "user", text };
-    const request: AssistantRequest = {
-      messages: [
-        ...session.turns
-          .filter((turn) => turn.kind !== "document")
-          .filter((turn) => turn.kind !== "user" || !turn.local),
-        user,
-      ]
-        .slice(-16)
-        .map(assistantMessage),
-      context: {
-        benefit: benefitTurn?.kind === "chooseBenefit" ? null : session.benefit,
-        goal: benefitTurn?.goal ?? session.goal,
-        pending: question ? { key: question.key, question: question.text } : null,
-        confirmed: Object.keys(session.family.facts) as FactKey[],
-      },
-    };
-    setSession((previous) => append(previous, user));
+    const request = buildAssistantRequest(session, text);
+    setSession((previous) => append(previous, { kind: "user", text }));
 
     async function askHelp(question: string) {
       const known = findHelpAnswer(question);
@@ -441,7 +484,9 @@ export function useParentWorkspace(uploadAllowed: boolean) {
       body: JSON.stringify(request),
       signal: AbortSignal.any([controller.signal, AbortSignal.timeout(21_000)]),
     }).catch(() => null);
-    const action = caseActionSchema.safeParse(await response?.json().catch(() => null));
+    const action = caseActionSchema.safeParse(
+      response?.ok ? await response.json().catch(() => null) : null,
+    );
     if (controller.signal.aborted) return;
     if (action.success && action.data.kind === "help") {
       const help = await askHelp(action.data.question);
@@ -454,13 +499,9 @@ export function useParentWorkspace(uploadAllowed: boolean) {
       return;
     }
     const known = findHelpAnswer(text);
-    update((previous) => {
-      const next = append(
-        previous,
-        known ? { kind: "help", answer: known } : { kind: "note", text: noConnection },
-      );
-      return !known && !getBenefitTurn(previous) ? askBenefit(next, "calculation") : next;
-    });
+    update((previous) =>
+      append(previous, known ? { kind: "help", answer: known } : unavailableReply),
+    );
   }
 
   return {
@@ -471,6 +512,8 @@ export function useParentWorkspace(uploadAllowed: boolean) {
     thinking,
     begin,
     requestBenefit,
+    chooseReply,
+    compareCare,
     changeGoal,
     save,
     resolveProposal,

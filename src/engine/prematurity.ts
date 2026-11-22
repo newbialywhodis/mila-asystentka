@@ -48,7 +48,11 @@ function eligibleDays(intervals: Interval[], early: boolean, premature: boolean)
   }, 0);
 }
 
-export function calculateSupplement(profile: Profile, asOf: string): Supplement {
+export function calculateSupplement(
+  profile: Profile,
+  asOf: string,
+  verifiedMultiple = false,
+): Supplement {
   if (profile.hospitalized === false) return { state: "calculated", weeks: 0 };
   if (profile.hospitalized === undefined) return { state: "unknown", fields: ["hospitalized"] };
 
@@ -57,7 +61,7 @@ export function calculateSupplement(profile: Profile, asOf: string): Supplement 
   const { childrenBorn, gestationalWeeks, birthWeightGrams, hospitalStays } = profile;
   if (!birth || !today || birth > today) return { state: "unknown", fields: ["birthDate"] };
   if (!childrenBorn) return { state: "unknown", fields: ["childrenBorn"] };
-  if (childrenBorn > 1) {
+  if (childrenBorn > 1 && !verifiedMultiple) {
     return {
       state: "review",
       reason:

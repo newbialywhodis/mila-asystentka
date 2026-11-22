@@ -56,7 +56,7 @@ export function MilaGuide({
 
   return (
     <GuideLayout
-      panelsEnabled={!loginHref}
+      panelsEnabled
       cases={
         <CaseHistory
           history={history}

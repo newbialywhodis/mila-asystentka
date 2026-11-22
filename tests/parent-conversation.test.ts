@@ -2,11 +2,17 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { assessBenefit } from "../src/engine/parent-benefit";
 import type { CaseFacts } from "../src/engine/parent-case";
+import { buildAssistantRequest } from "../src/features/parent/case-assistant-context";
 import { readFact } from "../src/features/parent/case-fields";
-import { readCaseRequest } from "../src/features/parent/case-message";
+import { readCareComparison, readCaseRequest } from "../src/features/parent/case-message";
+import { pregnancyConcernReply } from "../src/features/parent/case-replies";
 import {
+  append,
   appendAssessment,
+  appendCareComparison,
   askBenefit,
+  continueWithAssessment,
+  continueWithDocument,
   continueWithRequest,
   getAssessment,
   getBenefitTurn,
@@ -15,6 +21,11 @@ import {
   saveQuestionAnswer,
   selectBenefit,
 } from "../src/features/parent/case-session";
+import {
+  caseActionFromIntent,
+  caseActionSchema,
+  modelIntentSchema,
+} from "../src/features/parent/parent-intent";
 
 const asOf = "2026-11-21";
 const paternity: CaseFacts = {
@@ -26,6 +37,176 @@ const paternity: CaseFacts = {
   basis: 600_000,
   payer: "zus",
 };
+
+test("odpowiedź o ciąży trafia do kontekstu dopytania bez pytania kalkulatora", () => {
+  const session = appendAssessment({ ...newSession(), asOf, benefit: "paternity" });
+  const message = "chyba poronie";
+  const text = "To brzmi niepokojąco. Co teraz się dzieje?";
+  const reply = pregnancyConcernReply(text);
+  const next = append(session, { kind: "user", text: message }, reply);
+  const request = buildAssistantRequest(next, "jak mi pomozesz");
+  assert.deepEqual(request.messages.slice(-3), [
+    { role: "user", content: message },
+    { role: "assistant", content: reply.text },
+    { role: "user", content: "jak mi pomozesz" },
+  ]);
+  assert.equal(request.context.pending, null);
+  assert.equal(getBenefitTurn(next), getBenefitTurn(session));
+  assert.ok(reply.text.startsWith(text));
+  assert.match(reply.text, /112/);
+});
+
+test("wygenerowane dopytanie trafia do rozmowy bez automatycznej porady o ciąży", () => {
+  const text = "Masz wyznaczony termin na jutro czy czujesz, że poród się zaczyna?";
+  const reply = { kind: "reply" as const, text, choices: [] };
+  const next = append(
+    { ...newSession(), asOf },
+    { kind: "user", text: "jednak chyba urodzi się jutro" },
+    reply,
+  );
+  const request = buildAssistantRequest(next, "co?");
+  assert.deepEqual(request.messages.slice(-2), [
+    { role: "assistant", content: text },
+    { role: "user", content: "co?" },
+  ]);
+});
+
+test("model zwraca jedną dozwoloną akcję z danymi zgodnymi z kontraktem czatu", () => {
+  const context = buildAssistantRequest(
+    { ...newSession(), benefit: "paternity", goal: "application" },
+    "Chcę uzupełnić dane",
+  ).context;
+  const assess = modelIntentSchema.parse({
+    action: {
+      kind: "assess",
+      benefit: null,
+      goal: "calculation",
+      facts: [
+        { key: "insured", value: "true" },
+        { key: "birth", value: "nieznana" },
+      ],
+    },
+  });
+  const action = caseActionFromIntent(assess, context);
+  assert.deepEqual(caseActionSchema.parse(action), {
+    kind: "assess",
+    benefit: null,
+    goal: "application",
+    facts: { insured: true },
+  });
+  assert.equal(
+    modelIntentSchema.safeParse({ action: { kind: "google:python_interpreter" } }).success,
+    false,
+  );
+  assert.equal(
+    modelIntentSchema.safeParse({
+      action: {
+        kind: "urgentPregnancyCare",
+        text: "Czy obawiasz się poronienia?",
+        choices: ["benefit"],
+      },
+    }).success,
+    false,
+  );
+});
+
+test("nadmiar propozycji modelu nie odrzuca poprawnego tekstu odpowiedzi", () => {
+  const { context } = buildAssistantRequest(newSession(), "Od czego zacząć?");
+  const text = "Co chcesz najpierw omówić?";
+  const modeled = modelIntentSchema.parse({
+    action: {
+      kind: "reply",
+      text,
+      choices: ["beforeBirth", "beforeBirth", "afterBirth", "benefit"],
+    },
+  });
+  assert.deepEqual(caseActionSchema.parse(caseActionFromIntent(modeled, context)), {
+    kind: "reply",
+    text,
+    choices: ["beforeBirth", "afterBirth"],
+  });
+});
+
+test("kontekst intencji zawiera klucz pytania, a dane z odczytu PDF zostają w sprawie", () => {
+  const document = {
+    kind: "document",
+    file: new File([], "przyklad.pdf"),
+    mode: "local",
+    preview: "blob:przyklad",
+  } as const;
+  const session = continueWithDocument({ ...newSession(), asOf, turns: [document] }, document, {
+    benefit: "paternity",
+    facts: { birth: "2026-08-12", from: "2026-12-07", employment: "employee" },
+    sources: {},
+  });
+  const question = getAssessment(session)?.question;
+  assert.equal(question?.key, "insured");
+  assert.match(question?.text ?? "", /07\.12\.2026/);
+  const request = buildAssistantRequest(session, "Skąd bierze się to pytanie?");
+  assert.equal(request.context.pending, "insured");
+  assert.deepEqual(request.context.confirmed, ["birth", "from", "employment", "birthStage"]);
+  assert.doesNotMatch(JSON.stringify(request), /07\.12\.2026|2026-08-12|przyklad\.pdf/);
+});
+
+test("porównanie przechowuje własne dane wejściowe i wymaga ubezpieczenia dla symulacji", () => {
+  const session = saveFacts({ ...newSession(), asOf, benefit: "paternity" }, paternity);
+  const started = appendCareComparison(session, 50);
+  const comparison = started.turns.at(-1);
+  assert.equal(comparison?.kind, "compareCare");
+  if (comparison?.kind !== "compareCare") return;
+  const revised = saveFacts(started, { birth: "2026-09-12", basis: 720_000 });
+  assert.equal(comparison.workPercent, 50);
+  assert.equal(comparison.facts.insured, undefined);
+  assert.equal(session.family.facts.insured, true);
+  assert.equal(comparison.facts.birth, "2026-08-12");
+  assert.equal(comparison.facts.basis, 600_000);
+  assert.equal(revised.family.facts.basis, 720_000);
+});
+
+test("opis sytuacji bez świadczenia nie otwiera listy kalkulatora", () => {
+  const session = { ...newSession(), asOf };
+  const next = continueWithAssessment(session, {
+    kind: "assess",
+    benefit: null,
+    goal: "calculation",
+    facts: { dueDate: "2026-11-24" },
+  });
+  assert.equal(next.turns.at(-1)?.kind, "reply");
+  assert.equal(getBenefitTurn(next), undefined);
+  assert.deepEqual(next.family.facts, {});
+});
+
+test("pusta odpowiedź modelu nie powtarza pytania z kalkulatora", () => {
+  const session = appendAssessment({ ...newSession(), asOf, benefit: "paternity" });
+  const action = { kind: "assess", benefit: null, goal: "calculation", facts: {} } as const;
+  const next = continueWithAssessment(session, action);
+  assert.equal(next.turns.at(-1)?.kind, "reply");
+  assert.equal(getBenefitTurn(next), getBenefitTurn(session));
+
+  const proposed = continueWithAssessment(next, {
+    ...action,
+    facts: { birth: "2026-11-20" },
+  });
+  assert.equal(proposed.turns.at(-1)?.kind, "propose");
+});
+
+test("otwiera porównanie na podstawie naturalnego pytania o pracę lub podział urlopu", () => {
+  for (const [text, workPercent] of [
+    ["Co się zmieni, jeśli wrócę na pół etatu podczas rodzicielskiego?", 50],
+    ["A jeśli będę pracować na ćwierć etatu w trakcie urlopu rodzicielskiego?", 25],
+    ["Jak możemy podzielić urlop rodzicielski?", null],
+  ] as const) {
+    assert.deepEqual(readCareComparison(text), { kind: "compareCare", workPercent });
+  }
+  assert.equal(
+    readCareComparison("Czy mogę pracować na pół etatu podczas rodzicielskiego?"),
+    undefined,
+  );
+  assert.equal(
+    readCareComparison("Co się zmieni, jeśli wrócę na pół etatu po rodzicielskim?"),
+    undefined,
+  );
+});
 
 test("rozpoznaje świadczenie i długość z kilku naturalnych sformułowań", () => {
   const cases = [
