@@ -13,7 +13,10 @@ import styles from "./InterviewTurn.module.css";
 export function ScopeTurn({ workspace }: { workspace: ParentWorkspace }) {
   const id = useId();
   const s = workspace.session;
-  const subject = s.scopeTarget?.subject ?? s.data.navigation.activeSubject;
+  const subject =
+    s.scopeTarget?.subject.kind === "person"
+      ? s.scopeTarget.subject
+      : s.data.navigation.activeSubject;
   const [selected, setSelected] = useState(
     subject?.kind === "person" ? String(subject.personId) : "",
   );

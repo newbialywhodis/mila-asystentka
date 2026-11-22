@@ -8,6 +8,7 @@ import { maternityTopUp } from "../../engine/parent-benefit";
 import { factValue, fields } from "./case-fields";
 import { FactControl } from "./FactControl";
 import styles from "./ParentCard.module.css";
+import { resultCalculationLines } from "./result-explanation";
 
 function resultHeadline(result: BenefitResult) {
   return {
@@ -141,24 +142,9 @@ export function ResultCard({
           {result.coverageDay && insured === undefined ? (
             <p>Dzień oceny ubezpieczenia: {formatDay(result.coverageDay)}.</p>
           ) : null}
-          {result.moneyParts?.map(({ from, through, basis, daily, days }) => (
-            <p key={from}>
-              {formatDay(from)} – {formatDay(through)}. Podstawa {moneyLabel(basis)}. Kwota dzienna{" "}
-              {moneyLabel(daily)} × {formatDays(days)}.
-            </p>
+          {resultCalculationLines(result).map((line, index) => (
+            <p key={index}>{line}</p>
           ))}
-          {money && period && !result.moneyParts ? (
-            <p>
-              Podstawa {moneyLabel(money.basis)}. Kwota dzienna {moneyLabel(money.daily)} ×{" "}
-              {formatDays(period.days)}.
-            </p>
-          ) : null}
-          {result.extension?.money && result.extensionDays ? (
-            <p>
-              Wydłużenie: {moneyLabel(result.extension.money.daily)} ×{" "}
-              {formatDays(result.extensionDays)}.
-            </p>
-          ) : null}
           <a href={sources[result.source]?.url} target="_blank" rel="noreferrer">
             Podstawa i zasady ZUS
           </a>

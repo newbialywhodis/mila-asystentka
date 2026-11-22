@@ -1,9 +1,10 @@
 import { createGateway, generateText, Output } from "ai";
 import { z } from "zod";
 import { sources } from "../../../data/sources";
+import { procedures } from "../../../data/procedures";
 import { warsawToday } from "../../../engine/dates";
 import { guideQuestions } from "../../../features/guide/flow";
-import type { QuestionId } from "../../../features/guide/flow";
+import { generalHelpTopics, guideHelpRequestSchema } from "../../../features/guide/help-topics";
 import {
   aboutMilaAnswer,
   findHelpAnswer,
@@ -13,7 +14,7 @@ import {
   missingHelpAnswer,
   unavailableHelpAnswer,
 } from "../../../features/guide/helpAnswers";
-import { getHelpKnowledge } from "../../../features/guide/helpKnowledge";
+import { getGroundedHelpPassages, groundHelpAnswer } from "../../../features/guide/helpKnowledge";
 import { createSpeechToken } from "../../../features/guide/milaVoice";
 
 export const maxDuration = 20;
@@ -24,17 +25,8 @@ const openAIReasoningEffort = new Map<string, "minimal" | "none">([
   ["openai/gpt-6-luna", "none"],
 ]);
 const sourceId = z.enum(Object.keys(sources));
-const helpRequest = z.strictObject({
-  question: z.string().trim().min(1).max(maxHelpQuestionLength),
-  context: z
-    .custom<QuestionId>(
-      (value) => typeof value === "string" && Object.hasOwn(guideQuestions, value),
-    )
-    .optional(),
-  previousSourceIds: z.array(sourceId).max(maxHelpSources).optional(),
-});
 const helpOutput = Output.object({
-  schema: z.object({
+  schema: z.strictObject({
     aboutMila: z.boolean(),
     text: z
       .string()
@@ -62,7 +54,7 @@ export async function POST(request: Request) {
     return Response.json({ error: "Wyślij pytanie w formacie JSON." }, { status: 415 });
   }
 
-  const payload = helpRequest.safeParse(await request.json().catch(() => null));
+  const payload = guideHelpRequestSchema.safeParse(await request.json().catch(() => null));
   if (!payload.success) {
     return Response.json(
       { error: `Podaj prawidłowe pytanie do ${maxHelpQuestionLength} znaków.` },
@@ -70,7 +62,15 @@ export async function POST(request: Request) {
     );
   }
 
-  const { question, context, previousSourceIds } = payload.data;
+  if ("mode" in payload.data && payload.data.mode === "topic") {
+    const answer = generalHelpTopics[payload.data.topicId];
+    // Topic selection never receives or needs the browser's conversation state.
+    return Response.json(
+      { text: answer.text, sourceIds: answer.sourceIds },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  }
+  const { question, context, previousSourceIds, procedure } = payload.data;
   const known = findHelpAnswer(question, context);
   if (known) return Response.json({ text: known.text, sourceIds: known.sourceIds });
 
@@ -83,10 +83,11 @@ export async function POST(request: Request) {
   try {
     const { output } = await generateText({
       model: createGateway({ apiKey })(model),
-      instructions: `${instructions}\n\nKatalog Mili:\n${JSON.stringify(getHelpKnowledge(today))}\n\n${answerStyle}`,
+      instructions: `${instructions}\n\nKatalog Mili:\n${JSON.stringify(getGroundedHelpPassages(today))}\n\n${answerStyle}\nW tym etapie możesz wybrać wyłącznie jeden fragment z katalogu powyżej. Zwróć dokładnie jego text i sourceIds. Nie dopisuj niczego do tekstu. Jeśli żaden fragment nie odpowiada na pytanie, zwróć null.`,
       prompt: JSON.stringify({
         today,
         guideQuestion: context ? guideQuestions[context].label : undefined,
+        procedure: procedure ? procedures.find((p) => p.id === procedure)?.title : undefined,
         previousSourceIds,
         question,
       }),
@@ -114,6 +115,8 @@ export async function POST(request: Request) {
     ) {
       return Response.json(missingHelpAnswer);
     }
+    const grounded = groundHelpAnswer(text, sourceIds, today);
+    if (!grounded) return Response.json(missingHelpAnswer);
     const speechKey = process.env.ELEVENLABS_API_KEY?.trim();
     const speechToken = speechKey ? await createSpeechToken(text, speechKey) : null;
     return Response.json(

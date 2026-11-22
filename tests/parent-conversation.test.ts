@@ -4,6 +4,8 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { assessBenefit } from "../src/engine/parent-benefit";
 import type { CaseFacts } from "../src/engine/parent-case";
+import { proposeFacts } from "../src/features/parent/fact-proposals";
+import { applyConversationIntent } from "../src/features/parent/conversation-routing";
 import { buildAssistantRequest } from "../src/features/parent/case-assistant-context";
 import { readFact } from "../src/features/parent/case-fields";
 import { readCareComparison, readCaseRequest } from "../src/features/parent/case-message";
@@ -13,7 +15,6 @@ import {
   appendAssessment,
   appendCareComparison,
   askBenefit,
-  continueWithAssessment,
   continueWithDocument,
   continueWithRequest,
   getAssessment,
@@ -80,21 +81,39 @@ test("model zwraca jedną dozwoloną akcję z danymi zgodnymi z kontraktem czatu
   ).context;
   const assess = modelIntentSchema.parse({
     action: {
-      kind: "assess",
-      benefit: null,
-      goal: "calculation",
-      facts: [
-        { key: "insured", value: "true" },
-        { key: "birth", value: "nieznana" },
+      kind: "interpret",
+      intent: "answer",
+      candidates: [
+        {
+          field: "insured",
+          value: "true",
+          evidence: "Chyba mam chorobowe",
+          person: null,
+          title: null,
+          validTime: { kind: "undated", from: null, through: null },
+          certainty: "tentative",
+          unit: "none",
+        },
       ],
     },
   });
   const action = caseActionFromIntent(assess, context);
   assert.deepEqual(caseActionSchema.parse(action), {
-    kind: "assess",
-    benefit: null,
-    goal: "application",
-    facts: { insured: true },
+    kind: "interpret",
+    intent: "answer",
+    candidates: [
+      {
+        field: "insured",
+        value: true,
+        evidence: "Chyba mam chorobowe",
+        scope: "person",
+        person: null,
+        title: null,
+        validTime: { kind: "undated" },
+        certainty: "tentative",
+        unit: "none",
+      },
+    ],
   });
   assert.equal(
     modelIntentSchema.safeParse({ action: { kind: "google:python_interpreter" } }).success,
@@ -162,7 +181,7 @@ test("kontekst intencji zawiera klucz pytania, a dane z odczytu PDF zostają w s
   assert.equal(request.context.pending, "insured");
   assert.deepEqual(
     [...request.context.confirmed].sort(),
-    ["birth", "from", "employment", "birthStage"].sort(),
+    ["birth", "from", "employment", "birthStage", "stage"].sort(),
   );
   assert.doesNotMatch(JSON.stringify(request), /07\.12\.2026|2026-08-12|przyklad\.pdf/);
 });
@@ -184,29 +203,41 @@ test("porównanie przechowuje własne dane wejściowe i wymaga ubezpieczenia dla
 
 test("opis sytuacji bez świadczenia nie otwiera listy kalkulatora", () => {
   const session = { ...newSession(), asOf };
-  const next = continueWithAssessment(session, {
-    kind: "assess",
-    benefit: null,
-    goal: "calculation",
-    facts: { dueDate: "2026-11-24" },
-  });
-  assert.equal(next.turns.at(-1)?.kind, "reply");
+  const next = proposeFacts(session, [
+    {
+      field: "dueDate",
+      value: "2027-02-12",
+      scope: "family",
+      person: null,
+      title: null,
+      validTime: { kind: "undated" },
+      certainty: "stated",
+      unit: "none",
+    },
+  ]);
+  assert.equal(next.turns.at(-1)?.kind, "factsProposal");
   assert.equal(getBenefitTurn(next), undefined);
   assert.deepEqual(getParentCase(next).facts, {});
 });
 
 test("pusta odpowiedź modelu nie powtarza pytania z kalkulatora", () => {
   const session = appendAssessment(calculatorSession("paternity", asOf));
-  const action = { kind: "assess", benefit: null, goal: "calculation", facts: {} } as const;
-  const next = continueWithAssessment(session, action);
-  assert.equal(next.turns.at(-1)?.kind, "reply");
+  const next = applyConversationIntent(session, "answer");
+  assert.equal(next.turns.at(-1)?.kind, "note");
   assert.equal(getBenefitTurn(next), getBenefitTurn(session));
-
-  const proposed = continueWithAssessment(next, {
-    ...action,
-    facts: { birth: "2026-11-20" },
-  });
-  assert.equal(proposed.turns.at(-1)?.kind, "propose");
+  const proposed = proposeFacts(next, [
+    {
+      field: "birth",
+      value: "2026-11-20",
+      scope: "family",
+      person: null,
+      title: null,
+      validTime: { kind: "undated" },
+      certainty: "stated",
+      unit: "none",
+    },
+  ]);
+  assert.equal(proposed.turns.at(-1)?.kind, "factsProposal");
 });
 
 test("otwiera porównanie na podstawie naturalnego pytania o pracę lub podział urlopu", () => {

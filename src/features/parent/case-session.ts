@@ -22,9 +22,12 @@ import type { HelpAnswer } from "../guide/helpAnswers";
 import type { DocumentData } from "./case-documents";
 import { fields } from "./case-fields";
 import type { CaseRequest } from "./case-message";
-import { startingReply } from "./case-replies";
 import type { PregnancyConcernTurn } from "./case-replies";
 import type { CaseAction, CaseGoal, CaseReply, CaseTool } from "./parent-intent";
+import type { FactProposal } from "./fact-proposals";
+import type { ResultSnapshot } from "./family-session";
+import type { Profile } from "../../types/profile";
+import type { ProcedureResult } from "../../types/catalog";
 
 export type CaseQuestion = { key: FactKey; text: string; hint?: string };
 export type CaseAnswer = { question: CaseQuestion; field: FactKey };
@@ -64,6 +67,14 @@ export type AssessmentTurn = {
 };
 
 export type CaseTurn =
+  | FactProposal
+  | {
+      kind: "procedureExplanation";
+      text: string;
+      assessmentId: AssessmentId;
+      snapshot: ResultSnapshot<Profile, ProcedureResult>;
+    }
+  | { kind: "explanation"; text: string; assessment: AssessmentTurn }
   | {
       kind: "user";
       text: string;
@@ -80,13 +91,13 @@ export type CaseTurn =
   | PregnancyConcernTurn
   | { kind: "help"; answer: HelpAnswer }
   | { kind: "tool"; tool: CaseTool; text: string }
-  | { kind: "propose"; benefit: Benefit; goal: CaseGoal; facts: CaseFacts; text: string }
   | CareComparisonTurn
   | AttachedDocument
   | BenefitChoice
   | AssessmentTurn;
 
 export type CaseSession = {
+  pendingProposal?: FactProposal;
   data: InterviewSession;
   activeAssessmentId?: AssessmentId;
   view: "start" | "interview" | "discovery" | "scope" | "calculator" | "procedure" | "choice";
@@ -250,7 +261,9 @@ export function getParentCase(session: CaseSession): ParentCase {
             ? "Potwierdzone z PDF"
             : source.kind === "demo"
               ? source.label
-              : "Potwierdzona odpowiedź",
+              : source.kind === "answer" && source.via === "aiConfirmation"
+                ? "Potwierdzona interpretacja wypowiedzi"
+                : "Potwierdzona odpowiedź",
         ...(source.kind === "pdf" ? { page: source.page } : {}),
       };
   }
@@ -668,41 +681,12 @@ export function continueWithRequest(session: CaseSession, request: CaseRequest, 
   );
 }
 
-export function continueWithAssessment(
-  session: CaseSession,
-  action: Extract<CaseAction, { kind: "assess" }>,
-): CaseSession {
-  const current = getBenefitTurn(session);
-  const choosing = current?.kind === "chooseBenefit";
-  const benefit = action.benefit ?? (choosing ? null : session.benefit);
-  if (!benefit) return append(session, startingReply);
-
-  const goal = choosing && action.goal === "calculation" ? current.goal : action.goal;
-  const next = setCaseGoal(selectBenefit(session, benefit), goal);
-  const facts = Object.fromEntries(
-    Object.entries(action.facts).filter(
-      ([key, value]) => getParentCase(next).facts[key as FactKey] !== value,
-    ),
-  );
-  if (Object.keys(facts).length) {
-    return append(session, {
-      kind: "propose",
-      benefit,
-      goal,
-      facts,
-      text: "Czy dobrze zrozumiałam? Potwierdź dane, żebym mogła sprawdzić świadczenie.",
-    });
-  }
-  if (action.benefit === null && goal === session.goal) return append(session, startingReply);
-  return appendAssessment(next);
-}
-
 export function continueWithDocument(
   session: CaseSession,
   document: AttachedDocument,
   data?: DocumentData,
 ) {
-  if (session.turns.at(-1) !== document) return session;
+  if (!documentIsActive(session, document)) return session;
   if (
     data &&
     (data.baseRevision !== session.data.contextRevision ||
@@ -710,6 +694,14 @@ export function continueWithDocument(
   )
     return session;
   if (data?.benefit && session.benefit && data.benefit !== session.benefit) return session;
+  if (
+    data?.target &&
+    JSON.stringify(data.target) !==
+      JSON.stringify(
+        session.data.assessments.find((a) => a.id === session.activeAssessmentId)?.target,
+      )
+  )
+    return session;
 
   const current = getBenefitTurn(session);
   const unanswered = current?.kind === "chooseBenefit" || (current?.question && !current.deferred);
@@ -737,6 +729,18 @@ export function continueWithDocument(
     : next;
   if (current?.kind === "chooseBenefit" && !data?.benefit) return askBenefit(saved, current.goal);
   return appendAssessment(setCaseGoal(saved, current?.goal ?? getCaseContext(saved).goal));
+}
+
+export function documentIsActive(session: CaseSession, document: AttachedDocument) {
+  const index = session.turns.indexOf(document);
+  return (
+    index >= 0 &&
+    session.turns
+      .slice(index + 1)
+      .every((turn) =>
+        ["user", "help", "note", "explanation", "procedureExplanation"].includes(turn.kind),
+      )
+  );
 }
 
 export const toolMessages: Record<CaseTool, string> = {

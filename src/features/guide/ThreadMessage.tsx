@@ -163,7 +163,7 @@ function MilaMessageActions({
     <div className={`${styles.followUp} ${styles.messageActions}`}>
       {leadingActions}
       <CopyButton label="Kopiuj wiadomość Mili" text={text} className={styles.messageCopy}>
-        {!localOnly ? (
+        {!localOnly && (speechToken !== null || recordings.has(speechText)) ? (
           <IconButton
             icon="speaker"
             label={reading ? "Zatrzymaj odczytywanie" : "Odczytaj wiadomość Mili"}

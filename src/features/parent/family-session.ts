@@ -23,7 +23,10 @@ export type ChildId = z.infer<typeof childIdSchema>;
 export type ISODate = z.infer<typeof isoDateSchema>;
 
 export const factSourceSchema = z.discriminatedUnion("kind", [
-  z.strictObject({ kind: z.literal("answer"), via: z.enum(["button", "parser", "confirmation"]) }),
+  z.strictObject({
+    kind: z.literal("answer"),
+    via: z.enum(["button", "parser", "confirmation", "aiConfirmation"]),
+  }),
   z.strictObject({
     kind: z.literal("pdf"),
     documentId: documentIdSchema,

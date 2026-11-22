@@ -560,7 +560,9 @@ export function readFact(key: FactKey, input: string, upcomingFrom?: string) {
     const days = /^\d+$/.test(text) ? Number(text) : readPeriodLength(text);
     return days === undefined ? undefined : validateFact(key, days);
   }
-  const numeric = text.replace(/\s/g, "").replace(/(?:zl|pln|dni|tygodni|g|%)$/, "");
+  const numeric = text
+    .replace(/\s/g, "")
+    .replace(field.type === "money" ? /(?:zl|pln)$/ : /(?:dni|tygodni|g|%)$/, "");
   if (!/^\d+(?:[.,]\d{1,2})?$/.test(numeric)) return;
   const number = Number(numeric.replace(",", "."));
   return validateFact(key, field.type === "money" ? Math.round(number * 100) : number);

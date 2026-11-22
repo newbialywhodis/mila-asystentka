@@ -1,0 +1,60 @@
+.card {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  max-width: 100%;
+}
+.row {
+  display: grid;
+  gap: 0.6rem;
+  min-width: 0;
+  padding: 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 0.6rem;
+}
+.row label {
+  display: grid;
+  gap: 0.25rem;
+}
+.row input,
+.row select {
+  font: inherit;
+  max-width: 100%;
+  min-width: 0;
+  padding: 0.45rem;
+}
+.row .check {
+  display: flex;
+  align-items: start;
+  gap: 0.5rem;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.row input:not([type="checkbox"]),
+.row select {
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-xs);
+}
+.row input[type="checkbox"] {
+  accent-color: var(--primary);
+}
+.row :is(input, select):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.row summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+.row p {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}

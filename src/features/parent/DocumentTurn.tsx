@@ -11,6 +11,7 @@ import {
   acceptedDocumentFact,
   documentSuggestions,
   matchesDocumentCoverage,
+  matchesDocumentTarget,
 } from "./case-documents";
 import type {
   DocumentApplication,
@@ -24,6 +25,7 @@ import { demoDocumentRead } from "./demo-document";
 import type { ScanProgress, ScanRange } from "./local-document";
 import type { ScanReference } from "./scan-evidence";
 import styles from "./DocumentTurn.module.css";
+import { personLabel } from "./workspace-session";
 
 type ReadState =
   | { kind: "reading"; progress?: ScanProgress; cloud?: true }
@@ -144,6 +146,7 @@ export function DocumentTurn({
     session.documentTargets[document.documentId || document.preview] ===
       session.activeAssessmentId && Boolean(session.activeAssessmentId);
   const draft: DocumentData = {
+    target: session.data.assessments.find((a) => a.id === session.activeAssessmentId)?.target,
     benefit,
     facts: {},
     sources: {},
@@ -161,7 +164,12 @@ export function DocumentTurn({
         : entries[0];
     return { key, entries, existing, conflict, selected };
   });
+  let skippedScope = false;
   for (const { key, selected } of rows) {
+    if (selected && !matchesDocumentTarget(selected, draft.target, document.documentId)) {
+      skippedScope = true;
+      continue;
+    }
     if (selected && !selected.coverage) {
       const { facts, source } = acceptedDocumentFact(
         key,
@@ -178,6 +186,10 @@ export function DocumentTurn({
   let skippedCoverage = false;
   for (const { key, selected } of rows) {
     if (!selected?.coverage) continue;
+    if (!matchesDocumentTarget(selected, draft.target, document.documentId)) {
+      skippedScope = true;
+      continue;
+    }
     if (!matchesDocumentCoverage(selected, coverageBenefit, coverageFacts)) {
       skippedCoverage = true;
       continue;
@@ -302,6 +314,21 @@ export function DocumentTurn({
         </div>
       ) : null}
       {targetReady && rows.length ? (
+        <p className={styles.caption}>
+          Cel potwierdzenia:{" "}
+          {personLabel(
+            session,
+            draft.target?.subject.kind === "person" ? draft.target.subject.personId : undefined,
+          )}
+          . Tytuł:{" "}
+          {draft.target?.subject.kind === "person" && draft.target.subject.titleId
+            ? "wybrany w tej sprawie"
+            : "nieustalony"}
+          . Każda wartość dotyczy wskazanego celu; identyczna liczba nie potwierdza osoby ani
+          okresu.
+        </p>
+      ) : null}
+      {targetReady && rows.length ? (
         <ul className={styles.facts}>
           {rows.map(({ key, entries, existing, conflict, selected }) => (
             <li key={key}>
@@ -323,13 +350,12 @@ export function DocumentTurn({
                         ? "Pomiń rozbieżność"
                         : `Zachowaj obecną wartość (${factValue(key, existing)})`}
                     </option>
-                    {entries
-                      .filter((entry) => entry.value !== existing)
-                      .map((entry) => (
-                        <option key={String(entry.value)} value={entries.indexOf(entry)}>
-                          {factValue(key, entry.value)} · s. {entry.page}
-                        </option>
-                      ))}
+                    {entries.map((entry, index) => (
+                      <option key={index} value={entries.indexOf(entry)}>
+                        {factValue(key, entry.value)} · s. {entry.page}
+                        {entry.coverage ? ` · na ${formatDay(entry.coverage.day)}` : ""}
+                      </option>
+                    ))}
                   </select>
                 </label>
               ) : (
@@ -419,6 +445,12 @@ export function DocumentTurn({
       {skippedCoverage ? (
         <p className={styles.caption}>
           Chorobowe można przenieść razem z potwierdzoną datą i tytułem z poświadczenia.
+        </p>
+      ) : null}
+      {skippedScope ? (
+        <p className={styles.caption}>
+          Pominięto propozycje z innej osoby, tytułu lub okresu. Wybierz właściwy cel przed ich
+          zatwierdzeniem.
         </p>
       ) : null}
       {state.kind === "ready" && state.references?.length ? (

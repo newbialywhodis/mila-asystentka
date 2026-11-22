@@ -114,9 +114,14 @@ try {
     .first()
     .waitFor();
   assert.equal(await page.getByRole("region", { name: "Wynik sprawdzenia" }).count(), 0);
-  assert.equal(cloud.length, 0);
+  // Stage 4 now offers optional AI interpretation of this complex utterance.
+  // The 503 stub must leave every stage-3 control usable, without help/cloud upload.
+  assert.deepEqual(
+    cloud.map((url) => new URL(url).pathname),
+    ["/api/parent-intent"],
+  );
   evidence.push(
-    "desktop: keyboard, local explanation, pause/resume, ambiguous answer, interview → discovery → calculator → amount → documents → procedure → Sheet focus → correction/stale snapshot; zero AI requests",
+    "desktop: keyboard, local explanation, pause/resume, ambiguous answer, interview → discovery → calculator → amount → documents → procedure → Sheet focus → correction/stale snapshot; one failed optional interpretation, all button flows work without AI",
   );
   await page.close();
 

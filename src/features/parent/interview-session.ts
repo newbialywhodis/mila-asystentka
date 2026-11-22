@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { caseFactsSchema } from "../../engine/parent-case";
 import { writeAssessmentFacts } from "./assessment-facts";
 import type { AssessmentFactsCommand } from "./assessment-facts";
 import {
@@ -149,7 +150,7 @@ function applicableQuestions(s: InterviewSession): QuestionTarget[] {
     const currentTitles = person.titles.filter(
       ({ employment, ended }) =>
         employment?.state === "confirmed" &&
-        timeContains(employment.validTime, s.asOf) &&
+        (employment.validTime.kind === "undated" || timeContains(employment.validTime, s.asOf)) &&
         !(ended?.state === "confirmed" && ended.value < s.asOf),
     );
     // Multiple titles require an explicit title selection for any subsequent individual check.
@@ -518,6 +519,14 @@ export type ConfirmedCommand =
   | AssessmentFactsCommand
   | (AnswerMetadata & { readonly baseRevision: number } & (
         | { readonly kind: "answer"; readonly question: QuestionRef; readonly value: unknown }
+        | { readonly kind: "familyChildren"; readonly value: unknown }
+        | {
+            readonly kind: "withdrawEmployment";
+            readonly personId: PersonId;
+            readonly titleId: TitleId;
+            readonly expected: WorkKind;
+            readonly validTime: ValidTime;
+          }
         | {
             readonly kind: "employment";
             readonly personId: PersonId;
@@ -787,6 +796,85 @@ export function applyConfirmedFacts(s: InterviewSession, command: ConfirmedComma
     });
   if (!metadata.success) return failure(s, "invalid-answer");
   const { source, validTime: time, basis } = metadata.data;
+  if (command.kind === "withdrawEmployment") {
+    const title = s.persons
+      .find((p) => p.id === command.personId)
+      ?.titles.find((t) => t.id === command.titleId);
+    if (
+      !title ||
+      title.employment?.state !== "confirmed" ||
+      title.employment.value !== command.expected ||
+      JSON.stringify(title.employment.validTime) !== JSON.stringify(time)
+    )
+      return failure(s, "invalid-target");
+    const next = advance(s);
+    const reason = "Potwierdzona korekta właściciela informacji";
+    return success(
+      refresh(
+        invalidateDependentData(
+          {
+            ...next,
+            persons: next.persons.map((p) =>
+              p.id !== command.personId
+                ? p
+                : {
+                    ...p,
+                    titles: p.titles.map((t) =>
+                      t.id !== command.titleId
+                        ? t
+                        : {
+                            ...t,
+                            employment: markStale(t.employment, next.contextRevision, reason),
+                            sicknessCoverage: t.sicknessCoverage.map((c) => ({
+                              ...c,
+                              fact:
+                                c.fact.state === "confirmed" && timesOverlap(c.fact.validTime, time)
+                                  ? (markStale(c.fact, next.contextRevision, reason) ?? c.fact)
+                                  : c.fact,
+                            })),
+                          },
+                    ),
+                  },
+            ),
+          },
+          {
+            kind: "title",
+            personId: command.personId,
+            titleId: command.titleId,
+            field: "employment",
+            validTime: time,
+          },
+          next.contextRevision,
+        ),
+      ),
+    );
+  }
+  if (command.kind === "familyChildren") {
+    const value = caseFactsSchema.shape.children.safeParse(command.value);
+    if (!value.success) return failure(s, "invalid-answer");
+    const next = advance(s);
+    return success(
+      refresh(
+        invalidateDependentData(
+          {
+            ...next,
+            family: {
+              ...next.family,
+              childrenCount: confirmed(
+                value.data,
+                next.contextRevision,
+                source,
+                { kind: "undated" },
+                basis,
+              ),
+            },
+          },
+          { kind: "family", eventId: s.family.event.id, field: "childrenCount" },
+          next.contextRevision,
+        ),
+      ),
+    );
+  }
   if (command.kind === "employment") {
     const parsed = interviewQuestions.employment.schema.safeParse({
       kind: command.value,
@@ -1129,6 +1217,40 @@ export function answerInterviewQuestion(
     baseRevision: ref.promptRevision,
     ...metadata,
   });
+}
+
+/** Confirmed multi-field commands use the same schemas/invalidation as an answer.
+ * Targets are constructed locally; this never accepts a model-generated cursor. */
+export function confirmInterviewValue(
+  s: InterviewSession,
+  target: QuestionTarget,
+  value: unknown,
+  metadata: AnswerMetadata = {},
+): Transition {
+  if (
+    ("eventId" in target && target.eventId !== s.family.event.id) ||
+    ("personId" in target && !s.persons.some((p) => p.id === target.personId))
+  )
+    return failure(s, "invalid-target");
+  const question = { ...target, promptRevision: s.contextRevision };
+  const prepared: InterviewSession = {
+    ...s,
+    navigation: { ...s.navigation, view: "interview" },
+    interview: { ...s.interview, mode: "asking", active: question, editing: undefined },
+  };
+  const written = answerInterviewQuestion(prepared, question, value, metadata);
+  if (!written.ok) return failure(s, written.reason);
+  return success(
+    refresh({
+      ...written.session,
+      navigation: { ...written.session.navigation, view: s.navigation.view },
+      interview: {
+        ...written.session.interview,
+        mode: s.interview.mode,
+        editing: s.interview.editing,
+      },
+    }),
+  );
 }
 
 function skipQuestion(

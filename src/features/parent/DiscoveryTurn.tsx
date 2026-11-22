@@ -1,5 +1,5 @@
 import { Button } from "../../components/ui/Button";
-import { labels } from "../../engine/parent-case";
+import { labels, employmentLabels } from "../../engine/parent-case";
 import { discoverProcedures } from "../../engine/discover-procedures";
 import type { DiscoveryItem } from "../../engine/discover-procedures";
 import { questions } from "../../data/questions";
@@ -171,6 +171,21 @@ function DiscoveryCard({ item, workspace }: { item: DiscoveryItem; workspace: Pa
   const { evaluation, presentation } = item;
   const missing = evaluation.missingFields[0] ?? presentation.deadlineMissingFields[0];
   const subject = item.target.subject;
+  const person =
+    subject.kind === "person" ? s.data.persons.find((p) => p.id === subject.personId) : undefined;
+  const employment =
+    subject.kind === "person"
+      ? person?.titles.find((t) => t.id === subject.titleId)?.employment
+      : undefined;
+  const undatedWork =
+    employment?.state === "confirmed" && employment.validTime.kind === "undated"
+      ? employmentLabels[employment.value]
+      : person?.workSituation?.state === "confirmed" &&
+          person.workSituation.validTime.kind === "undated"
+        ? person.workSituation.value === "notWorking"
+          ? "Brak pracy"
+          : "Inna sytuacja"
+        : undefined;
   const checked = s.data.assessments.find(
     (a) =>
       (a.kind === "calculator" &&
@@ -208,7 +223,11 @@ function DiscoveryCard({ item, workspace }: { item: DiscoveryItem; workspace: Pa
           : ""}
       </p>
       {missing ? (
-        <p className={styles.meta}>Do ustalenia: {questions[missing].label}</p>
+        <p className={styles.meta}>
+          {undatedWork && (missing === "employment" || missing === "otherParentEmployment")
+            ? `Zapisano formę pracy: ${undatedWork}. Do szczegółowej oceny potwierdzisz jej zakres na wymagany dzień.`
+            : `Do ustalenia: ${questions[missing].label}`}
+        </p>
       ) : item.action.missing.length ? (
         <p className={styles.meta}>Najpierw ustalimy właściwą osobę, tytuł i zakres sprawy.</p>
       ) : null}

@@ -13,7 +13,7 @@ import {
   validateDocumentRead,
 } from "../src/features/parent/case-documents";
 import { caseExamples } from "../src/features/parent/parent-examples";
-import { caseActionSchema, proposedFacts } from "../src/features/parent/parent-intent";
+import { caseActionSchema } from "../src/features/parent/parent-intent";
 import {
   append,
   appendAssessment,
@@ -374,19 +374,50 @@ test("odczyt PDF pomija nieprawidłowe dane i nie wprowadza rozstrzygnięcia do 
 });
 
 test("wynik narzędzia i odpowiedzi przyjmują tylko prawidłowe, ustrukturyzowane fakty", () => {
-  const facts = proposedFacts([
-    { key: "birth", value: "2026-08-12" },
-    { key: "basis", value: "600005" },
-    { key: "insured", value: "true" },
-    { key: "children", value: "0" },
-  ]);
-  assert.deepEqual(facts, { birth: "2026-08-12", basis: 600_005, insured: true });
   assert.equal(
     caseActionSchema.safeParse({
       kind: "assess",
       benefit: "paternity",
       goal: "application",
-      facts,
+      facts: { insured: true },
+    }).success,
+    false,
+  );
+  assert.equal(
+    caseActionSchema.safeParse({
+      kind: "interpret",
+      intent: "answer",
+      candidates: [
+        {
+          field: "insured",
+          value: "true",
+          scope: "person",
+          person: "subject",
+          title: null,
+          validTime: { kind: "undated" },
+          certainty: "stated",
+          unit: "none",
+        },
+      ],
+    }).success,
+    false,
+  );
+  assert.equal(
+    caseActionSchema.safeParse({
+      kind: "interpret",
+      intent: "answer",
+      candidates: [
+        {
+          field: "insured",
+          value: true,
+          scope: "person",
+          person: "subject",
+          title: null,
+          validTime: { kind: "undated" },
+          certainty: "stated",
+          unit: "none",
+        },
+      ],
     }).success,
     true,
   );
@@ -550,7 +581,7 @@ test("sugestie PDF zachowują sprzeczne wartości i pomijają termin porodu, gdy
   });
   assert.ok(read);
   assert.deepEqual(documentSuggestions(read, { birth: "2026-11-19", basis: 500_000 }, today), [
-    [read.candidates[1], read.candidates[3]],
+    [read.candidates[1], read.candidates[2], read.candidates[3]],
   ]);
   const decision = validateDocumentRead({
     ...read,

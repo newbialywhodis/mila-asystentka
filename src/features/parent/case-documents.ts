@@ -2,6 +2,8 @@ import { z } from "zod";
 import { parseDate } from "../../engine/dates";
 import { benefitSchema, caseFactsSchema } from "../../engine/parent-case";
 import type { Benefit, CaseFacts, FactKey, ParentCase } from "../../engine/parent-case";
+import { documentIdSchema, personIdSchema, titleIdSchema, validTimeSchema } from "./family-session";
+import type { AssessmentTarget } from "./family-session";
 
 export const pdfUploadLimit = 3_500_000;
 
@@ -48,6 +50,10 @@ const candidate = z.strictObject({
   value: z.union([z.string().max(45), z.number(), z.boolean()]),
   page,
   coverage: z.object({ day: date, employment: caseFactsSchema.shape.employment }).optional(),
+  personId: personIdSchema.optional(),
+  titleId: titleIdSchema.optional(),
+  validTime: validTimeSchema.optional(),
+  documentId: documentIdSchema.optional(),
 });
 const documentKind = z.enum([
   "application",
@@ -79,6 +85,7 @@ export type DocumentApplication = { page: number; read: DocumentRead };
 import type { AssessmentId } from "./family-session";
 
 export type DocumentData = {
+  target?: AssessmentTarget;
   baseRevision?: number;
   assessmentId?: AssessmentId;
   benefit: Benefit | null;
@@ -158,12 +165,22 @@ export function documentSuggestions(read: DocumentRead, facts: CaseFacts, today:
     if (entry.key === "birth" && typeof entry.value === "string" && entry.value > today) continue;
     if (entry.key === "dueDate" && birth) continue;
     const group = groups.get(entry.key) ?? [];
-    if (!group.some(({ value }) => value === entry.value)) group.push(entry);
+    if (
+      !group.some(
+        (other) =>
+          other.value === entry.value &&
+          other.page === entry.page &&
+          other.personId === entry.personId &&
+          other.titleId === entry.titleId &&
+          JSON.stringify(other.validTime) === JSON.stringify(entry.validTime) &&
+          JSON.stringify(other.coverage) === JSON.stringify(entry.coverage),
+      )
+    )
+      group.push(entry);
     groups.set(entry.key, group);
   }
-  return [...groups.values()].filter(
-    (group) => group.length > 1 || facts[group[0].key] !== group[0].value,
-  );
+  // Equal values without proven ownership/time are still proposals, not corroboration.
+  return [...groups.values()];
 }
 
 export function acceptedDocumentFact(
@@ -185,4 +202,23 @@ export function matchesDocumentCoverage(
   if (!candidate.coverage) return true;
   const day = benefit === "maternity" || benefit === "lossMaternity" ? facts.birth : facts.from;
   return day === candidate.coverage.day && facts.employment === candidate.coverage.employment;
+}
+
+export function matchesDocumentTarget(
+  candidate: DocumentCandidate,
+  target: AssessmentTarget | undefined,
+  documentId?: string,
+) {
+  if (!target) return false;
+  const personId = target.subject.kind === "person" ? target.subject.personId : target.applicantId;
+  const titleId =
+    target.subject.kind === "person" ? target.subject.titleId : target.applicantTitleId;
+  return (
+    (!candidate.personId || candidate.personId === personId) &&
+    (!candidate.titleId || candidate.titleId === titleId) &&
+    (!candidate.documentId || candidate.documentId === documentId) &&
+    (!candidate.validTime ||
+      candidate.validTime.kind === "undated" ||
+      (candidate.validTime.kind === "day" && candidate.validTime.day === candidate.coverage?.day))
+  );
 }

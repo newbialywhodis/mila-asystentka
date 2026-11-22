@@ -1,9 +1,23 @@
 import type { QuestionId } from "./flow";
 import { normalizeGuideText } from "./textInput";
+import { z } from "zod";
+import { sources } from "../../data/sources";
 
 export const maxHelpQuestionLength = 2_000;
 export const maxHelpAnswerLength = 1_200;
 export const maxHelpSources = 4;
+export const helpAnswerSchema = z.strictObject({
+  text: z.string().min(1).max(maxHelpAnswerLength),
+  sourceIds: z
+    .array(z.enum(Object.keys(sources)))
+    .max(maxHelpSources)
+    .optional(),
+  speechToken: z
+    .string()
+    .regex(/^[A-Za-z0-9+/]{43}=$/)
+    .nullable()
+    .optional(),
+});
 
 export type HelpAnswer = {
   text: string;
@@ -55,6 +69,34 @@ export const helpTopics = [
   trimesterHelp,
   trimesterDefinition,
 ] as const;
+
+export const generalHelpTopics = {
+  leaveAndAllowance: {
+    label: "Czym różni się urlop od zasiłku?",
+    text: "Urlop to przerwa w pracy przewidziana dla pracownika. Zasiłek jest świadczeniem pieniężnym. Prawo do urlopu i prawo do wypłaty wymagają osobnego sprawdzenia.",
+    sourceIds: ["maternity"],
+  },
+  sicknessInsurance: {
+    label: "Jak działa ubezpieczenie chorobowe?",
+    text: helpTopics[5].text,
+    sourceIds: ["sickness"],
+  },
+  benefitBasis: {
+    label: "Czym jest podstawa wymiaru zasiłku?",
+    text: "Podstawa wymiaru służy do obliczenia zasiłku. Nie musi być równa pensji brutto ani podstawie składek. W Mili korzystaj z podstawy ustalonej przez płatnika lub dostępnego formularza podstawy. Własną kwotę sprawdzisz w lokalnym kalkulatorze.",
+    sourceIds: ["maternity"],
+  },
+  usualDocuments: {
+    label: "Jakie dokumenty zwykle są potrzebne?",
+    text: "Dokumenty zależą od świadczenia, formy pracy i płatnika. Mogą obejmować wniosek, zaświadczenie płatnika składek oraz dokument potwierdzający zdarzenie. Wybierz konkretną sprawę, aby zobaczyć właściwą listę i oficjalne źródła.",
+    sourceIds: ["maternity"],
+  },
+  applicationDeadline: {
+    label: "Jak rozumieć termin składania wniosku?",
+    text: "Sprawdź, od jakiego zdarzenia biegnie termin i jaki jest skutek jego przekroczenia. Data urodzenia, data karty urodzenia i początek urlopu to różne zdarzenia. Termin dla wybranej sprawy znajdziesz w jej instrukcji.",
+    sourceIds: ["birth", "maternity"],
+  },
+} as const satisfies Record<string, HelpAnswer & { label: string }>;
 
 const explanations: Partial<Record<QuestionId, HelpAnswer>> = {
   stage: {
@@ -118,6 +160,8 @@ const explanationQuestions = new Set([
 const answersByQuestion = new Map<string, HelpAnswer>(
   helpTopics.map((answer) => [normalizeHelpQuestion(answer.label), answer]),
 );
+for (const topic of Object.values(generalHelpTopics))
+  answersByQuestion.set(normalizeHelpQuestion(topic.label), topic);
 for (const alias of [
   "trymestr",
   "co to jest trymestr",
@@ -127,6 +171,14 @@ for (const alias of [
 ]) {
   answersByQuestion.set(alias, trimesterDefinition);
 }
+
+for (const alias of [
+  "co to znaczy ubezpieczenie chorobowe",
+  "co to jest ubezpieczenie chorobowe",
+  "czym jest ubezpieczenie chorobowe",
+  "chorobowe",
+])
+  answersByQuestion.set(alias, generalHelpTopics.sicknessInsurance);
 
 export function findHelpAnswer(question: string, context?: QuestionId): HelpAnswer | undefined {
   const normalized = normalizeHelpQuestion(question);
@@ -153,6 +205,7 @@ export const unavailableHelpAnswer: HelpAnswer = {
 export function getStaticHelpTexts(): string[] {
   return [
     ...helpTopics,
+    ...Object.values(generalHelpTopics),
     ...Object.values(explanations),
     aboutMilaAnswer,
     missingHelpAnswer,

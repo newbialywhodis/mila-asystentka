@@ -668,7 +668,7 @@ export function CareComparison({
     </div>
   );
   return (
-    <MilaMessage copyText={copyText} smartComponents={card}>
+    <MilaMessage copyText={copyText} speechToken={null} smartComponents={card}>
       <p tabIndex={-1} data-chat-focus>
         {turn.text}
       </p>

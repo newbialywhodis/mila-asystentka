@@ -4,7 +4,7 @@ import { InterviewTurn } from "./InterviewTurn";
 import { DiscoveryTurn } from "./DiscoveryTurn";
 import { ScopeTurn } from "./ScopeTurn";
 import { ProcedureQuestionTurn } from "./ProcedureQuestionTurn";
-import { getParentCase } from "./case-session";
+import { getParentCase, assessmentTurnIsCurrent, documentIsActive } from "./case-session";
 import { useId, useLayoutEffect, useRef, useState } from "react";
 import { Button } from "../../components/ui/Button";
 import { Icon } from "../../components/ui/Icon";
@@ -14,7 +14,6 @@ import { MilaMessage, UserMessage } from "../guide/ThreadMessage";
 import { BenefitAssessment, BenefitSelection } from "./BenefitTurn";
 import { CareComparison } from "./CareComparison";
 import type { OpenPdfPreview } from "./AttachmentPreview";
-import { factValue, fields } from "./case-fields";
 import { replyChoiceLabels } from "./case-replies";
 import type { CaseAnswer, CaseTurn } from "./case-session";
 import { DocumentTurn } from "./DocumentTurn";
@@ -25,6 +24,11 @@ import type { CaseTool } from "./parent-intent";
 import { isExpanded } from "./useParentWorkspace";
 import type { ExpandedTool, ParentWorkspace } from "./useParentWorkspace";
 import styles from "./ParentCard.module.css";
+import { FactProposals } from "./FactProposals";
+import { proposalIsCurrent } from "./fact-proposals";
+import { generalHelpTopics } from "../guide/help-topics";
+import type { HelpTopicId } from "../guide/help-topics";
+import { procedureExplanationIsCurrent } from "./result-explanation";
 
 const toolLabels: Record<ExpandedTool, string> = {
   formalities: "Zobacz plan formalności",
@@ -47,7 +51,12 @@ export function ParentThread({
   const interviewEdits = revisableInterviewAnswers(session);
   const [edit, setEdit] = useState<{ answer: CaseAnswer; at: CaseTurn | undefined }>();
   const editTrigger = useRef<HTMLButtonElement>(null);
-  const waiting = latest?.kind === "propose" || latest?.kind === "document";
+  const proposing = Boolean(
+    session.pendingProposal && proposalIsCurrent(session, session.pendingProposal),
+  );
+  const waiting =
+    proposing ||
+    session.turns.some((turn) => turn.kind === "document" && documentIsActive(session, turn));
   const lastReply = thinking ? session.turns.at(-2) : latest;
   const activeBenefit =
     !workspace.active ||
@@ -140,7 +149,7 @@ export function ParentThread({
               <DocumentTurn
                 document={turn}
                 session={session}
-                active={current && workspace.active}
+                active={workspace.active && documentIsActive(session, turn)}
                 onPreview={onPreview}
                 onContinue={(data) => workspace.finishDocument(turn, data)}
                 onPrepare={(benefit) => workspace.prepareDocument(turn, benefit)}
@@ -158,6 +167,7 @@ export function ParentThread({
         );
       })}
       {workspace.active &&
+      !proposing &&
       ["interview", "discovery", "scope", "procedure"].includes(session.view) ? (
         <div key="workflow" data-chat-scroll data-chat-current={true} tabIndex={-1}>
           {session.view === "interview" ? (
@@ -170,6 +180,24 @@ export function ParentThread({
             <ProcedureQuestionTurn key={session.data.contextRevision} workspace={workspace} />
           )}
         </div>
+      ) : null}
+      {workspace.active && session.turns.length ? (
+        <details className={styles.card}>
+          <summary>Ogólne tematy pomocy</summary>
+          <div className={styles.actions}>
+            {(Object.keys(generalHelpTopics) as HelpTopicId[]).map((topicId) => (
+              <Button
+                key={topicId}
+                size="sm"
+                variant="outline"
+                disabled={thinking}
+                onClick={() => void workspace.askTopic(topicId)}
+              >
+                {generalHelpTopics[topicId].label}
+              </Button>
+            ))}
+          </div>
+        </details>
       ) : null}
       {thinking ? <output className={styles.thinking}>Mila odpowiada…</output> : null}
     </>
@@ -224,6 +252,31 @@ function Turn({
   workspace: ParentWorkspace;
   onChoosePdf: () => void;
 }) {
+  if (turn.kind === "factsProposal") return <FactProposals proposal={turn} workspace={workspace} />;
+  if (turn.kind === "procedureExplanation") {
+    const text = procedureExplanationIsCurrent(workspace.session, turn)
+      ? turn.text
+      : "Uzasadnienie historyczne jest nieaktualne po zmianie danych. Sprawdź bieżącą ocenę sprawy.";
+    return (
+      <MilaMessage copyText={text} speechToken={null}>
+        <p tabIndex={-1} data-chat-focus className={styles.explanation}>
+          {text}
+        </p>
+      </MilaMessage>
+    );
+  }
+  if (turn.kind === "explanation") {
+    const text = assessmentTurnIsCurrent(workspace.session, turn.assessment)
+      ? turn.text
+      : "Uzasadnienie historyczne jest nieaktualne po zmianie danych. Wróć do sprawy, aby sprawdzić bieżący wynik.";
+    return (
+      <MilaMessage copyText={text} speechToken={null}>
+        <p tabIndex={-1} data-chat-focus className={styles.explanation}>
+          {text}
+        </p>
+      </MilaMessage>
+    );
+  }
   if (turn.kind === "help") return <GuideHelpReply answer={turn.answer} />;
   if (turn.kind === "compareCare") return <CareComparison turn={turn} workspace={workspace} />;
   if (turn.kind === "chooseBenefit")
@@ -232,41 +285,7 @@ function Turn({
     return <BenefitAssessment turn={turn} active={activeBenefit} workspace={workspace} />;
 
   const smartComponents =
-    turn.kind === "propose" ? (
-      <div className={styles.turnControls}>
-        <div className={styles.card}>
-          <dl className={styles.values}>
-            {Object.entries(turn.facts).map(([name, value]) => {
-              const key = name as FactKey;
-              return (
-                <div key={key}>
-                  <dt>{fields[key].label}</dt>
-                  <dd>{factValue(key, value)}</dd>
-                </div>
-              );
-            })}
-          </dl>
-          {controls ? (
-            <div className={styles.actions}>
-              <Button
-                size="sm"
-                variant="brand"
-                onClick={() => workspace.resolveProposal(turn, true)}
-              >
-                Potwierdź dane
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => workspace.resolveProposal(turn, false)}
-              >
-                Podaj dane po kolei
-              </Button>
-            </div>
-          ) : null}
-        </div>
-      </div>
-    ) : turn.kind === "reply" && controls && turn.choices.length ? (
+    turn.kind === "reply" && controls && turn.choices.length ? (
       <div className={styles.actions}>
         {turn.choices.map((choice) => (
           <Button
@@ -286,7 +305,7 @@ function Turn({
     ) : null;
 
   return (
-    <MilaMessage copyText={turn.text} smartComponents={smartComponents}>
+    <MilaMessage copyText={turn.text} speechToken={null} smartComponents={smartComponents}>
       <p tabIndex={-1} data-chat-focus>
         {turn.text}
       </p>

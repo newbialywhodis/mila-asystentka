@@ -171,7 +171,12 @@ export function BenefitAssessment({
       </MilaMessage>
     );
   return (
-    <MilaMessage copyText={copyText} speechText={speechText} smartComponents={smartComponents}>
+    <MilaMessage
+      copyText={copyText}
+      speechToken={null}
+      speechText={speechText}
+      smartComponents={smartComponents}
+    >
       <p id={promptId} tabIndex={-1} data-chat-focus aria-describedby={hintId}>
         {text}
       </p>

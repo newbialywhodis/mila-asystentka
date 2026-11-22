@@ -31,7 +31,7 @@ Na ekranie startowym wybierz **Sprawdź sprawę z PDF-u** i otwórz plik z urzą
 
 Jeśli Mila rozpozna kilka wniosków, wybierz jeden okres. Gdy pola są nieczytelne, użyj **Strony do sprawdzenia ręcznie** i uzupełnij dane z podglądu. Przy pliku powyżej 30 stron możesz wskazać zakres przed skanowaniem. Lokalny odczyt obsługuje pliki do 30 MB i przetwarza do 100 stron naraz. Plik pozostaje w przeglądarce. Aplikacja pobiera pliki PDF.js i Tesseract.js z własnego serwera przy pierwszym odczycie. Porównaj wynik z rozstrzygnięciem ZUS dla tego samego świadczenia i okresu. [Przykłady do sprawdzenia](docs/plan-aplikacji-zus.md#własne-przykłady-do-publicznego-demo)
 
-Własny PDF włącza dla całej rozmowy tryb lokalny: swobodny tekst, historia i dokument nie są wysyłane do AI. Chmurowy upload PDF jest wyłączony również w endpointzie, niezależnie od zmiennych środowiskowych. Dane z odczytu wymagają wskazania osoby, tytułu i celu oraz potwierdzenia; sprzeczna propozycja domyślnie zachowuje aktualną odpowiedź.
+Własny PDF włącza dla całej rozmowy tryb lokalny (także po zmianie świadczenia i zamknięciu podglądu): swobodny tekst, historia i dokument nie są wysyłane do AI. Chmurowy upload PDF jest wyłączony również w endpointzie, niezależnie od zmiennych środowiskowych. Dane z odczytu wymagają wskazania osoby, tytułu i celu oraz potwierdzenia; sprzeczna propozycja domyślnie zachowuje aktualną odpowiedź.
 
 ## Opcjonalne klucze
 
@@ -39,7 +39,7 @@ Wpisz potrzebne klucze w `.env.local` w katalogu projektu.
 
 - `MILA_SITE_URL` ustawia domenę adresu kanonicznego i grafiki udostępniania strony głównej. Podaj pełny publiczny adres z `https://`.
 - `AI_GATEWAY_API_KEY` włącza rozpoznawanie intencji w rozmowie i odpowiedzi z katalogu. Przy rozpoznawaniu intencji modelem głównym jest `openai/gpt-5-mini`, a zapasowym `google/gemini-2.5-flash`. Jeśli ustawisz inny model obsługujący odpowiedzi zgodne ze schematem JSON przez `MILA_INTENT_MODEL`, modelem zapasowym będzie GPT-5 mini. Po zmianie konfiguracji uruchom ponownie serwer.
-- `ELEVENLABS_API_KEY` z uprawnieniem Text to Speech włącza odczyt wygenerowanych odpowiedzi głosem Mili. Po kliknięciu odtwarzania serwer wysyła do ElevenLabs tekst odpowiedzi. Ten klucz pozwala też uzupełnić gotowe nagrania poleceniem `bun run audio:generate`.
+- `ELEVENLABS_API_KEY` z uprawnieniem Text to Speech włącza odczyt ogólnych odpowiedzi z zatwierdzonego katalogu głosem Mili. Po kliknięciu odtwarzania serwer może wysłać do ElevenLabs wyłącznie taki ogólny tekst; indywidualne wyjaśnienia i wyniki nie korzystają z zewnętrznego TTS. Ten klucz pozwala też uzupełnić gotowe nagrania poleceniem `bun run audio:generate`.
 
 Na Vercel dodaj klucze w **Settings → Environment Variables** i wykonaj nowe wdrożenie. Przy publicznym dostępie ustaw limity żądań dla `/api/parent-document`, `/api/parent-intent`, `/api/guide-help` i `/api/guide-speech` oraz limity wydatków usług.
 
@@ -48,3 +48,15 @@ Na Vercel dodaj klucze w **Settings → Environment Variables** i wykonaj nowe w
 [Silnik raportu](src/engine) korzysta z [katalogu świadczeń i źródeł](src/data). Użyj `bun run sources fetch`, aby pobrać kopie źródeł, i `bun run sources diff`, aby sprawdzić zmiany.
 
 W rozmowie wpisz „Ile dostanę ojcowskiego?” albo wybierz fikcyjną sprawę. Ten sam kalkulator działa po potwierdzeniu pól z PDF-u oraz przy porównaniu planów rodziców. Dokumenty z decyzjami służą do porównania wyniku po obliczeniu. [Przypadki odbiorowe](docs/plan-aplikacji-zus.md#8-sprawdziany-przed-pokazem)
+
+### Rozmowa AI — etap 4
+
+`/api/parent-intent` przyjmuje `version: 2`; stary kształt żądania jest normalizowany do tego samego interpretatora. Kontekst obejmuje tryb, zamknięte klucze pytań/pól i aliasy `subject`, `related`, `selected` oraz alias rozmówcy. Nie dołącza identyfikatorów sesji, pełnego profilu, potwierdzonych wartości, dokumentów ani snapshotu wyniku. Krótka historia jest ograniczona do bieżącej wymiany i kończy się na przejściu między krokami.
+
+Model proponuje maksymalnie 12 informacji. Aplikacja wyznacza własność z rejestru, sprawdza typy, jednostki i daty. Karta umożliwia zmianę wartości, osoby i tytułu, wybór pól oraz odrzucenie. Przypuszczenia są domyślnie niezaznaczone; ubezpieczenie wymaga jawnego dnia lub okresu. Jedna akceptacja publikuje cały poprawny zestaw albo nic. Jawna korekta właściciela może osobno zatwierdzić wycofanie starej informacji o pracy i zapis u nowej osoby w tej samej operacji; stare pochodzenie pozostaje w nieaktualnym wpisie. Propozycja wygasa po zmianie kontekstu. Lokalne proste odpowiedzi nadal zapisują się bez AI. Silniki prawne i obliczenia pozostają deterministyczne.
+
+Pytania o konkretną kwotę i podstawę wyjaśnia lokalny snapshot. Korekta unieważnia stare uzasadnienie i kartę. Do TTS nie trafiają indywidualne wyjaśnienia, wyniki ani tekst propozycji. Ogólna pomoc przyjmuje `mode: question` lub `mode: topic`. Tryb `topic` dopuszcza wyłącznie `topicId` z rejestru, odrzuca dodatkowe pola i działa z lokalnym fallbackiem. Wybór tematu nie wywołuje interpretatora intencji. Odpowiedzi katalogowe są ograniczone do zatwierdzonych fragmentów ze sprawdzonym zestawem źródeł; sam poprawny JSON modelu nie wystarcza.
+
+Ochrona po PDF-ie obejmuje wszystkie aplikacyjne miejsca budowania żądań. Endpoint pytań tekstowych nie ma serwerowej sesji przeglądarki i nie może rozpoznać wcześniejszego dodania pliku w ręcznie skonstruowanym żądaniu HTTP.
+
+Próby: `bun test tests/ai-conversation.test.ts tests/ai-contracts.test.ts`, `node scripts/test-stage4-browser.mjs` (Playwright poza zależnościami runtime, `MILA_PLAYWRIGHT_MODULE`), opcjonalnie `bun scripts/test-stage4-provider.ts` (wyłącznie fikcyjne dane, maksymalnie siedem przykładów i przerwy między żądaniami).

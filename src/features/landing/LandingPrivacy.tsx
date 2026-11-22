@@ -22,16 +22,22 @@ export function LandingPrivacy() {
         <div>
           <h3>Kiedy dane mogą trafić do innych usług?</h3>
           <p>
-            Jeśli otwarte pytanie wymaga pomocy AI, trafia na serwer Mili. Gdy ta funkcja jest
-            włączona, treść pytania, nazwa bieżącego kroku i oznaczenia źródeł z poprzedniej
-            odpowiedzi mogą trafić przez AI Gateway do dostawcy modelu. Pełny zestaw odpowiedzi z
-            wywiadu nie jest dołączany automatycznie.
+            W zwykłej rozmowie swobodny tekst i krótki fragment bieżącej wymiany mogą trafić przez
+            AI Gateway do dostawcy modelu. Kontekst zawiera klucze pól i anonimowe aliasy; pełne
+            dane rodziny ani wyniki kalkulatora nie są dołączane automatycznie. Propozycje AI
+            wymagają Twojego potwierdzenia.
           </p>
           <p>
             Odczyt uruchamiasz przyciskiem. Mila korzysta z gotowych nagrań, a przy włączonej
-            usłudze ElevenLabs przesyła jej tekst wygenerowanej odpowiedzi do odczytania. W
+            usłudze ElevenLabs przesyła jej wyłącznie sprawdzone, ogólne odpowiedzi katalogowe. W
             niektórych przypadkach korzysta z syntezy mowy przeglądarki, która zależy od Twojego
             urządzenia i może używać usług sieciowych.
+          </p>
+          <p>
+            Dodanie własnego PDF-u włącza tryb lokalny do końca tej rozmowy, również po zamknięciu
+            podglądu i zmianie sprawdzanego świadczenia. Tekst rozmowy, pliki, OCR, fakty i wyniki
+            nie są wtedy wysyłane do AI. Przygotowane tematy pomocy wysyłają tylko identyfikator
+            ogólnego tematu. Indywidualnych wyjaśnień i kwot nie przekazujemy do syntezy mowy.
           </p>
         </div>
       </div>

@@ -29,13 +29,12 @@ import { warsawToday } from "../../engine/dates";
 import type { DemoRate } from "../../engine/parent-benefit";
 import { labels } from "../../engine/parent-case";
 import type { Benefit, CaseFacts, FactKey, ParentCase } from "../../engine/parent-case";
-import { findHelpAnswer, unavailableHelpAnswer } from "../guide/helpAnswers";
-import type { HelpAnswer } from "../guide/helpAnswers";
+import { findHelpAnswer, unavailableHelpAnswer, helpAnswerSchema } from "../guide/helpAnswers";
 import { normalizeGuideText } from "../guide/textInput";
 import { buildAssistantRequest } from "./case-assistant-context";
 
 import type { DocumentData } from "./case-documents";
-import { factValue, fields, readFact, readNarrativeFacts } from "./case-fields";
+import { factValue, fields, readFact } from "./case-fields";
 import { careComparisonLabel, readCareComparison, readCaseRequest } from "./case-message";
 import {
   findFirstSteps,
@@ -50,7 +49,6 @@ import {
   appendAssessment,
   appendCareComparison,
   askBenefit,
-  continueWithAssessment,
   continueWithDocument,
   continueWithRequest,
   getBenefitTurn,
@@ -67,10 +65,18 @@ import type {
   CaseAnswer,
   CaseQuestion,
   CaseSession,
-  CaseTurn,
 } from "./case-session";
+import { applyConversationIntent, routeConversationCommand } from "./conversation-routing";
+import { proposeFacts, confirmFactProposal, rejectFactProposal } from "./fact-proposals";
+import type { FactProposal, ProposalSelection } from "./fact-proposals";
+import {
+  buildTopicHelpRequest,
+  buildQuestionHelpRequest,
+  generalHelpTopics,
+} from "../guide/help-topics";
+import type { HelpTopicId } from "../guide/help-topics";
 import { makeDemoPdf } from "./demo-document";
-import { caseActionSchema } from "./parent-intent";
+import { assistantActionSchema } from "./parent-intent";
 import type { CaseAction, CaseGoal, CaseReply, CaseTool, ReplyChoice } from "./parent-intent";
 
 const expandedTools = ["formalities", "facts", "services", "rules"] as const;
@@ -289,20 +295,6 @@ export function useParentWorkspace(active = true) {
     });
   }
 
-  function resolveProposal(turn: Extract<CaseTurn, { kind: "propose" }>, accepted: boolean) {
-    update((previous) => {
-      if (previous.turns.at(-1) !== turn) return previous;
-      const next = setCaseGoal(selectBenefit(previous, turn.benefit), turn.goal);
-      return appendAssessment(
-        append(accepted ? saveFacts(next, turn.facts) : next, {
-          kind: "user",
-          text: accepted ? "Potwierdzam dane" : "Podam dane po kolei",
-          local: true,
-        }),
-      );
-    });
-  }
-
   function confirm(
     turn: AssessmentTurn,
     facts: CaseFacts,
@@ -465,12 +457,31 @@ export function useParentWorkspace(active = true) {
     });
   }
 
-  function applyAction(action: Exclude<CaseAction, { kind: "help" }>) {
+  function applyAction(action: Exclude<CaseAction, { kind: "help" }>, sourceText: string) {
     if (action.kind === "open") {
       open(action.tool);
       return;
     }
     update((previous) => {
+      if (action.kind === "startInterview")
+        return showInterview(previous, previous.data.interview.mode !== "idle");
+      if (action.kind === "interpret") {
+        if (action.candidates.length) {
+          if (action.intent !== "answer" && action.intent !== "correct")
+            return append(previous, unavailableReply);
+          try {
+            return proposeFacts(previous, action.candidates, sourceText);
+          } catch {
+            return append(previous, unavailableReply);
+          }
+        }
+        return applyConversationIntent(previous, action.intent);
+      }
+      if (action.kind === "selectBenefit")
+        return requestDestination(
+          { ...previous, goal: action.goal },
+          { kind: "calculator", benefit: action.benefit },
+        );
       if (action.kind === "reply") return append(previous, action);
       if (action.kind === "outOfScope") return append(previous, outOfScopeReply);
       if (action.kind === "urgentPregnancyCare")
@@ -479,58 +490,47 @@ export function useParentWorkspace(active = true) {
       if (action.kind === "firstSteps") {
         return append(previous, {
           kind: "help",
-          answer: getFirstSteps(action.timing, action.intro),
+          answer: {
+            ...getFirstSteps(action.timing, action.intro),
+            ...(action.intro ? { speechToken: null } : {}),
+          },
         });
       }
-      if (
-        action.kind === "assess" &&
-        action.benefit &&
-        (!previous.activeAssessmentId || action.benefit !== previous.benefit)
-      )
-        return requestDestination(previous, { kind: "calculator", benefit: action.benefit });
       if (action.kind === "chooseBenefit") return askBenefit(previous, action.goal);
       if (action.kind === "unknownFact") {
+        if (previous.view === "interview" && previous.data.interview.active)
+          return interviewText(previous, "Nie wiem");
+        if (previous.view === "procedure") {
+          const field = previous.procedureQuestion ?? procedureProjection(previous)?.missing;
+          return field ? saveProcedureAnswer(previous, field, undefined, "unknown") : previous;
+        }
         const current = getBenefitTurn(previous);
-        return current?.kind === "assessment" && current.question
-          ? append(previous, {
-              ...current,
-              deferred: true,
-              text: unknownFactHint(current.question.key),
-            })
-          : append(previous, startingReply);
+        if (current?.kind === "assessment" && current.question) {
+          const deferred = {
+            ...current,
+            deferred: true as const,
+            text: unknownFactHint(current.question.key),
+          };
+          return append({ ...previous, cursor: deferred }, deferred);
+        }
+        return append(previous, startingReply);
       }
-      return continueWithAssessment(previous, action);
+      return previous;
     });
   }
 
   async function send(text: string) {
     if (!activeRef.current || pendingRequest.current) return;
-    const command = normalizeGuideText(text).replace(/[.!?]+$/, "");
-    if (["pokaz mozliwe sprawy", "wroc do dopasowanych spraw"].includes(command)) {
-      update(showDiscovery);
-      return;
-    }
-    if (["sprawdz co moze ci przyslugiwac", "rozpocznij wywiad"].includes(command)) {
-      update((s) => showInterview(s, s.data.interview.mode !== "idle"));
-      return;
-    }
-    if (session.view === "scope") {
-      update((s) =>
-        append(s, {
-          kind: "note",
-          text: "Wybierz osobę i zakres sprawy dostępnymi kontrolkami. Nie przypisuję danych na podstawie niejednoznacznego opisu.",
-        }),
-      );
-      return;
-    }
-    if (session.view === "interview") {
-      update((s) => interviewText(s, text));
+    const routed = routeConversationCommand(session, text);
+    if (routed) {
+      update(() => routed);
       return;
     }
     if (session.view === "procedure") {
       const p = procedureProjection(session);
-      if (p?.missing) {
+      if (p && (session.procedureQuestion ?? p.missing)) {
         const field = session.procedureQuestion ?? p.missing;
+        if (!field) return;
         const value = readProcedureAnswer(field, text);
         const state =
           normalizeGuideText(text) === "nie wiem"
@@ -540,18 +540,7 @@ export function useParentWorkspace(active = true) {
               : undefined;
         if (value !== undefined || state)
           update((s) => saveProcedureAnswer(s, field, value, state));
-        else
-          update((s) =>
-            append(
-              s,
-              { kind: "user", text, local: true },
-              {
-                kind: "note",
-                text: "Wybierz jedną z opcji lub podaj prostą odpowiedź na aktywne pytanie.",
-              },
-            ),
-          );
-        return;
+        if (value !== undefined || state) return;
       }
     }
     const normalized = normalizeGuideText(text).replace(/[.!?]+$/, "");
@@ -629,22 +618,6 @@ export function useParentWorkspace(active = true) {
       update((previous) => continueWithRequest(previous, local, text));
       return;
     }
-    const narrative = readNarrativeFacts(text);
-    const statements = text.split(/(?<=[.!?])\s+/);
-    if (statements.length > 1 && Object.keys(narrative).length) {
-      const request = statements.map((part) => readCaseRequest(part, localContext)).find(Boolean);
-      if (request) {
-        update((previous) =>
-          continueWithAssessment(append(previous, { kind: "user", text, local: true }), {
-            kind: "assess",
-            benefit: request.benefit,
-            goal: request.goal ?? previous.goal,
-            facts: { ...narrative, ...request.facts },
-          }),
-        );
-        return;
-      }
-    }
     if (session.privacy === "localDocuments") {
       const known = findHelpAnswer(text);
       update((previous) =>
@@ -665,9 +638,6 @@ export function useParentWorkspace(active = true) {
     pendingRequest.current = controller;
     setThinking(true);
     const request = buildAssistantRequest(session, text);
-    const checkedAssessment =
-      benefitTurn?.kind === "assessment" &&
-      (benefitTurn.result.status === "eligible" || benefitTurn.result.status === "ineligible");
     const token = generation.current;
     const contextRevision = session.data.contextRevision;
     const withUser = append(sessionRef.current, { kind: "user", text });
@@ -683,18 +653,22 @@ export function useParentWorkspace(active = true) {
     async function askHelp(question: string) {
       const known = findHelpAnswer(question);
       if (known) return known;
-      if (checkedAssessment) return undefined;
-      const last = session.turns.findLast((turn) => turn.kind === "help");
       const response = await fetch("/api/guide-help", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question, previousSourceIds: last?.answer.sourceIds }),
+        body: JSON.stringify(
+          buildQuestionHelpRequest(
+            sessionRef.current.privacy,
+            question,
+            request.context.procedure ?? undefined,
+          ),
+        ),
         signal: AbortSignal.any([controller.signal, AbortSignal.timeout(15_000)]),
       }).catch(() => null);
-      const help: HelpAnswer = response?.ok
-        ? await response.json().catch(() => unavailableHelpAnswer)
-        : unavailableHelpAnswer;
-      return help;
+      const help = helpAnswerSchema.safeParse(
+        response?.ok ? await response.json().catch(() => null) : null,
+      );
+      return help.success ? help.data : unavailableHelpAnswer;
     }
 
     const response = await fetch("/api/parent-intent", {
@@ -703,27 +677,75 @@ export function useParentWorkspace(active = true) {
       body: JSON.stringify(request),
       signal: AbortSignal.any([controller.signal, AbortSignal.timeout(21_000)]),
     }).catch(() => null);
-    const action = caseActionSchema.safeParse(
+    const action = assistantActionSchema.safeParse(
       response?.ok ? await response.json().catch(() => null) : null,
     );
     if (controller.signal.aborted || !isCurrent()) return;
-    if (action.success && action.data.kind === "help") {
-      const help = await askHelp(action.data.question);
+    if (
+      action.success &&
+      (action.data.kind === "help" ||
+        (action.data.kind === "interpret" &&
+          action.data.intent === "generalHelp" &&
+          !action.data.candidates.length))
+    ) {
+      const help = await askHelp(action.data.kind === "help" ? action.data.question : text);
       if (controller.signal.aborted || !isCurrent()) return;
       update((previous) =>
-        help ? append(previous, { kind: "help", answer: help }) : appendAssessment(previous),
+        append(previous, { kind: "help", answer: help ?? unavailableHelpAnswer }),
       );
       return;
     }
     if (action.success && action.data.kind !== "help") {
-      if (checkedAssessment && action.data.kind === "reply")
-        update((previous) => appendAssessment(previous));
-      else applyAction(action.data);
+      applyAction(action.data, text);
       return;
     }
     const known = findHelpAnswer(text);
     update((previous) =>
-      append(previous, known ? { kind: "help", answer: known } : unavailableReply),
+      append(
+        previous,
+        known
+          ? { kind: "help", answer: known }
+          : previous.view === "interview"
+            ? {
+                kind: "note",
+                text: "Nie rozpoznałam jednej jednoznacznej odpowiedzi. Wybierz opcję przy pytaniu, wpisz prostą odpowiedź albo pomiń pytanie. Interpretacja AI jest teraz niedostępna.",
+              }
+            : unavailableReply,
+      ),
+    );
+  }
+
+  async function askTopic(topicId: HelpTopicId) {
+    if (!activeRef.current || pendingRequest.current) return;
+    const controller = new AbortController();
+    pendingRequest.current = controller;
+    setThinking(true);
+    const token = generation.current;
+    const revision = sessionRef.current.data.contextRevision;
+    const request = buildTopicHelpRequest(topicId);
+    const response = await fetch("/api/guide-help", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(request),
+      signal: AbortSignal.any([controller.signal, AbortSignal.timeout(15_000)]),
+    }).catch(() => null);
+    if (response?.ok) await response.json().catch(() => null);
+    if (
+      controller.signal.aborted ||
+      !activeRef.current ||
+      generation.current !== token ||
+      sessionRef.current.data.contextRevision !== revision ||
+      pendingRequest.current !== controller
+    )
+      return;
+    const prepared = generalHelpTopics[topicId];
+    // The protected channel can only display the server-selected, prepared answer.
+    update((s) =>
+      append(
+        s,
+        { kind: "user", text: prepared.label, local: true },
+        { kind: "help", answer: prepared },
+      ),
     );
   }
 
@@ -803,7 +825,13 @@ export function useParentWorkspace(active = true) {
     compareCare,
     changeGoal,
     save,
-    resolveProposal,
+    confirmFactProposal: (proposal: FactProposal, selections: readonly ProposalSelection[]) => {
+      const result = confirmFactProposal(sessionRef.current, proposal, selections);
+      if (!result.error) update(() => result.session);
+      return result.error;
+    },
+    rejectFactProposal: (proposal: FactProposal) => update((s) => rejectFactProposal(s, proposal)),
+    askTopic,
     confirm,
     correct,
     defer,

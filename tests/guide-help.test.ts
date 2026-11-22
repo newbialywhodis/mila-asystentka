@@ -4,7 +4,7 @@ import { test } from "node:test";
 import { POST } from "../src/app/api/guide-help/route";
 import { POST as postSpeech } from "../src/app/api/guide-speech/route";
 import audioManifest from "../src/features/guide/audioManifest.json";
-import { getStaticHelpTexts } from "../src/features/guide/helpAnswers";
+import { getStaticHelpTexts, helpTopics } from "../src/features/guide/helpAnswers";
 import { getHelpKnowledge } from "../src/features/guide/helpKnowledge";
 
 function requestHelp(payload: object) {
@@ -69,8 +69,8 @@ test("Mila sprawdza źródła modelu i pozwala odczytać podpisaną odpowiedź",
   const question = "A jakie są terminy po porodzie?";
   const payload = { question, context: "stage", previousSourceIds: ["becikowe", "child800"] };
   const output = {
-    text: "Każde ze świadczeń ma osobny termin.",
-    sourceIds: payload.previousSourceIds,
+    text: helpTopics[3].text,
+    sourceIds: [...helpTopics[3].sourceIds] as string[],
   };
   let aboutMila = false;
   let speechAvailable = true;
@@ -115,7 +115,7 @@ test("Mila sprawdza źródła modelu i pozwala odczytać podpisaną odpowiedź",
     openai: { reasoningEffort: "minimal", store: false },
   });
   assert.equal(prompt[0].role, "system");
-  assert.match(prompt[0].content, /Świadczenie wychowawcze 800\+/);
+  assert.ok(prompt[0].content.includes(helpTopics[3].text));
   const userMessage = JSON.parse(prompt[1].content[0].text);
   assert.match(userMessage.today, /^\d{4}-\d{2}-\d{2}$/);
   assert.deepEqual(userMessage, {
