@@ -5,7 +5,6 @@ import { Icon } from "../../components/ui/Icon";
 import type { IconName } from "../../components/ui/Icon";
 import { warsawToday } from "../../engine/dates";
 import type { ActionGaze } from "../guide/ActionGaze";
-import { StartTopicContext } from "../guide/StartTopicContext";
 import type { StartTopic } from "../guide/startTopics";
 import { careComparisonLabel } from "./case-message";
 import { AdminCard, SimulationCard } from "./ParentExtras";
@@ -93,7 +92,6 @@ export function StartActions({
 
   return (
     <section ref={section} tabIndex={-1} aria-label={headings[page]} className={styles.actions}>
-      {page === "start" ? <StartTopicContext topics={topics} /> : null}
       <div key={page} className={styles.page}>
         {page !== "start" ? (
           <div className={styles.toolbar}>
