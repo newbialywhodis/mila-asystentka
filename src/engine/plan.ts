@@ -16,6 +16,10 @@ function upcomingDeadline(result: ProcedureResult, asOf: string): string {
 
 export function generatePlan(profile: Profile, asOf: string) {
   const results = procedures.map((procedure) => evaluateProcedure(profile, procedure, asOf));
+  return assemblePlan(results, profile, asOf);
+}
+
+export function assemblePlan(results: ProcedureResult[], profile: Profile, asOf: string) {
   const items = results
     .filter(({ status }) => status !== "not-relevant")
     .sort((a, b) => {

@@ -1,3 +1,4 @@
+import { getParentCase, getCaseContext } from "./case-session";
 import { fields } from "./case-fields";
 import { replyChoiceLabels } from "./case-replies";
 import { getBenefitTurn } from "./case-session";
@@ -47,13 +48,15 @@ export function buildAssistantRequest(session: CaseSession, text: string): Assis
       { role: "user" as const, content: text },
     ].slice(-16),
     context: {
-      benefit: benefitTurn?.kind === "chooseBenefit" ? null : session.benefit,
-      goal: benefitTurn?.goal ?? session.goal,
+      benefit: benefitTurn?.kind === "chooseBenefit" ? null : getCaseContext(session).benefit,
+      goal: benefitTurn?.goal ?? getCaseContext(session).goal,
       pending:
         benefitTurn?.kind === "assessment" && !pregnancyConcern
           ? (benefitTurn.question?.key ?? null)
           : null,
-      confirmed: Object.keys(session.family.facts) as AssistantRequest["context"]["confirmed"],
+      confirmed: Object.keys(
+        getParentCase(session).facts,
+      ) as AssistantRequest["context"]["confirmed"],
     },
   };
 }

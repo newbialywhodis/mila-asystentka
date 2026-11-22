@@ -19,12 +19,10 @@ export function MilaGuide({
   initialTopics = [],
   loginHref,
   signOutAction,
-  uploadAllowed = false,
 }: {
   initialTopics?: readonly StartTopic[];
   loginHref?: string;
   signOutAction?: () => Promise<void>;
-  uploadAllowed?: boolean;
 }) {
   const [conversations, setConversations] = useState<GuideCase[]>(() => [
     { id: 1, input: createRef<HTMLTextAreaElement>() },
@@ -75,7 +73,6 @@ export function MilaGuide({
           selection={selection.id === id ? selection : null}
           initialTopics={id === 1 ? initialTopics : undefined}
           loginHref={loginHref}
-          uploadAllowed={uploadAllowed}
           onSummary={setCaseSummary}
         />
       ))}

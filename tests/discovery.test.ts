@@ -1109,11 +1109,25 @@ test("wszystkie potwierdzone otwarte formalności pozostają widoczne ponad limi
       children: Array.from({ length: 5 }, (_, index) => ({
         id: childIdSchema.parse(`child-${index}`),
         birth: fact(isoDateSchema.parse(birth)),
-        facts: { healthRegistered: fact(false), healthTitle: fact(true) },
+        facts: {},
       })),
     },
   };
-  const discovery = discoverProcedures(s);
+  const scoped: InterviewSession = {
+    ...s,
+    assessments: s.family.children.map((child, index) => ({
+      kind: "procedure",
+      id: assessmentIdSchema.parse(`health-${index}`),
+      procedureId: "CHILD_HEALTH_INSURANCE",
+      target: { eventId: s.family.event.id, subject: { kind: "family" }, childIds: [child.id] },
+      asOf: s.asOf,
+      inputRevision: 1,
+      goal: "application",
+      state: "draft",
+      details: { healthRegistered: fact(false), healthTitle: fact(true) },
+    })),
+  };
+  const discovery = discoverProcedures(scoped);
   assert.equal(discovery.items.length, 5);
   assert.ok(
     discovery.items.every(

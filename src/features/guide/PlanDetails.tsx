@@ -4,7 +4,7 @@ import { Icon } from "../../components/ui/Icon";
 import { ScrollArea } from "../../components/ui/ScrollArea";
 import { amounts, documents } from "../../data/references";
 import { questions } from "../../data/questions";
-import { generatePlan } from "../../engine/plan";
+import { assemblePlan, generatePlan } from "../../engine/plan";
 import type { ProcedureResult } from "../../types/catalog";
 import type { Profile } from "../../types/profile";
 import { formatDate } from "./flow";
@@ -270,18 +270,26 @@ function Tasks({
 
 export function PlanDetails({
   profile,
+  evaluatedResults,
   period,
   asOf,
   checked,
   onToggle,
 }: {
   profile: Profile;
+  evaluatedResults?: ProcedureResult[];
   period?: Period;
   asOf: string;
   checked: string[];
   onToggle: (id: string) => void;
 }) {
-  const { items } = useMemo(() => generatePlan(profile, asOf), [profile, asOf]);
+  const { items } = useMemo(
+    () =>
+      evaluatedResults
+        ? assemblePlan(evaluatedResults, profile, asOf)
+        : generatePlan(profile, asOf),
+    [evaluatedResults, profile, asOf],
+  );
   const notice =
     profile.standardResidence === false ? (
       <p className={styles.notice}>

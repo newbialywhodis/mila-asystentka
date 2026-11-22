@@ -68,3 +68,54 @@ Odbiór 22 listopada 2026 r. Zakres wynika z [pełnej treści zadania ZUS](https
 | Oryginalność                                     |  15% | Korekta danych w rozmowie zmienia wynik tego samego kalkulatora.              |
 | Kompletność projektu i doświadczenie użytkownika |  25% | Próby z PDF-u i z ręcznych danych, dokumenty oraz dwie szerokości ekranu.     |
 | Potencjał wdrożeniowy                            |  15% | Lokalne przetwarzanie akt, oddzielny silnik i kontrolowane zmiany parametrów. |
+
+## 7. Lokalny odbiór etapu 3 — branch `ejaj`, 22.11.2026
+
+Ten odbiór dotyczy integracji wywiadu w lokalnym kodzie. Wcześniejsze dowody wdrożenia i prób na aktach w sekcji 4 pozostają historyczne; nie wykonano nowego wdrożenia ani ponownego odbioru rzeczywistych akt konkursowych.
+
+| Zakres                                                               | Stan                                           | Bieżący dowód                                                                                                                                                                                                        |
+| -------------------------------------------------------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Start → wywiad → discovery → kalkulator → wynik → kolejna sprawa     | Spełnione                                      | `tests/workspace-integration.test.ts`; headless Chromium, desktop 1440×1000 i telefon 390×844; prognoza 140 dni / 28 000 zł i ręczny ojcowski 14 dni / 2800 zł                                                       |
+| Jeden właściciel faktów, osoby, tytuły i cel oceny                   | Spełnione                                      | `CaseSession.data: InterviewSession`, `applyConfirmedFacts`, `toCaseFacts`, `toProcedureProfile`; test odrębnej podstawy A/B oraz dwóch tytułów tej samej osoby                                                      |
+| Wszystkie 12 kalkulatorów i istniejące porównanie                    | Spełnione w zakresie integracji                | 12 testów równoważności adaptera z `assessBenefit`, każdy z kwotą; porównanie działa na obu szerokościach, a zatwierdzony wariant zapisuje osobny snapshot z dwoma celami                                            |
+| Korekty, aktualność wyników i odhaczone zadania                      | Spełnione                                      | Testy rewizji, dat, parametrów demo, zadań i niezależnych ocen; Chromium: korekta usuwa nieaktualne kwoty i dostęp do ich dokumentów, zadanie planowania przechodzi między kartami a Sheet                           |
+| Pytania formalności, planowanie, brak daty, adopcja, piecza i strata | Spełnione w zakresie katalogu                  | Testy sesji i discovery; brak nieznanego etapu traktowanego jako planowanie; osobne skierowania szczególnych ścieżek, bez nowego kalkulatora                                                                         |
+| Własny PDF: lokalny odczyt, cel, konflikt, źródło i strona           | Spełnione dla przetestowanego fikcyjnego PDF-u | Przeglądarkowy import przez rzeczywisty lokalny parser na obu szerokościach, jawne zastąpienie konfliktującej daty, 7 dni / 1400 zł; test źródła `{documentId,page}` i odrzucenia starej rewizji                     |
+| Prywatność dokumentów i opóźnione operacje                           | Spełnione w zakresie etapu 3                   | Zero żądań do AI/uploadu/audio po własnym PDF-ie; bezpośredni HTTP POST uploadu zwraca 403, test także z `MILA_PDF_UPLOAD_ALLOWED=1`; opóźniony worker PDF i odpowiedź AI nie zmieniają drugiej zamontowanej rozmowy |
+| Klawiatura, fokus i telefon                                          | Spełnione dla Chromium                         | Start klawiszem Enter, lokalne wyjaśnienie, przerwanie/wznowienie, Escape i powrót fokusu z Sheet, podgląd PDF na telefonie, brak poziomego przewijania                                                              |
+| Narzędzia jakości                                                    | Spełnione                                      | `bun run check`: 291 testów, lint, typy, formatowanie, 19 procedur / 22 dokumenty / 34 źródła; `bun run build`                                                                                                       |
+| Nowe wielopolowe wypowiedzi AI, tematy chronionej pomocy, nowe API   | Poza etapem 3                                  | Pozostają na etap 4. Po własnym PDF-ie dostępny jest lokalny komunikat ograniczenia, bez wysyłania tekstu/historii                                                                                                   |
+| WebKit, fizyczny telefon, nowe akta ZUS i wersja publiczna           | Niezweryfikowane w tym odbiorze                | Wykonano emulację telefonu w Chromium i własny fikcyjny PDF; brak nowego deployu                                                                                                                                     |
+
+Scenariusze 1–24 z zadania pokrywają `tests/interview.test.ts`, `tests/discovery.test.ts`, `tests/workspace-integration.test.ts`, istniejące testy kalkulatorów i `scripts/test-stage3-browser.mjs`. Główna ścieżka przeglądarkowa ma zablokowane API AI. Testy przeglądarkowe nie są testami jednostkowymi: uruchamiają rzeczywisty Chromium i lokalny serwer, w tym PDF.js. Skany wymagające OCR Tesseract i komplet rzeczywistych teczek wymagają osobnego, szerszego odbioru.
+
+Bazowo przechodziło 256 testów i build; `check` zatrzymywał się wyłącznie na zastanym formatowaniu `LandingPaperwork.tsx`. Poprawiono tam tylko cudzysłowy i średniki, bez zmiany zachowania. Zastane ostrzeżenia buildu dotyczą zewnętrznego `bun.lock` i `metadataBase`.
+
+Samodzielny audyt poprawił między innymi powrót fokusu, zachowanie wyboru osoby podczas ustalania etapu, aktualność historycznych kwot i parametrów demo, ponowne porównanie konfliktów PDF po rewizji, jawne potwierdzenie ojcostwa, izolację nowego tytułu oraz zakres potwierdzeń zgłoszenia zdrowotnego. Te ostatnie należą do oceny konkretnego zgłaszającego/tytułu, a nie do ogólnego faktu dziecka. Nie zmieniono algorytmów, stawek ani warunków prawnych silników.
+
+Odtworzenie próby przeglądarkowej (Playwright zainstalowany poza zależnościami runtime):
+
+```powershell
+bun run dev
+# W drugim terminalu:
+bun -e 'import {makeDemoPdf} from "./src/features/parent/demo-document"; await Bun.write("test-results/stage3/fictional.pdf",makeDemoPdf());'
+$env:MILA_TEST_PDF='test-results/stage3/fictional.pdf'
+# Jeśli Playwright jest poza ścieżką rozwiązywania modułów, wskaż URL jego index.mjs:
+# $env:MILA_PLAYWRIGHT_MODULE='file:///.../node_modules/playwright/index.mjs'
+node scripts/test-stage3-browser.mjs
+```
+
+Skrypt zapisuje lokalne zrzuty i `evidence.json` w ignorowanym `test-results/stage3/`. Nie używa prywatnych akt. Na etap 4 pozostają wielopolowe propozycje z AI i zatwierdzanie per pole/osoba/czas, rozbudowa intencji i pomocy, bezpieczny kontrakt tematów `topicId` po PDF-ie, usunięcie ograniczenia `checkedAssessment` oraz bogatsze pochodzenie propozycji. Upload własnych akt pozostaje wyłączony.
+
+Pliki zmienione w integracji etapu 3 (bez plików dowodowych z ignorowanego `test-results/`):
+
+- `.`: `README.md`.
+- `docs`: `checklista-wymagan-zus.md`.
+- `scripts`: `test-stage3-browser.mjs`.
+- `src/app/api/parent-document`: `route.ts`.
+- `src/app/chat`: `page.tsx`.
+- `src/engine`: `discover-procedures.ts`, `plan.ts`.
+- `src/features/guide`: `CaseConversation.tsx`, `MilaGuide.tsx`, `PlanDetails.tsx`, `PlanReport.tsx`, `ThreadMessage.tsx`.
+- `src/features/landing`: `LandingPaperwork.tsx`.
+- `src/features/parent`: `BenefitTurn.tsx`, `CareComparison.tsx`, `CaseTools.tsx`, `DiscoveryTurn.tsx`, `DocumentTurn.tsx`, `InterviewTurn.module.css`, `InterviewTurn.tsx`, `ParentThread.tsx`, `ProcedureQuestionTurn.tsx`, `ScopeTurn.tsx`, `StartActions.tsx`, `assessment-facts.ts`, `case-assistant-context.ts`, `case-documents.ts`, `case-session.ts`, `comparison-session.ts`, `family-session.ts`, `interview-profile.ts`, `interview-session.ts`, `result-snapshots.ts`, `useParentWorkspace.ts`, `workspace-session.ts`.
+- `tests`: `discovery.test.ts`, `parent-benefit.test.ts`, `parent-conversation.test.ts`, `workspace-fixture.ts`, `workspace-integration.test.ts`.

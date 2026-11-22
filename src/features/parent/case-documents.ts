@@ -76,7 +76,11 @@ export const documentReadSchema = z.strictObject({
 export type DocumentRead = z.infer<typeof documentReadSchema>;
 export type DocumentCandidate = DocumentRead["candidates"][number];
 export type DocumentApplication = { page: number; read: DocumentRead };
+import type { AssessmentId } from "./family-session";
+
 export type DocumentData = {
+  baseRevision?: number;
+  assessmentId?: AssessmentId;
   benefit: Benefit | null;
   facts: CaseFacts;
   sources: ParentCase["sources"];

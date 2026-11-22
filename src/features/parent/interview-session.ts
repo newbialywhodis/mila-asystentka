@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { writeAssessmentFacts } from "./assessment-facts";
+import type { AssessmentFactsCommand } from "./assessment-facts";
 import {
   childIdSchema,
   confirmedValue,
@@ -512,24 +514,26 @@ export type AnswerMetadata = {
   readonly validTime?: ValidTime;
   readonly basis?: "observed" | "assumed";
 };
-export type ConfirmedCommand = AnswerMetadata & { readonly baseRevision: number } & (
-    | { readonly kind: "answer"; readonly question: QuestionRef; readonly value: unknown }
-    | {
-        readonly kind: "employment";
-        readonly personId: PersonId;
-        readonly titleId: TitleId;
-        readonly value: WorkKind;
-        readonly validTime: ValidTime;
-      }
-    | {
-        readonly kind: "coverage";
-        readonly personId: PersonId;
-        readonly titleId: TitleId;
-        readonly coverageId: string;
-        readonly value: boolean;
-        readonly validTime: ValidTime;
-      }
-  );
+export type ConfirmedCommand =
+  | AssessmentFactsCommand
+  | (AnswerMetadata & { readonly baseRevision: number } & (
+        | { readonly kind: "answer"; readonly question: QuestionRef; readonly value: unknown }
+        | {
+            readonly kind: "employment";
+            readonly personId: PersonId;
+            readonly titleId: TitleId;
+            readonly value: WorkKind;
+            readonly validTime: ValidTime;
+          }
+        | {
+            readonly kind: "coverage";
+            readonly personId: PersonId;
+            readonly titleId: TitleId;
+            readonly coverageId: string;
+            readonly value: boolean;
+            readonly validTime: ValidTime;
+          }
+      ));
 
 function recordAnswer(
   before: InterviewSession,
@@ -690,11 +694,6 @@ function writeEmployment(
         : saved,
     );
   }
-  if (
-    existing?.employment?.state === "confirmed" &&
-    !timesOverlap(existing.employment.validTime, time)
-  )
-    return failure(s, "scope-conflict");
   if (sameFact(existing?.employment, value, time, basis)) return success(s);
   const next = advance(s);
   let ordinal = next.contextRevision;
@@ -709,6 +708,16 @@ function writeEmployment(
     ...existing,
     id,
     employment: confirmed(value, next.contextRevision, source, time, basis),
+    employmentPeriods:
+      existing?.employment &&
+      "validTime" in existing.employment &&
+      !timesOverlap(existing.employment.validTime, time)
+        ? [...(existing.employmentPeriods ?? []), existing.employment]
+        : existing?.employmentPeriods?.map((f) =>
+            f.state === "confirmed" && timesOverlap(f.validTime, time)
+              ? (markStale(f, next.contextRevision, "Korekta zatrudnienia w tym okresie") ?? f)
+              : f,
+          ),
     sicknessCoverage: (existing?.sicknessCoverage ?? []).map((c) => ({
       ...c,
       fact:
@@ -752,6 +761,8 @@ function writeEmployment(
 
 export function applyConfirmedFacts(s: InterviewSession, command: ConfirmedCommand): Transition {
   if (command.baseRevision !== s.contextRevision) return failure(s, "stale");
+  if (command.kind === "caseFacts" || command.kind === "procedureFact")
+    return writeAssessmentFacts(s, command);
   const metadataRef = command.kind === "answer" ? command.question : undefined;
   const previousEmployment =
     metadataRef?.id === "employment"

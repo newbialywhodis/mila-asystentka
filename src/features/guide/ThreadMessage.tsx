@@ -1,4 +1,4 @@
-import { useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { IconButton } from "../../components/ui/Button";
 import { CopyButton } from "../../components/ui/CopyButton";
@@ -10,8 +10,14 @@ const typingInterval = 23;
 const maxTypingSteps = 85;
 const segmenter = typeof Intl.Segmenter === "function" ? new Intl.Segmenter() : undefined;
 
+export const LocalOnlyMessages = createContext(false);
+
 const recordings = new Map<string, string>(Object.entries(audioManifest));
 let stopActiveReading: (() => void) | null = null;
+
+export function stopMilaReading() {
+  stopActiveReading?.();
+}
 
 async function fetchGeneratedAudio(text: string, token: string, signal: AbortSignal) {
   const response = await fetch("/api/guide-speech", {
@@ -35,12 +41,16 @@ function MilaMessageActions({
   speechToken?: string | null;
   leadingActions?: ReactNode;
 }) {
+  const localOnly = useContext(LocalOnlyMessages);
   const stopReading = useRef<((updateState?: boolean) => void) | null>(null);
   const generatedAudio = useRef<ArrayBuffer>(null);
   const [reading, setReading] = useState(false);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => () => stopReading.current?.(false), []);
+  useEffect(() => {
+    if (localOnly) stopReading.current?.();
+  }, [localOnly]);
 
   function toggleReading() {
     if (stopReading.current) {
@@ -153,12 +163,14 @@ function MilaMessageActions({
     <div className={`${styles.followUp} ${styles.messageActions}`}>
       {leadingActions}
       <CopyButton label="Kopiuj wiadomość Mili" text={text} className={styles.messageCopy}>
-        <IconButton
-          icon="speaker"
-          label={reading ? "Zatrzymaj odczytywanie" : "Odczytaj wiadomość Mili"}
-          size="icon-xs"
-          onClick={toggleReading}
-        />
+        {!localOnly ? (
+          <IconButton
+            icon="speaker"
+            label={reading ? "Zatrzymaj odczytywanie" : "Odczytaj wiadomość Mili"}
+            size="icon-xs"
+            onClick={toggleReading}
+          />
+        ) : null}
         <output className={styles.speechStatus}>
           {failed ? "Nie udało się odczytać wiadomości" : null}
         </output>

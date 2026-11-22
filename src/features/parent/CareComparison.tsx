@@ -1,3 +1,5 @@
+import type { ParentWorkspace } from "./useParentWorkspace";
+import { personLabel } from "./workspace-session";
 import { useId, useLayoutEffect, useRef, useState } from "react";
 import { Button } from "../../components/ui/Button";
 import { addDays, isoDate, parseDate } from "../../engine/dates";
@@ -216,8 +218,33 @@ function WorkSelect({
   );
 }
 
-export function CareComparison({ turn }: { turn: CareComparisonTurn }) {
+export function CareComparison({
+  turn,
+  workspace,
+}: {
+  turn: CareComparisonTurn;
+  workspace?: ParentWorkspace;
+}) {
   const titleId = useId();
+  const subjects =
+    workspace?.session.data.persons.flatMap((p) =>
+      p.titles.map((t) => ({
+        value: `${p.id}/${t.id}`,
+        label: `${personLabel(workspace.session, p.id)} · ${t.employment?.state === "confirmed" ? employmentLabels[t.employment.value] : "Nieustalony tytuł"}`,
+        target: {
+          eventId: workspace.session.data.family.event.id,
+          subject: { kind: "person" as const, personId: p.id, titleId: t.id },
+          childIds: workspace.session.data.family.children.map((c) => c.id),
+        },
+      })),
+    ) ?? [];
+  const [firstSubject, setFirstSubject] = useState("");
+  const [secondSubject, setSecondSubject] = useState("");
+  const [savedComparison, setSavedComparison] = useState<string>();
+  const [draftRevision, setDraftRevision] = useState(
+    turn.baseRevision ?? workspace?.session.data.contextRevision ?? 0,
+  );
+  const staleDraft = Boolean(workspace && workspace.session.data.contextRevision !== draftRevision);
   const promptId = useId();
   const hintId = promptId + "-hint";
   const [personal, setPersonal] = useState(false);
@@ -244,7 +271,7 @@ export function CareComparison({ turn }: { turn: CareComparisonTurn }) {
   const birth = parseDate(facts.birth);
   const activeOptions = personal ? options : example;
   const comparison =
-    activeOptions && (!personal || !missing)
+    activeOptions && (!personal || (!missing && !staleDraft))
       ? compareParentalPlans(
           personal ? facts : careComparisonExample.facts,
           activeOptions,
@@ -330,6 +357,47 @@ export function CareComparison({ turn }: { turn: CareComparisonTurn }) {
           </>
         ) : null}
         <div className={styles.personal} hidden={!personal}>
+          {workspace ? (
+            <div className={styles.grid}>
+              <p>
+                Formularz jest szkicem. Aby zapisać potwierdzony wariant, wskaż obie osoby i ich
+                tytuły.
+              </p>
+              {[
+                { label: "Pierwsza osoba i tytuł", value: firstSubject, set: setFirstSubject },
+                { label: "Druga osoba i tytuł", value: secondSubject, set: setSecondSubject },
+              ].map((control) => (
+                <label key={control.label} className={cardStyles.field}>
+                  {control.label}
+                  <select
+                    value={control.value}
+                    onChange={(e) => control.set(e.currentTarget.value)}
+                  >
+                    <option value="">Wybierz</option>
+                    {subjects.map((s) => (
+                      <option key={s.value} value={s.value}>
+                        {s.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ))}
+              <Button size="sm" variant="ghost" onClick={workspace.resumeInterview}>
+                Uzupełnij dane osób w wywiadzie
+              </Button>
+            </div>
+          ) : null}
+          {staleDraft ? (
+            <p>
+              Dane rodziny zmieniły się od otwarcia szkicu. Otwórz nowe porównanie, aby użyć
+              aktualnych danych.
+            </p>
+          ) : null}
+          {staleDraft && workspace ? (
+            <Button variant="outline" onClick={() => workspace.compareCare()}>
+              Otwórz nowe porównanie
+            </Button>
+          ) : null}
           {field ? (
             <>
               <p id={promptId} ref={personal ? prompt : undefined} tabIndex={-1}>
@@ -395,7 +463,29 @@ export function CareComparison({ turn }: { turn: CareComparisonTurn }) {
                 onChange={(event) => setOptions(readOptions(event.currentTarget))}
                 onSubmit={(event) => {
                   event.preventDefault();
-                  setOptions(readOptions(event.currentTarget));
+                  const options = readOptions(event.currentTarget);
+                  setOptions(options);
+                  const first = subjects.find((s) => s.value === firstSubject);
+                  const second = subjects.find((s) => s.value === secondSubject);
+                  if (
+                    workspace &&
+                    options &&
+                    first &&
+                    second &&
+                    first.target.subject.personId !== second.target.subject.personId
+                  ) {
+                    const revision = workspace.confirmComparison(
+                      facts,
+                      options,
+                      first.target,
+                      second.target,
+                      draftRevision,
+                    );
+                    if (revision !== undefined) {
+                      setDraftRevision(revision);
+                      setSavedComparison(workspace.session.data.id);
+                    }
+                  }
                 }}
               >
                 <div className={styles.grid}>
@@ -535,6 +625,14 @@ export function CareComparison({ turn }: { turn: CareComparisonTurn }) {
               </section>
             ))}
           </div>
+        ) : null}
+        {savedComparison &&
+        workspace?.session.data.assessments.findLast((a) => a.kind === "comparison")?.result
+          ?.state === "stale" ? (
+          <p>
+            Poprzednio zapisane porównanie jest nieaktualne po zmianie danych. Przelicz wariant dla
+            aktualnych odpowiedzi.
+          </p>
         ) : null}
         <div className={cardStyles.actions}>
           <Button

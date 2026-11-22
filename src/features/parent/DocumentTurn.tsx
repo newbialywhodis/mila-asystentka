@@ -1,8 +1,9 @@
+import { getParentCase } from "./case-session";
 import { useEffect, useRef, useState } from "react";
 import type { SubmitEvent } from "react";
 import { Button } from "../../components/ui/Button";
 import { Icon } from "../../components/ui/Icon";
-import { formatDay, labels } from "../../engine/parent-case";
+import { benefits, formatDay, labels } from "../../engine/parent-case";
 import type { Benefit, FactKey } from "../../engine/parent-case";
 import { MilaMessage } from "../guide/ThreadMessage";
 import type { OpenPdfPreview } from "./AttachmentPreview";
@@ -10,7 +11,6 @@ import {
   acceptedDocumentFact,
   documentSuggestions,
   matchesDocumentCoverage,
-  validateDocumentRead,
 } from "./case-documents";
 import type {
   DocumentApplication,
@@ -54,12 +54,14 @@ export function DocumentTurn({
   active,
   onPreview,
   onContinue,
+  onPrepare,
 }: {
   document: AttachedDocument;
   session: CaseSession;
   active: boolean;
   onPreview: OpenPdfPreview;
   onContinue: (data?: DocumentData) => void;
+  onPrepare: (benefit: Benefit) => void;
 }) {
   const { file, mode } = document;
   const documentNumber =
@@ -67,16 +69,19 @@ export function DocumentTurn({
   const [state, setState] = useState<ReadState>(() =>
     mode === "demo" ? { kind: "ready", read: demoDocumentRead } : { kind: "reading" },
   );
+  const [chosenBenefit, setChosenBenefit] = useState<Benefit>(session.benefit ?? "maternity");
   const [attempt, setAttempt] = useState(0);
   const [range, setRange] = useState<ScanRange>();
   const [application, setApplication] = useState("");
-  const [cloudError, setCloudError] = useState("");
-  const [choices, setChoices] = useState<Partial<Record<FactKey, DocumentCandidate | null>>>({});
+  const [choices, setChoices] = useState<Partial<Record<string, DocumentCandidate | null>>>({});
+  const choiceKey = (key: FactKey) =>
+    `${session.activeAssessmentId ?? "none"}:${session.data.contextRevision}:${key}`;
   const controller = useRef<AbortController>(null);
+  const completedRead = useRef(mode === "demo");
   const prompt = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => {
-    if (!active || mode === "demo") return;
+    if (!active || mode === "demo" || completedRead.current) return;
     const request = new AbortController();
     controller.current = request;
     async function scan() {
@@ -92,6 +97,7 @@ export function DocumentTurn({
           range,
         );
         if (!request.signal.aborted) {
+          completedRead.current = result.kind !== "scope";
           setState(
             result.kind === "scope"
               ? result
@@ -119,45 +125,6 @@ export function DocumentTurn({
     return () => controller.current?.abort();
   }, [active, attempt, file, mode, range]);
 
-  async function analyzeInCloud() {
-    if (controller.current || state.kind === "reading") return;
-    const request = new AbortController();
-    controller.current = request;
-    prompt.current?.focus({ preventScroll: true });
-    setCloudError("");
-    setState({ kind: "reading", cloud: true });
-    try {
-      const response = await fetch("/api/parent-document", {
-        method: "POST",
-        body: file,
-        headers: { "Content-Type": "application/pdf", "X-Mila-Pdf-Permission": "confirmed" },
-        signal: AbortSignal.any([request.signal, AbortSignal.timeout(55_000)]),
-      });
-      const data: unknown = await response.json().catch(() => null);
-      if (request.signal.aborted) return;
-      const read = response.ok ? validateDocumentRead(data) : undefined;
-      const error =
-        data && typeof data === "object" && "error" in data && typeof data.error === "string"
-          ? data.error
-          : readError;
-      if (read) {
-        setChoices({});
-        setApplication("");
-        setState({ kind: "ready", read });
-      } else {
-        setCloudError(error);
-        setState(state);
-      }
-    } catch {
-      if (!request.signal.aborted) {
-        setCloudError(readError);
-        setState(state);
-      }
-    } finally {
-      if (controller.current === request) controller.current = null;
-    }
-  }
-
   const applications = state.kind === "ready" ? state.applications : undefined;
   const choosingApplication = Boolean(applications && applications.length > 1);
   const read =
@@ -170,15 +137,28 @@ export function DocumentTurn({
         : (applications?.[0]?.read ?? state.read);
   const benefit = read?.requestedBenefit ?? null;
   const mismatch = Boolean(benefit && session.benefit && benefit !== session.benefit);
-  const facts = session.family.facts;
+  const facts = getParentCase(session).facts;
   const suggestions =
     active && read && !mismatch ? documentSuggestions(read, facts, session.asOf) : [];
-  const draft: DocumentData = { benefit, facts: {}, sources: {} };
+  const targetReady =
+    session.documentTargets[document.documentId || document.preview] ===
+      session.activeAssessmentId && Boolean(session.activeAssessmentId);
+  const draft: DocumentData = {
+    benefit,
+    facts: {},
+    sources: {},
+    baseRevision: session.data.contextRevision,
+    assessmentId: session.activeAssessmentId,
+  };
   const rows = suggestions.map((entries) => {
     const { key } = entries[0];
     const existing = facts[key];
     const conflict = entries.length > 1 || existing !== undefined;
-    const selected = Object.hasOwn(choices, key) ? choices[key] : conflict ? null : entries[0];
+    const selected = Object.hasOwn(choices, choiceKey(key))
+      ? choices[choiceKey(key)]
+      : conflict
+        ? null
+        : entries[0];
     return { key, entries, existing, conflict, selected };
   });
   for (const { key, selected } of rows) {
@@ -212,7 +192,8 @@ export function DocumentTurn({
     Object.assign(draft.sources, source);
   }
   const hasFacts = Object.keys(draft.facts).length > 0;
-  const useDocument = read && !mismatch && (hasFacts || (benefit && !session.benefit));
+  const useDocument =
+    targetReady && read && !mismatch && (hasFacts || (benefit && !session.benefit));
   const text = active
     ? promptText(
         state,
@@ -266,6 +247,7 @@ export function DocumentTurn({
           onChoose={(next) => {
             setChoices({});
             setApplication("");
+            completedRead.current = false;
             setRange(next);
           }}
         />
@@ -296,7 +278,30 @@ export function DocumentTurn({
       ) : benefit ? (
         <p className={styles.benefit}>{labels[benefit]}</p>
       ) : null}
-      {rows.length ? (
+      {active && !targetReady ? (
+        <div className={styles.actions}>
+          <label>
+            Świadczenie z dokumentu{" "}
+            <select
+              value={benefit ?? chosenBenefit}
+              onChange={(e) => {
+                const selected = benefits.find((b) => b === e.currentTarget.value);
+                if (selected) setChosenBenefit(selected);
+              }}
+            >
+              {benefits.map((b) => (
+                <option key={b} value={b}>
+                  {labels[b]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <Button variant="outline" onClick={() => onPrepare(benefit ?? chosenBenefit)}>
+            Wybierz osobę i cel danych z PDF-u
+          </Button>
+        </div>
+      ) : null}
+      {targetReady && rows.length ? (
         <ul className={styles.facts}>
           {rows.map(({ key, entries, existing, conflict, selected }) => (
             <li key={key}>
@@ -309,7 +314,7 @@ export function DocumentTurn({
                       const value = event.currentTarget.value;
                       setChoices((previous) => ({
                         ...previous,
-                        [key]: value === "" ? null : entries[Number(value)],
+                        [choiceKey(key)]: value === "" ? null : entries[Number(value)],
                       }));
                     }}
                   >
@@ -339,7 +344,7 @@ export function DocumentTurn({
                       const checked = event.currentTarget.checked;
                       setChoices((previous) => ({
                         ...previous,
-                        [key]: checked ? entries[0] : null,
+                        [choiceKey(key)]: checked ? entries[0] : null,
                       }));
                     }}
                   />
@@ -371,6 +376,11 @@ export function DocumentTurn({
           ))}
         </ul>
       ) : null}
+      {!active ? (
+        <Button size="sm" variant="ghost" onClick={() => onPrepare(benefit ?? chosenBenefit)}>
+          Sprawdź ponownie dane z tego PDF-u
+        </Button>
+      ) : null}
       {active ? (
         <div className={styles.actions}>
           {state.kind === "error" ? (
@@ -385,6 +395,7 @@ export function DocumentTurn({
               onClick={() => {
                 setChoices({});
                 setApplication("");
+                completedRead.current = false;
                 setRange(undefined);
               }}
             >
@@ -426,16 +437,6 @@ export function DocumentTurn({
               </li>
             ))}
           </ul>
-        </details>
-      ) : null}
-      {active && mode === "read" && state.kind !== "reading" ? (
-        <details className={styles.decisions}>
-          <summary>Odczyt z AI w chmurze</summary>
-          <p>Ta opcja wysyła cały PDF do zewnętrznej usługi AI.</p>
-          <Button size="sm" variant="outline" onClick={() => void analyzeInCloud()}>
-            Wyślij do odczytu
-          </Button>
-          {cloudError ? <p role="alert">{cloudError}</p> : null}
         </details>
       ) : null}
       {read?.decisions.length ? (

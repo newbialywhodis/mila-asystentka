@@ -11,7 +11,7 @@ import type { Field, Profile } from "../types/profile";
 // Stage 2's explicitly placed orchestrator consumes pure domain adapters and
 // session types only. It has no dependency on React or feature UI/runtime code.
 /* eslint-disable no-restricted-imports */
-import { isoDateSchema, isValidTarget } from "../features/parent/family-session";
+import { confirmedValue, isoDateSchema, isValidTarget } from "../features/parent/family-session";
 import type { AssessmentTarget, Person, Subject } from "../features/parent/family-session";
 import { projectionRoute, toProcedureProfile } from "../features/parent/interview-profile";
 import type { Projection, ProjectionDependency } from "../features/parent/interview-profile";
@@ -124,13 +124,14 @@ function targetsFor(s: InterviewSession, id: ProcedureId, asOf: string): Assessm
 }
 
 function routingMissing(
+  s: InterviewSession,
   definition: DiscoveryDefinition,
   target: AssessmentTarget,
 ): RoutingRequirement[] {
   return definition.required.filter((required) => {
     switch (required) {
       case "person":
-        return target.subject.kind !== "person";
+        return target.subject.kind !== "person" && !target.applicantId;
       case "title":
         return target.subject.kind !== "person" || !target.subject.titleId;
       case "child":
@@ -139,7 +140,14 @@ function routingMissing(
         return !target.relatedPersonId;
       case "fatherRole":
         // Stage 1's otherParent cannot establish fatherhood.
-        return true;
+        return (
+          target.subject.kind !== "person" ||
+          confirmedValue(
+            s.persons.find(
+              (p) => target.subject.kind === "person" && p.id === target.subject.personId,
+            )?.father,
+          ) !== true
+        );
     }
   });
 }
@@ -309,7 +317,7 @@ export function discoverProcedures(s: InterviewSession, asOf: string = s.asOf) {
         const projection = toProcedureProfile(s, procedureId, target, asOf);
         const evaluation = evaluateProcedure(projection.value, procedure, asOf);
         const definition = discoveryDefinitions[procedureId];
-        const missing = routingMissing(definition, target);
+        const missing = routingMissing(s, definition, target);
         const presentation = present(evaluation, projection, asOf, missing);
         results.push({
           procedureId,

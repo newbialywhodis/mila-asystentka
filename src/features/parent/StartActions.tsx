@@ -59,7 +59,12 @@ export function StartActions({
         ]
       : [
           {
-            label: "Sprawdź świadczenie",
+            label: "Sprawdź, co może Ci przysługiwać",
+            icon: "sparkles",
+            onClick: workspace.startInterview,
+          },
+          {
+            label: "Wiem, jakie świadczenie sprawdzić",
             icon: "tasks",
             onClick: workspace.requestBenefit,
           },

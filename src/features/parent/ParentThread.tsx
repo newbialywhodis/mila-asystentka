@@ -1,3 +1,10 @@
+import { revisableInterviewAnswers } from "./workspace-session";
+import { sameQuestion } from "./interview";
+import { InterviewTurn } from "./InterviewTurn";
+import { DiscoveryTurn } from "./DiscoveryTurn";
+import { ScopeTurn } from "./ScopeTurn";
+import { ProcedureQuestionTurn } from "./ProcedureQuestionTurn";
+import { getParentCase } from "./case-session";
 import { useId, useLayoutEffect, useRef, useState } from "react";
 import { Button } from "../../components/ui/Button";
 import { Icon } from "../../components/ui/Icon";
@@ -37,11 +44,18 @@ export function ParentThread({
 }) {
   const { session, thinking, benefitTurn } = workspace;
   const latest = session.turns.at(-1);
+  const interviewEdits = revisableInterviewAnswers(session);
   const [edit, setEdit] = useState<{ answer: CaseAnswer; at: CaseTurn | undefined }>();
   const editTrigger = useRef<HTMLButtonElement>(null);
   const waiting = latest?.kind === "propose" || latest?.kind === "document";
   const lastReply = thinking ? session.turns.at(-2) : latest;
-  const activeBenefit = waiting || lastReply?.kind === "pregnancyConcern" ? undefined : benefitTurn;
+  const activeBenefit =
+    !workspace.active ||
+    !["calculator", "choice"].includes(session.view) ||
+    waiting ||
+    lastReply?.kind === "pregnancyConcern"
+      ? undefined
+      : benefitTurn;
 
   function cancelEdit() {
     setEdit(undefined);
@@ -52,6 +66,16 @@ export function ParentThread({
     <>
       {session.turns.map((turn, index) => {
         const current = turn === latest;
+        const workflowKind =
+          session.view === "calculator" || session.view === "choice" || session.view === "start"
+            ? undefined
+            : session.view;
+        if (
+          workspace.active &&
+          turn.kind === workflowKind &&
+          turn === session.turns.findLast((t) => t.kind === workflowKind)
+        )
+          return null;
         const answer =
           turn.kind === "user" &&
           !thinking &&
@@ -74,15 +98,23 @@ export function ParentThread({
                   question={answer?.question.text}
                   editing={answer ? editing : undefined}
                   onEdit={
-                    answer
-                      ? (trigger) => {
-                          if (editing) cancelEdit();
-                          else {
-                            editTrigger.current = trigger;
-                            setEdit({ answer, at: latest });
-                          }
+                    turn.interviewAnswer &&
+                    workspace.active &&
+                    interviewEdits.some(
+                      (ref) => turn.interviewAnswer && sameQuestion(ref, turn.interviewAnswer),
+                    )
+                      ? () => {
+                          if (turn.interviewAnswer) workspace.editInterview(turn.interviewAnswer);
                         }
-                      : undefined
+                      : answer
+                        ? (trigger) => {
+                            if (editing) cancelEdit();
+                            else {
+                              editTrigger.current = trigger;
+                              setEdit({ answer, at: latest });
+                            }
+                          }
+                        : undefined
                   }
                 >
                   {turn.text}
@@ -90,11 +122,12 @@ export function ParentThread({
                 {answer && editing ? (
                   <AnswerEdit
                     answer={answer}
-                    value={session.family.facts[answer.field]}
+                    value={getParentCase(session).facts[answer.field]}
                     today={session.asOf}
                     onCancel={cancelEdit}
                     onSave={(facts) => {
-                      if (session.family.facts[answer.field] === facts[answer.field]) cancelEdit();
+                      if (getParentCase(session).facts[answer.field] === facts[answer.field])
+                        cancelEdit();
                       else {
                         setEdit(undefined);
                         workspace.correct(answer, facts);
@@ -107,15 +140,16 @@ export function ParentThread({
               <DocumentTurn
                 document={turn}
                 session={session}
-                active={current}
+                active={current && workspace.active}
                 onPreview={onPreview}
                 onContinue={(data) => workspace.finishDocument(turn, data)}
+                onPrepare={(benefit) => workspace.prepareDocument(turn, benefit)}
               />
             ) : (
               <Turn
                 turn={turn}
                 activeBenefit={turn === activeBenefit}
-                controls={current && !thinking}
+                controls={current && !thinking && workspace.active}
                 workspace={workspace}
                 onChoosePdf={onChoosePdf}
               />
@@ -123,6 +157,20 @@ export function ParentThread({
           </div>
         );
       })}
+      {workspace.active &&
+      ["interview", "discovery", "scope", "procedure"].includes(session.view) ? (
+        <div key="workflow" data-chat-scroll data-chat-current={true} tabIndex={-1}>
+          {session.view === "interview" ? (
+            <InterviewTurn workspace={workspace} />
+          ) : session.view === "discovery" ? (
+            <DiscoveryTurn workspace={workspace} />
+          ) : session.view === "scope" ? (
+            <ScopeTurn workspace={workspace} />
+          ) : (
+            <ProcedureQuestionTurn key={session.data.contextRevision} workspace={workspace} />
+          )}
+        </div>
+      ) : null}
       {thinking ? <output className={styles.thinking}>Mila odpowiada…</output> : null}
     </>
   );
@@ -177,7 +225,7 @@ function Turn({
   onChoosePdf: () => void;
 }) {
   if (turn.kind === "help") return <GuideHelpReply answer={turn.answer} />;
-  if (turn.kind === "compareCare") return <CareComparison turn={turn} />;
+  if (turn.kind === "compareCare") return <CareComparison turn={turn} workspace={workspace} />;
   if (turn.kind === "chooseBenefit")
     return <BenefitSelection turn={turn} active={activeBenefit} workspace={workspace} />;
   if (turn.kind === "assessment")
@@ -274,7 +322,7 @@ function CaseToolContent({
   }
   return (
     <>
-      {Object.keys(workspace.session.family.facts).length ? (
+      {Object.keys(getParentCase(workspace.session).facts).length ? (
         <p>Wybranie przykładu zastąpi dane bieżącej sprawy.</p>
       ) : null}
       <div className={styles.actions}>

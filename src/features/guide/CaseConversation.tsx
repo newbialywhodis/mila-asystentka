@@ -1,3 +1,4 @@
+import { LocalOnlyMessages, stopMilaReading } from "./ThreadMessage";
 import { useRouter } from "next/navigation";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { RefObject } from "react";
@@ -27,7 +28,6 @@ export function CaseConversation({
   selection,
   initialTopics,
   loginHref,
-  uploadAllowed,
   input,
   onSummary,
 }: {
@@ -35,13 +35,12 @@ export function CaseConversation({
   selection: CaseSelection | null;
   initialTopics?: readonly StartTopic[];
   loginHref?: string;
-  uploadAllowed: boolean;
   input: RefObject<HTMLTextAreaElement | null>;
   onSummary: (id: number, title: string) => void;
 }) {
   const router = useRouter();
   const { attachmentOutlet, showAttachments } = useGuidePanels();
-  const workspace = useParentWorkspace(uploadAllowed);
+  const workspace = useParentWorkspace(selection !== null);
   const [startPage, setStartPage] = useState<StartPage>("start");
   const [query, setQuery] = useState("");
   const fileInput = useRef<HTMLInputElement>(null);
@@ -108,6 +107,7 @@ export function CaseConversation({
 
   useLayoutEffect(() => {
     if (!selection) {
+      stopMilaReading();
       actionGaze.current = { hovered: null, focused: null };
     } else if (selection.focusComposer) {
       input.current?.focus({ preventScroll: true });
@@ -120,7 +120,9 @@ export function CaseConversation({
     if (lastTurn.current === latest) return;
     lastTurn.current = latest;
     const region = scrollport.current;
-    const target = region?.querySelector<HTMLElement>('[data-chat-current="true"]');
+    const target = Array.from(
+      region?.querySelectorAll<HTMLElement>('[data-chat-current="true"]') ?? [],
+    ).at(-1);
     if (!target || !region) return;
     if (document.activeElement !== input.current) {
       const prompt = target.querySelector<HTMLElement>("[data-chat-focus]") ?? target;
@@ -184,7 +186,13 @@ export function CaseConversation({
         >
           <div className={styles.thread} role="log" aria-label="Wiadomości">
             <SetActionGazeContext value={setActionGaze}>
-              <ParentThread workspace={workspace} onChoosePdf={choosePdf} onPreview={showPreview} />
+              <LocalOnlyMessages value={workspace.session.privacy === "localDocuments"}>
+                <ParentThread
+                  workspace={workspace}
+                  onChoosePdf={choosePdf}
+                  onPreview={showPreview}
+                />
+              </LocalOnlyMessages>
             </SetActionGazeContext>
           </div>
           <footer ref={footer} className={styles.footer}>

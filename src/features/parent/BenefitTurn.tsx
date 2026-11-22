@@ -1,3 +1,4 @@
+import { getParentCase, assessmentTurnIsCurrent } from "./case-session";
 import { useId, useState } from "react";
 import { Button } from "../../components/ui/Button";
 import { benefits, labels } from "../../engine/parent-case";
@@ -13,9 +14,7 @@ import { assessmentCopyText, NextSteps, ResultCard } from "./ParentResult";
 import type { ParentWorkspace } from "./useParentWorkspace";
 import styles from "./ParentCard.module.css";
 
-const benefitOptions = benefits
-  .filter((benefit) => benefit !== "lossMaternity")
-  .map((benefit) => ({ value: benefit, label: labels[benefit] }));
+const benefitOptions = benefits.map((benefit) => ({ value: benefit, label: labels[benefit] }));
 
 export function BenefitSelection({
   turn,
@@ -65,6 +64,7 @@ export function BenefitAssessment({
 }) {
   const promptId = useId();
   const { benefit, result, goal, question, deferred, text } = turn;
+  const stale = !assessmentTurnIsCurrent(workspace.session, turn);
   const documents = !question && goal === "application" && result.documents.length > 0;
   const pending = question && !deferred;
   const { session } = workspace;
@@ -108,6 +108,11 @@ export function BenefitAssessment({
             hintId={hintId}
           />
         ) : null}
+        {active ? (
+          <Button size="sm" variant="outline" onClick={workspace.showDiscovery}>
+            Wróć do dopasowanych spraw
+          </Button>
+        ) : null}
         {active && !pending ? (
           <div className={styles.actions}>
             {deferred ? (
@@ -130,7 +135,7 @@ export function BenefitAssessment({
                 Co zmieni powrót do pracy?
               </Button>
             ) : null}
-            {!deferred && Object.keys(session.family.facts).length ? (
+            {!deferred && Object.keys(getParentCase(session).facts).length ? (
               <Button size="sm" variant="ghost" onClick={() => workspace.setExpanded("facts")}>
                 Zmień dane
               </Button>
@@ -149,6 +154,22 @@ export function BenefitAssessment({
       </div>
     ) : null;
 
+  if (stale)
+    return (
+      <MilaMessage
+        copyText={
+          result.period || documents
+            ? "Wynik historyczny jest nieaktualny po zmianie danych."
+            : text
+        }
+      >
+        <p>
+          {result.period || documents
+            ? "Wynik historyczny jest nieaktualny po zmianie danych. Wróć do dopasowanych spraw, aby sprawdzić go ponownie."
+            : text}
+        </p>
+      </MilaMessage>
+    );
   return (
     <MilaMessage copyText={copyText} speechText={speechText} smartComponents={smartComponents}>
       <p id={promptId} tabIndex={-1} data-chat-focus aria-describedby={hintId}>
@@ -177,9 +198,23 @@ function FactAnswer({
   hintId?: string;
 }) {
   const { session } = workspace;
-  const { facts } = session.family;
+  const { facts } = getParentCase(session);
   const { key } = question;
   const alternate = alternateField(key, workspace);
+  const activeAssessment = session.data.assessments.find(
+    (a) => a.id === session.activeAssessmentId,
+  );
+  const relatedRequired =
+    (
+      [
+        "otherParentDays",
+        "motherInsured",
+        "motherDaysAfterBirth",
+        "motherDaysBeforeBirth",
+        "motherJobPercent",
+        "motherJobEnds",
+      ] as FactKey[]
+    ).includes(key) && !activeAssessment?.target.relatedPersonId;
   const [useAlternate, setUseAlternate] = useState(
     () => alternate && facts[alternate.key] !== undefined && facts[key] === undefined,
   );
@@ -206,6 +241,29 @@ function FactAnswer({
       </>
     );
   }
+  if (relatedRequired)
+    return (
+      <div className={styles.actions}>
+        <p>
+          Wskaż drugą osobę, zanim zapiszesz jej dane. Jeżeli nie ma jej jeszcze w rozmowie, dodaj
+          ją w wywiadzie.
+        </p>
+        <Button
+          variant="outline"
+          onClick={() => workspace.destination({ kind: "calculator", benefit: turn.benefit })}
+        >
+          Wybierz powiązaną osobę
+        </Button>
+        <Button
+          variant="ghost"
+          onClick={() =>
+            workspace.editInterview({ id: "subject", eventId: session.data.family.event.id })
+          }
+        >
+          Dodaj osobę w wywiadzie
+        </Button>
+      </div>
+    );
   const field = useAlternate && alternate ? alternate.key : key;
   const alternateId = field !== key ? promptId + "-alternate" : undefined;
   const simulateService =
@@ -247,6 +305,16 @@ function FactAnswer({
           <Button size="sm" variant="ghost" onClick={() => workspace.defer(turn)}>
             Nie wiem
           </Button>
+          <Button size="sm" variant="ghost" onClick={() => workspace.defer(turn, "Pomiń")}>
+            Pomiń
+          </Button>
+          <details>
+            <summary>Dlaczego o to pytasz?</summary>
+            <p>
+              {question.hint ??
+                "Ta informacja jest potrzebna kalkulatorowi do sprawdzenia warunków, okresu lub kwoty. Możesz uzupełnić ją później."}
+            </p>
+          </details>
           {simulateService ? (
             <Button size="sm" variant="ghost" onClick={() => workspace.setExpanded("services")}>
               Wypróbuj dane z eZUS
@@ -280,7 +348,7 @@ function alternateField(key: FactKey, { session }: ParentWorkspace) {
   if (
     key === "basis" &&
     session.benefit !== "rehabilitation" &&
-    session.family.facts.employment === "employee"
+    getParentCase(session).facts.employment === "employee"
   ) {
     return {
       key: "fixedSalary",

@@ -1,3 +1,5 @@
+import { calculatorSession } from "./workspace-fixture";
+import { getParentCase, setCaseGoal } from "../src/features/parent/case-session";
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import { benefitMoney, assessBenefit, maternityTopUp } from "../src/engine/parent-benefit";
@@ -17,7 +19,6 @@ import {
   appendAssessment,
   continueWithDocument,
   getAssessment,
-  newSession,
   saveFacts,
   saveQuestionAnswer,
   selectBenefit,
@@ -394,23 +395,32 @@ test("wynik narzędzia i odpowiedzi przyjmują tylko prawidłowe, ustrukturyzowa
 });
 
 test("po zmianie celu sprawa zachowuje dane i pozwala ustalić dokumenty przed podstawą", () => {
-  const selected = selectBenefit({ ...newSession(), asOf: today }, "paternity");
+  const selected = calculatorSession("paternity", today);
   const session = saveFacts(selected, {
     ...caseExamples[0].facts,
     basis: undefined,
     payer: undefined,
   });
   assert.equal(getAssessment(session)?.question?.key, "basis");
-  const application = { ...session, goal: "application" } as const;
+  const application = setCaseGoal(session, "application");
   assert.equal(getAssessment(application)?.question?.key, "payer");
   const withPayer = saveFacts(application, { payer: "zus" });
   assert.equal(getAssessment(withPayer)?.question, undefined);
   assert.ok(getAssessment(withPayer)?.result.documents.length);
   assert.equal(getAssessment(withPayer)?.result.money, undefined);
-  const next = selectBenefit(withPayer, "maternity");
-  assert.equal(next.family.facts.birth, withPayer.family.facts.birth);
-  assert.equal(next.family.facts.from, undefined);
-  assert.equal(next.family.facts.insured, undefined);
+  const next = selectBenefit(
+    {
+      ...withPayer,
+      data: {
+        ...withPayer.data,
+        persons: withPayer.data.persons.map((p) => ({ ...p, roles: ["birthing"] })),
+      },
+    },
+    "maternity",
+  );
+  assert.equal(getParentCase(next).facts.birth, getParentCase(withPayer).facts.birth);
+  assert.equal(getParentCase(next).facts.from, undefined);
+  assert.equal(getParentCase(next).facts.insured, undefined);
 });
 
 test("przed porodem szacuje okres i kwotę według przewidywanej daty, po przyjęciu założenia o ubezpieczeniu", () => {
@@ -445,7 +455,7 @@ test("przed porodem szacuje okres i kwotę według przewidywanej daty, po przyj�
 });
 
 test("rzeczywista data z dokumentu zastępuje termin porodu i odświeża podstawę oceny", () => {
-  const selected = selectBenefit({ ...newSession(), asOf: today }, "maternity");
+  const selected = calculatorSession("maternity", today);
   const planning = saveFacts(selected, {
     dueDate: "2026-11-16",
     insured: true,
@@ -455,17 +465,21 @@ test("rzeczywista data z dokumentu zastępuje termin porodu i odświeża podstaw
   });
   const { facts, source } = acceptedDocumentFact("birth", "2026-11-19", 3);
   const born = saveFacts(planning, facts, source);
-  assert.equal(born.family.facts.birthStage, "born");
-  assert.equal(born.family.facts.dueDate, undefined);
-  assert.equal(born.family.facts.basis, undefined);
-  assert.equal(born.family.facts.children, undefined);
-  assert.equal(born.family.sources.birth?.page, 3);
+  assert.equal(getParentCase(born).facts.birthStage, "born");
+  assert.equal(getParentCase(born).facts.dueDate, undefined);
+  assert.equal(getParentCase(born).facts.basis, undefined);
+  assert.equal(getParentCase(born).facts.children, undefined);
+  assert.equal(getParentCase(born).sources.birth?.page, 3);
   assert.equal(getAssessment(born)?.result.coverageDay, "2026-11-19");
-  assert.equal(getAssessment(born)?.question?.key, "insured");
+  assert.equal(getAssessment(born)?.question?.key, "employment");
+  assert.equal(
+    getAssessment(saveFacts(born, { employment: "employee" }))?.question?.key,
+    "insured",
+  );
 });
 
 test("poprawia wybraną odpowiedź i zachowuje pozostałe aktualne odpowiedzi", () => {
-  const selected = selectBenefit({ ...newSession(), asOf: today }, "maternity");
+  const selected = calculatorSession("maternity", today);
   function answer(session: CaseSession, facts: CaseFacts) {
     const question = getAssessment(session)?.question;
     assert.ok(question);
@@ -477,24 +491,26 @@ test("poprawia wybraną odpowiedź i zachowuje pozostałe aktualne odpowiedzi", 
   const corrected = saveQuestionAnswer(employed, afterDate.answered[1].question, {
     birth: "2026-11-20",
   });
-  assert.equal(corrected.family.facts.birth, "2026-11-20");
-  assert.ok(corrected.answered.includes(employed.answered[2]));
+  assert.equal(getParentCase(corrected).facts.birth, "2026-11-20");
+  assert.ok(!corrected.answered.includes(employed.answered[2]));
+  assert.equal(getAssessment(corrected)?.question?.key, "employment");
+  const reconfirmed = saveFacts(corrected, { employment: "employee" });
   assert.ok(!corrected.answered.includes(afterDate.answered[1]));
-  assert.equal(getAssessment(corrected)?.question?.key, "insured");
+  assert.equal(getAssessment(reconfirmed)?.question?.key, "insured");
 
   const planning = saveQuestionAnswer(corrected, afterStage.answered[0].question, {
     birthStage: "expected",
   });
   assert.equal(getAssessment(planning)?.question?.key, "dueDate");
-  assert.equal(planning.family.facts.birth, undefined);
+  assert.equal(getParentCase(planning).facts.birth, undefined);
   assert.ok(!planning.answered.includes(corrected.answered.at(-1)!));
 });
 
 test("PDF uzupełnia bieżącą sprawę bez zmiany celu i bez powtarzania otwartego pytania", () => {
-  const session = selectBenefit({ ...newSession(), asOf: today, goal: "application" }, "maternity");
+  const session = setCaseGoal(calculatorSession("maternity", today), "application");
   const document: AttachedDocument = {
     kind: "document",
-    mode: "read",
+    mode: "local",
     file: new File([], "test.pdf"),
     preview: "blob:pdf",
   };
@@ -505,6 +521,8 @@ test("PDF uzupełnia bieżącą sprawę bez zmiany celu i bez powtarzania otwart
     attached,
   );
   const continued = continueWithDocument(attached, document, {
+    baseRevision: attached.data.contextRevision,
+    assessmentId: attached.activeAssessmentId,
     benefit: null,
     facts,
     sources: source,
@@ -513,7 +531,7 @@ test("PDF uzupełnia bieżącą sprawę bez zmiany celu i bez powtarzania otwart
   assert.equal(continued.benefit, "maternity");
   assert.equal(continued.turns[0], document);
   assert.equal(continued.turns.length, 2);
-  assert.equal(continued.family.sources.birth?.page, 2);
+  assert.equal(getParentCase(continued).sources.birth?.page, 2);
   assert.equal(getAssessment(continued)?.question?.key, "employment");
   assert.equal(continueWithDocument(continued, document), continued);
 });
@@ -544,7 +562,7 @@ test("sugestie PDF zachowują sprzeczne wartości i pomijają termin porodu, gdy
 });
 
 test("po korekcie wyboru stawki kalkulator używa bieżącej odpowiedzi", () => {
-  const selected = selectBenefit({ ...newSession(), asOf: today }, "maternity");
+  const selected = calculatorSession("maternity", today);
   const averaging = saveFacts(selected, { ...employed, averagedRequest: "2025-12-20" });
   assert.equal(getAssessment(averaging)?.result.rate, 8150);
   const standard = saveFacts(averaging, { standardRate: true });

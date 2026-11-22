@@ -1,5 +1,6 @@
 import { Tabs } from "@base-ui/react/tabs";
 import dynamic from "next/dynamic";
+import type { ProcedureResult } from "../../types/catalog";
 import type { Profile } from "../../types/profile";
 import type { Answers, Period } from "./flow";
 import { PlanNavigation, planSections } from "./PlanNavigation";
@@ -14,6 +15,7 @@ const PlanDetails = dynamic(() => import("./PlanDetails").then((module) => modul
 export function PlanReport({
   stage,
   profile,
+  evaluatedResults,
   period,
   asOf,
   interests,
@@ -24,6 +26,7 @@ export function PlanReport({
 }: {
   stage: Answers["stage"];
   profile: Profile;
+  evaluatedResults?: ProcedureResult[];
   period?: Period;
   asOf: string;
   interests?: Answers["planInterests"];
@@ -48,6 +51,7 @@ export function PlanReport({
       <PlanNavigation />
       <PlanDetails
         profile={profile}
+        evaluatedResults={evaluatedResults}
         period={period}
         asOf={asOf}
         checked={checked}

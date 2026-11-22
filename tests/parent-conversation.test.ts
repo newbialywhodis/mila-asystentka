@@ -1,3 +1,5 @@
+import { calculatorSession } from "./workspace-fixture";
+import { getParentCase } from "../src/features/parent/case-session";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { assessBenefit } from "../src/engine/parent-benefit";
@@ -39,7 +41,7 @@ const paternity: CaseFacts = {
 };
 
 test("odpowiedź o ciąży trafia do kontekstu dopytania bez pytania kalkulatora", () => {
-  const session = appendAssessment({ ...newSession(), asOf, benefit: "paternity" });
+  const session = appendAssessment(calculatorSession("paternity", asOf));
   const message = "chyba poronie";
   const text = "To brzmi niepokojąco. Co teraz się dzieje?";
   const reply = pregnancyConcernReply(text);
@@ -145,7 +147,10 @@ test("kontekst intencji zawiera klucz pytania, a dane z odczytu PDF zostają w s
     mode: "local",
     preview: "blob:przyklad",
   } as const;
-  const session = continueWithDocument({ ...newSession(), asOf, turns: [document] }, document, {
+  const base = { ...calculatorSession("paternity", asOf), turns: [document] };
+  const session = continueWithDocument(base, document, {
+    baseRevision: base.data.contextRevision,
+    assessmentId: base.activeAssessmentId,
     benefit: "paternity",
     facts: { birth: "2026-08-12", from: "2026-12-07", employment: "employee" },
     sources: {},
@@ -155,12 +160,15 @@ test("kontekst intencji zawiera klucz pytania, a dane z odczytu PDF zostają w s
   assert.match(question?.text ?? "", /07\.12\.2026/);
   const request = buildAssistantRequest(session, "Skąd bierze się to pytanie?");
   assert.equal(request.context.pending, "insured");
-  assert.deepEqual(request.context.confirmed, ["birth", "from", "employment", "birthStage"]);
+  assert.deepEqual(
+    [...request.context.confirmed].sort(),
+    ["birth", "from", "employment", "birthStage"].sort(),
+  );
   assert.doesNotMatch(JSON.stringify(request), /07\.12\.2026|2026-08-12|przyklad\.pdf/);
 });
 
 test("porównanie przechowuje własne dane wejściowe i wymaga ubezpieczenia dla symulacji", () => {
-  const session = saveFacts({ ...newSession(), asOf, benefit: "paternity" }, paternity);
+  const session = saveFacts(calculatorSession("paternity", asOf), paternity);
   const started = appendCareComparison(session, 50);
   const comparison = started.turns.at(-1);
   assert.equal(comparison?.kind, "compareCare");
@@ -168,10 +176,10 @@ test("porównanie przechowuje własne dane wejściowe i wymaga ubezpieczenia dla
   const revised = saveFacts(started, { birth: "2026-09-12", basis: 720_000 });
   assert.equal(comparison.workPercent, 50);
   assert.equal(comparison.facts.insured, undefined);
-  assert.equal(session.family.facts.insured, true);
+  assert.equal(getParentCase(session).facts.insured, true);
   assert.equal(comparison.facts.birth, "2026-08-12");
   assert.equal(comparison.facts.basis, 600_000);
-  assert.equal(revised.family.facts.basis, 720_000);
+  assert.equal(getParentCase(revised).facts.basis, 720_000);
 });
 
 test("opis sytuacji bez świadczenia nie otwiera listy kalkulatora", () => {
@@ -184,11 +192,11 @@ test("opis sytuacji bez świadczenia nie otwiera listy kalkulatora", () => {
   });
   assert.equal(next.turns.at(-1)?.kind, "reply");
   assert.equal(getBenefitTurn(next), undefined);
-  assert.deepEqual(next.family.facts, {});
+  assert.deepEqual(getParentCase(next).facts, {});
 });
 
 test("pusta odpowiedź modelu nie powtarza pytania z kalkulatora", () => {
-  const session = appendAssessment({ ...newSession(), asOf, benefit: "paternity" });
+  const session = appendAssessment(calculatorSession("paternity", asOf));
   const action = { kind: "assess", benefit: null, goal: "calculation", facts: {} } as const;
   const next = continueWithAssessment(session, action);
   assert.equal(next.turns.at(-1)?.kind, "reply");
@@ -284,7 +292,7 @@ test("pyta o start zaplanowanego ojcowskiego i pokazuje zakres od razu po dacie"
   const message = "Chcę wziąć tydzień ojcowskiego";
   const request = readCaseRequest(message, { asOf });
   assert.ok(request);
-  const session = continueWithRequest({ ...newSession(), asOf }, request, message);
+  const session = continueWithRequest(calculatorSession("paternity", asOf), request, message);
   const first = getAssessment(session)?.question;
   assert.equal(first?.key, "from");
   assert.match(first.text, /7 dni ojcowskiego/);
@@ -300,17 +308,19 @@ test("pyta o start zaplanowanego ojcowskiego i pokazuje zakres od razu po dacie"
 });
 
 test("zmiana startu zachowuje długość, a wybranie konkretnego końca ją zastępuje", () => {
-  const session = saveFacts(
-    { ...newSession(), asOf, benefit: "paternity" },
-    {
-      ...paternity,
-      requestedDays: 7,
-    },
-  );
+  const session = saveFacts(calculatorSession("paternity", asOf), {
+    ...paternity,
+    requestedDays: 7,
+  });
   const corrected = saveFacts(session, { from: "2026-12-28" });
-  assert.equal(corrected.family.facts.insured, undefined);
-  assert.equal(corrected.family.facts.requestedDays, 7);
-  const confirmed = saveFacts(corrected, { insured: true });
+  assert.equal(getParentCase(corrected).facts.insured, undefined);
+  assert.equal(getParentCase(corrected).facts.requestedDays, 7);
+  const confirmed = saveFacts(corrected, {
+    employment: "employee",
+    insured: true,
+    basis: 600_000,
+    payer: "zus",
+  });
   assert.deepEqual(getAssessment(confirmed)?.result.period, {
     from: "2026-12-28",
     through: "2027-01-03",
@@ -318,7 +328,7 @@ test("zmiana startu zachowuje długość, a wybranie konkretnego końca ją zast
   });
   assert.equal(getAssessment(confirmed)?.result.money?.total, 140_000);
   const explicit = saveFacts(confirmed, { through: "2027-01-10" });
-  assert.equal(explicit.family.facts.requestedDays, undefined);
+  assert.equal(getParentCase(explicit).facts.requestedDays, undefined);
   assert.equal(getAssessment(explicit)?.result.period?.days, 14);
   const lengthReply = readCaseRequest("Jednak tydzień", {
     asOf,
@@ -326,9 +336,9 @@ test("zmiana startu zachowuje długość, a wybranie konkretnego końca ją zast
   });
   assert.ok(lengthReply);
   const revised = continueWithRequest(explicit, lengthReply, "Jednak tydzień");
-  assert.equal(revised.family.facts.through, undefined);
+  assert.equal(getParentCase(revised).facts.through, undefined);
   assert.equal(getAssessment(revised)?.result.period?.days, 7);
-  assert.equal(selectBenefit(revised, "parental").family.facts.requestedDays, undefined);
+  assert.equal(getParentCase(selectBenefit(revised, "parental")).facts.requestedDays, undefined);
 });
 
 test("zweryfikowany okres nadal musi mieścić się w dostępnych dniach i granicy wieku", () => {

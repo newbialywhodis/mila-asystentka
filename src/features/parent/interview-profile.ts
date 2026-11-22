@@ -183,8 +183,9 @@ function context(s: InterviewSession, target: AssessmentTarget, a: Audit) {
     return;
   }
   const subject = target.subject;
-  const person =
-    subject.kind === "person" ? s.persons.find(({ id }) => id === subject.personId) : undefined;
+  const person = s.persons.find(
+    ({ id }) => id === (subject.kind === "person" ? subject.personId : target.applicantId),
+  );
   if (person) {
     a.select({ kind: "person", personId: person.id, field: "roles" }, person.roles);
     a.select(
@@ -193,10 +194,11 @@ function context(s: InterviewSession, target: AssessmentTarget, a: Audit) {
     );
   }
   // No implicit first/only title: the assessment/discovery target names it.
-  const title =
-    subject.kind === "person" && subject.titleId
-      ? person?.titles.find(({ id }) => id === subject.titleId)
-      : undefined;
+  const title = (subject.kind === "person" ? subject.titleId : target.applicantTitleId)
+    ? person?.titles.find(
+        ({ id }) => id === (subject.kind === "person" ? subject.titleId : target.applicantTitleId),
+      )
+    : undefined;
   if (
     (person && s.persons.filter(({ id }) => id === person.id).length !== 1) ||
     (title && person && person.titles.filter(({ id }) => id === title.id).length !== 1)
@@ -235,9 +237,24 @@ function employment(
   // CaseFacts.employment also names a former insurance title. The existing
   // calculator, using employmentEnded and insured, decides post-insurance rules.
   const formerTitle = Boolean(allowEnded && day && ended && ended < day);
+  const candidates = [title.employment, ...(title.employmentPeriods ?? [])].filter(
+    (f) => f?.state === "confirmed" && (!day || timeContains(f.validTime, day)),
+  );
+  if (
+    candidates.length > 1 &&
+    candidates.some(
+      (f) =>
+        f?.state === "confirmed" &&
+        candidates[0]?.state === "confirmed" &&
+        f.value !== candidates[0].value,
+    )
+  ) {
+    a.omit(field, "conflict");
+    return;
+  }
   const value = a.read(
     field,
-    title.employment,
+    candidates[0] ?? title.employment,
     { ...ref, field: "employment" },
     formerTitle ? ended : day,
   );
@@ -349,6 +366,8 @@ function sameTarget(a: AssessmentTarget, b: AssessmentTarget) {
         a.subject.personId === b.subject.personId &&
         a.subject.titleId === b.subject.titleId)) &&
     a.relatedPersonId === b.relatedPersonId &&
+    a.applicantId === b.applicantId &&
+    a.applicantTitleId === b.applicantTitleId &&
     JSON.stringify([...a.childIds].sort()) === JSON.stringify([...b.childIds].sort())
   );
 }
@@ -382,11 +401,17 @@ export function toProcedureProfile(
   }
   const stage = observed(s.family.stage);
   if (stage === "pregnant" || stage === "born") value.stage = stage;
-  value.dueDate = a.read("dueDate", s.family.dueDate, {
-    kind: "family",
-    eventId: target.eventId,
-    field: "dueDate",
-  });
+  value.dueDate = a.read(
+    "dueDate",
+    s.family.dueDate,
+    {
+      kind: "family",
+      eventId: target.eventId,
+      field: "dueDate",
+    },
+    undefined,
+    true,
+  );
   value.birthDate = birthDate(children, day, a);
   value.childrenBorn = a.read("childrenBorn", s.family.childrenCount, {
     kind: "family",
@@ -407,7 +432,9 @@ export function toProcedureProfile(
       // Stage 1 has only a generic otherParent role, not a confirmed father.
       // Keep this as a referral instead of attributing an employee leave to
       // someone solely because they are the other parent.
-      if (procedureId === "PATERNITY_LEAVE") a.omit("otherParentEmployment", "subject");
+      if (procedureId === "PATERNITY_LEAVE" && observed(person.father) === true)
+        value.otherParentEmployment = work;
+      else if (procedureId === "PATERNITY_LEAVE") a.omit("otherParentEmployment", "subject");
       else value.employment = work;
     } else if (work) a.omit("employment", "unsupported-employment");
     value.sicknessInsurance = coverage(person, title, day, a, "sicknessInsurance");
@@ -457,16 +484,7 @@ export function toProcedureProfile(
       if (v !== undefined) Object.assign(value, { [field]: v });
     }
     for (const field of Object.keys(profileOwnership) as Field[]) {
-      if (
-        [
-          "hospitalized",
-          "healthRegistered",
-          "healthTitle",
-          "healthRegistrationTrigger",
-          "zaZyciemCertificate",
-          "activeDisabilityCertificate",
-        ].includes(field)
-      ) {
+      if (["hospitalized", "zaZyciemCertificate", "activeDisabilityCertificate"].includes(field)) {
         const key = field as keyof typeof child.facts;
         const fact = child.facts[key];
         const v = a.read<unknown>(
@@ -477,11 +495,7 @@ export function toProcedureProfile(
             childId: child.id,
             field: key,
           },
-          (key === "healthRegistered" || key === "healthTitle") &&
-            fact?.state === "confirmed" &&
-            fact.validTime.kind !== "undated"
-            ? day
-            : undefined,
+          undefined,
         );
         if (v !== undefined) Object.assign(value, { [field]: v });
       }
@@ -621,12 +635,31 @@ export function toCaseFacts(
   }
   const familyRef = { kind: "family", eventId: assessment.target.eventId } as const;
   value.birth = birthDate(children, day, a);
-  value.dueDate = a.read("dueDate", s.family.dueDate, { ...familyRef, field: "dueDate" });
-  value.children = a.read("children", s.family.childrenCount, {
-    ...familyRef,
-    field: "childrenCount",
-  });
+  value.dueDate = a.read(
+    "dueDate",
+    s.family.dueDate,
+    { ...familyRef, field: "dueDate" },
+    undefined,
+    true,
+  );
+  value.children = a.read(
+    "children",
+    s.family.childrenCount,
+    {
+      ...familyRef,
+      field: "childrenCount",
+    },
+    undefined,
+    observed(s.family.stage) === "pregnant",
+  );
   const stage = observed(s.family.stage);
+  const plannedStart = observed(assessment.details.from);
+  const forecastDetails =
+    (stage === "pregnant" &&
+      ["expected", "expectedEarly"].includes(observed(assessment.details.birthStage) ?? "")) ||
+    (assessment.benefit !== "maternity" &&
+      assessment.forecast === true &&
+      Boolean(plannedStart && plannedStart > day));
   if (stage === "pregnant" && value.birth) {
     delete value.birth;
     a.omit("birth", "conflict");
@@ -651,7 +684,13 @@ export function toCaseFacts(
     const fact = assessment.details[field];
     // Money is checked against the engine's coverage day below. Other details
     // belong solely to this assessment, never to a neighbouring calculation.
-    const v = a.read<unknown>(key, fact, { kind: "assessment", assessmentId, field: key });
+    const v = a.read<unknown>(
+      key,
+      fact,
+      { kind: "assessment", assessmentId, field: key },
+      undefined,
+      forecastDetails,
+    );
     if (v !== undefined) Object.assign(value, { [key]: v });
   }
   if (stage !== "pregnant") {
@@ -685,6 +724,18 @@ export function toCaseFacts(
       childId: child.id,
       field: "hospitalStays",
     });
+    if (!stays?.length && child.hospitalStayDraft) {
+      value.hospitalFrom = a.read("hospitalFrom", child.hospitalStayDraft.from, {
+        kind: "child",
+        childId: child.id,
+        field: "hospitalStayDraft",
+      });
+      value.hospitalThrough = a.read("hospitalThrough", child.hospitalStayDraft.through, {
+        kind: "child",
+        childId: child.id,
+        field: "hospitalStayDraft",
+      });
+    }
     if (stays?.length && completedStays([...stays], day))
       value.hospitalRanges = stays.map(({ from, through }) => `${from}/${through}`).join(", ");
     else if (stays) a.omit("hospitalRanges", "outside-period");
@@ -805,7 +856,9 @@ export function toCaseFacts(
   const coverageDay = probe.coverageDay ? isoDateSchema.parse(probe.coverageDay) : undefined;
   if (coverageDay) value.employment = employment(person, title, coverageDay, a, "employment", true);
   else a.omit("employment", "coverage-day");
-  const forecast = probe.projected === true && stage === "pregnant";
+  const forecast =
+    (probe.projected === true && stage === "pregnant") ||
+    (assessment.forecast === true && Boolean(coverageDay && coverageDay > day));
   if (
     value.employmentPercent !== undefined &&
     title?.employmentPercent?.state === "confirmed" &&

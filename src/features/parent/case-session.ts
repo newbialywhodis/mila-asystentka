@@ -1,7 +1,22 @@
-import { addDays, daysBetween, isoDate, parseDate } from "../../engine/dates";
+import { addDays, daysBetween, isoDate, parseDate, warsawToday } from "../../engine/dates";
 import { assessBenefit } from "../../engine/parent-benefit";
+import { compareParentalPlans } from "../../engine/parent-plan";
+import { createInterviewSession, applyConfirmedFacts } from "./interview-session";
+import type { InterviewSession } from "./interview-session";
+import {
+  assessmentIdSchema,
+  documentIdSchema,
+  confirmedValue,
+  isoDateSchema,
+} from "./family-session";
+import type { AssessmentId, AssessmentTarget, FactSource } from "./family-session";
+import { toCaseFacts } from "./interview-profile";
+import { dependencyStamp, refreshSnapshots } from "./result-snapshots";
+import type { QuestionRef, QuestionTarget } from "./interview";
+import type { Field } from "../../types/profile";
+import type { DiscoveryAction } from "../../data/discovery";
 import type { BenefitResult, DemoRate } from "../../engine/parent-benefit";
-import { applyCaseFacts, emptyParentCase, formatDay, formatDays } from "../../engine/parent-case";
+import { formatDay, formatDays } from "../../engine/parent-case";
 import type { Benefit, CaseFacts, FactKey, ParentCase } from "../../engine/parent-case";
 import type { HelpAnswer } from "../guide/helpAnswers";
 import type { DocumentData } from "./case-documents";
@@ -15,6 +30,7 @@ export type CaseQuestion = { key: FactKey; text: string; hint?: string };
 export type CaseAnswer = { question: CaseQuestion; field: FactKey };
 export type CareComparisonTurn = {
   kind: "compareCare";
+  baseRevision?: number;
   text: string;
   facts: CaseFacts;
   asOf: string;
@@ -26,12 +42,18 @@ export type AttachedDocument = {
   kind: "document";
   file: File;
   preview: string;
-  mode: "local" | "read" | "demo";
+  mode: "local" | "demo";
+  documentId?: string;
 };
 
 export type BenefitChoice = { kind: "chooseBenefit"; goal: CaseGoal; text: string };
 export type AssessmentTurn = {
   kind: "assessment";
+  assessmentId?: AssessmentId;
+  inputRevision?: number;
+  snapshotInput?: CaseFacts;
+  dependencyStamp?: string;
+  demoRate?: DemoRate;
   benefit: Benefit;
   result: BenefitResult;
   insured?: boolean;
@@ -42,7 +64,17 @@ export type AssessmentTurn = {
 };
 
 export type CaseTurn =
-  | { kind: "user"; text: string; local?: boolean; answer?: CaseAnswer }
+  | {
+      kind: "user";
+      text: string;
+      local?: boolean;
+      answer?: CaseAnswer;
+      interviewAnswer?: QuestionTarget;
+    }
+  | { kind: "interview"; question?: QuestionRef; text: string }
+  | { kind: "discovery"; text: string }
+  | { kind: "scope"; text: string }
+  | { kind: "procedure"; text: string; assessmentId: AssessmentId }
   | { kind: "note"; text: string }
   | CaseReply
   | PregnancyConcernTurn
@@ -55,7 +87,18 @@ export type CaseTurn =
   | AssessmentTurn;
 
 export type CaseSession = {
-  family: ParentCase;
+  data: InterviewSession;
+  activeAssessmentId?: AssessmentId;
+  view: "start" | "interview" | "discovery" | "scope" | "calculator" | "procedure" | "choice";
+  cursor?: BenefitChoice | AssessmentTurn;
+  pendingDestination?: DiscoveryAction;
+  procedureQuestion?: Field;
+  procedureInstructions?: boolean;
+  returnDocument?: AttachedDocument;
+  documentTargets: Record<string, AssessmentId>;
+  scopeTarget?: AssessmentTarget;
+  tasks: string[];
+  privacy: "standard" | "localDocuments";
   benefit: Benefit | null;
   goal: CaseGoal;
   asOf: string;
@@ -64,9 +107,13 @@ export type CaseSession = {
   demoRate?: DemoRate;
 };
 
-export function newSession(): CaseSession {
+export function newSession(id = crypto.randomUUID()): CaseSession {
   return {
-    family: emptyParentCase,
+    data: createInterviewSession(id, warsawToday()),
+    view: "start",
+    tasks: [],
+    documentTargets: {},
+    privacy: "standard",
     benefit: null,
     goal: "calculation",
     asOf: "",
@@ -85,37 +132,221 @@ export function appendCareComparison(
 ): CaseSession {
   return append(session, {
     kind: "compareCare",
+    baseRevision: session.data.contextRevision,
     text: "Porównajmy, jak podział rodzicielskiego i powrót do pracy wpłyną na zasiłek i datę końca urlopu.",
-    facts: { ...session.family.facts, insured: undefined, debt: undefined, debtPaid: undefined },
+    facts: {
+      ...getParentCase(session).facts,
+      insured: undefined,
+      debt: undefined,
+      debtPaid: undefined,
+    },
     asOf: session.asOf,
     demoRate: session.demoRate,
     workPercent,
   });
 }
 
-export function selectBenefit(session: CaseSession, benefit: Benefit): CaseSession {
-  if (!session.benefit || session.benefit === benefit) return { ...session, benefit };
+/** Compatibility selections are used before a check exists; the assessment owns execution context. */
+export function getCaseContext(session: CaseSession) {
+  const assessment = session.data.assessments.find((a) => a.id === session.activeAssessmentId);
+  return assessment
+    ? {
+        benefit: assessment.kind === "calculator" ? assessment.benefit : null,
+        goal: assessment.goal,
+        asOf: assessment.asOf,
+      }
+    : { benefit: session.benefit, goal: session.goal, asOf: session.asOf || session.data.asOf };
+}
+export function setCaseGoal(session: CaseSession, goal: CaseGoal): CaseSession {
   return {
     ...session,
-    benefit,
-    answered: [],
-    family: applyCaseFacts(session.family, {
-      from: undefined,
-      through: undefined,
-      requestedDays: undefined,
-      insured: undefined,
-      documentDate: undefined,
-      standardRate: undefined,
-      averagedRequest: undefined,
-      ...(session.benefit === "rehabilitation" || benefit === "rehabilitation"
-        ? { basis: undefined, rehabSickBasis: undefined, rehabStart: undefined }
-        : {}),
-    }),
+    goal,
+    data: {
+      ...session.data,
+      assessments: session.data.assessments.map((a) =>
+        a.id === session.activeAssessmentId ? { ...a, goal } : a,
+      ),
+    },
   };
 }
 
-export function saveFacts(session: CaseSession, facts: CaseFacts, sources?: ParentCase["sources"]) {
-  const previous = session.family.facts;
+export function assessmentTurnIsCurrent(session: CaseSession, turn: AssessmentTurn): boolean {
+  if (!turn.assessmentId) return true;
+  const assessment = session.data.assessments.find((a) => a.id === turn.assessmentId);
+  if (!assessment || assessment.kind !== "calculator" || assessment.result?.state === "stale")
+    return false;
+  const projection = toCaseFacts(session.data, assessment.id);
+  return (
+    JSON.stringify(projection.value) === JSON.stringify(turn.snapshotInput) &&
+    turn.dependencyStamp === dependencyStamp(projection.dependencies) &&
+    (JSON.stringify(turn.demoRate) === JSON.stringify(session.demoRate) ||
+      JSON.stringify(
+        assessBenefit(turn.benefit, projection.value, assessment.asOf, session.demoRate),
+      ) === JSON.stringify(turn.result))
+  );
+}
+
+export function setSessionDemoRate(session: CaseSession, demoRate?: DemoRate): CaseSession {
+  const data: InterviewSession = {
+    ...session.data,
+    contextRevision: session.data.contextRevision + 1,
+    pendingOperation: undefined,
+    assessments: session.data.assessments.map((a) => {
+      if (!a.result || a.result.state === "stale") return a;
+      if (a.kind === "calculator")
+        return JSON.stringify(assessBenefit(a.benefit, a.result.input, a.asOf, demoRate)) ===
+          JSON.stringify(a.result.result)
+          ? a
+          : { ...a, result: { ...a.result, state: "stale" } };
+      if (a.kind === "comparison")
+        return JSON.stringify(
+          compareParentalPlans(a.result.input.facts, a.result.input.options, a.asOf, demoRate),
+        ) === JSON.stringify(a.result.result)
+          ? a
+          : { ...a, result: { ...a.result, state: "stale" } };
+      return a;
+    }),
+  };
+  return { ...session, data, demoRate };
+}
+
+export function getParentCase(session: CaseSession): ParentCase {
+  const facts = session.activeAssessmentId
+    ? toCaseFacts(session.data, session.activeAssessmentId).value
+    : {};
+  const assessment = session.data.assessments.find((a) => a.id === session.activeAssessmentId);
+  const sources: ParentCase["sources"] = {};
+  for (const key of Object.keys(facts) as FactKey[]) {
+    const detail =
+      assessment?.kind === "calculator" && key in assessment.details
+        ? assessment.details[key as keyof typeof assessment.details]
+        : undefined;
+    const target = assessment?.target;
+    const subject = target?.subject;
+    const person =
+      subject?.kind === "person"
+        ? session.data.persons.find((p) => p.id === subject.personId)
+        : undefined;
+    const title = person?.titles.find(
+      (t) => subject?.kind === "person" && t.id === subject.titleId,
+    );
+    const child = session.data.family.children.find((c) => target?.childIds.includes(c.id));
+    const sharedFact =
+      key === "birth"
+        ? child?.birth
+        : key === "dueDate"
+          ? session.data.family.dueDate
+          : key === "children"
+            ? session.data.family.childrenCount
+            : key === "employment"
+              ? title?.employment
+              : undefined;
+    const fact = detail || sharedFact;
+    const source = fact && "source" in fact ? fact.source : undefined;
+    if (source)
+      sources[key] = {
+        label:
+          source.kind === "pdf"
+            ? "Potwierdzone z PDF"
+            : source.kind === "demo"
+              ? source.label
+              : "Potwierdzona odpowiedź",
+        ...(source.kind === "pdf" ? { page: source.page } : {}),
+      };
+  }
+  return { facts, sources };
+}
+
+export function selectBenefit(session: CaseSession, benefit: Benefit): CaseSession {
+  const data = { ...session.data, asOf: isoDateSchema.parse(session.asOf || session.data.asOf) };
+  const subject = data.navigation.activeSubject;
+  if (!subject || subject.kind !== "person") return { ...session, data, benefit };
+  const person = data.persons.find((p) => p.id === subject.personId);
+  if (person && person.titles.length > 1 && !subject.titleId)
+    return {
+      ...session,
+      data,
+      benefit,
+      activeAssessmentId: undefined,
+      cursor: undefined,
+      view: "scope",
+      pendingDestination: { kind: "calculator", benefit },
+    };
+  const titleId =
+    subject.titleId ?? (person?.titles.length === 1 ? person.titles[0].id : undefined);
+  const target: AssessmentTarget = {
+    eventId: data.family.event.id,
+    subject: { ...subject, titleId },
+    childIds: data.family.children.map((c) => c.id),
+    ...(session.scopeTarget?.relatedPersonId
+      ? { relatedPersonId: session.scopeTarget.relatedPersonId }
+      : {}),
+  };
+  const existing = data.assessments.find(
+    (a) =>
+      a.kind === "calculator" &&
+      a.benefit === benefit &&
+      a.asOf === data.asOf &&
+      a.target.subject.kind === "person" &&
+      a.target.subject.personId === subject.personId &&
+      a.target.subject.titleId === titleId &&
+      JSON.stringify([...a.target.childIds].sort()) ===
+        JSON.stringify([...target.childIds].sort()) &&
+      (!a.target.relatedPersonId || a.target.relatedPersonId === target.relatedPersonId),
+  );
+  const id =
+    existing?.id ??
+    assessmentIdSchema.parse(`${data.id}:assessment:${data.assessments.length + 1}`);
+  const stage = confirmedValue(data.family.stage);
+  const stageDetail =
+    stage === "pregnant"
+      ? {
+          birthStage: {
+            state: "confirmed" as const,
+            value: "expected" as const,
+            revision: data.contextRevision,
+            source: { kind: "answer" as const, via: "confirmation" as const },
+            validTime: { kind: "undated" as const },
+            basis: "observed" as const,
+          },
+        }
+      : {};
+  return {
+    ...session,
+    data: {
+      ...data,
+      assessments: existing
+        ? data.assessments.map((a) => (a.id === id ? { ...a, state: "draft", target } : a))
+        : [
+            ...data.assessments,
+            {
+              id,
+              target,
+              asOf: data.asOf,
+              inputRevision: data.contextRevision,
+              goal: session.goal,
+              state: "draft",
+              kind: "calculator",
+              benefit,
+              details: stageDetail,
+            },
+          ],
+    },
+    activeAssessmentId: id,
+    benefit,
+    answered: session.activeAssessmentId === id ? session.answered : [],
+    view: "calculator",
+    cursor: undefined,
+  };
+}
+
+export function saveFacts(
+  session: CaseSession,
+  facts: CaseFacts,
+  sources?: ParentCase["sources"],
+  provenance?: Partial<Record<FactKey, FactSource>>,
+) {
+  const previous = getParentCase(session).facts;
   const patch = { ...facts };
   const previousStage =
     previous.birthStage ?? (previous.birth ? "born" : previous.dueDate ? "expected" : undefined);
@@ -207,11 +438,37 @@ export function saveFacts(session: CaseSession, facts: CaseFacts, sources?: Pare
       if (!(key in patch)) patch[key] = undefined;
     }
   }
-  const family = applyCaseFacts(session.family, patch, sources);
+  let selected = session.activeAssessmentId
+    ? session
+    : session.benefit
+      ? selectBenefit(session, session.benefit)
+      : session;
+  if (!selected.activeAssessmentId) return selected;
+  const factSources: Partial<Record<FactKey, FactSource>> = {};
+  for (const key of Object.keys(sources ?? {}) as FactKey[]) {
+    const source = sources?.[key];
+    if (source)
+      factSources[key] = source.page
+        ? { kind: "pdf", documentId: documentIdSchema.parse(source.label), page: source.page }
+        : { kind: "demo", label: source.label };
+  }
+  const written = applyConfirmedFacts(selected.data, {
+    kind: "caseFacts",
+    baseRevision: selected.data.contextRevision,
+    assessmentId: selected.activeAssessmentId,
+    facts: patch,
+    sources: provenance ?? factSources,
+  });
+  if (!written.ok)
+    return append(selected, {
+      kind: "note",
+      text: "Nie zapisano tych danych. Najpierw ustal osobę, tytuł oraz właściwy dzień lub okres. Możesz uzupełnić aktywne pytanie i wrócić do dokumentu.",
+    });
+  selected = { ...selected, data: refreshSnapshots(written.session), cursor: undefined };
+  const family = getParentCase(selected);
   return {
-    ...session,
-    family,
-    answered: session.answered.filter(
+    ...selected,
+    answered: selected.answered.filter(
       ({ field }) => family.facts[field] !== undefined && family.facts[field] === previous[field],
     ),
   };
@@ -244,7 +501,9 @@ export function saveQuestionAnswer(
 }
 
 export function getAssessment(session: CaseSession): AssessmentTurn | undefined {
-  const { benefit, family, asOf, goal, demoRate } = session;
+  const { benefit, asOf, goal } = getCaseContext(session);
+  const { demoRate } = session;
+  const family = getParentCase(session);
   if (!benefit) return;
   const result = assessBenefit(benefit, family.facts, asOf, demoRate);
   const missing =
@@ -272,6 +531,14 @@ export function getAssessment(session: CaseSession): AssessmentTurn | undefined 
         : result.reason);
   return {
     kind: "assessment",
+    assessmentId: session.activeAssessmentId,
+    inputRevision: session.data.assessments.find((a) => a.id === session.activeAssessmentId)
+      ?.inputRevision,
+    snapshotInput: structuredClone(family.facts),
+    dependencyStamp: session.activeAssessmentId
+      ? dependencyStamp(toCaseFacts(session.data, session.activeAssessmentId).dependencies)
+      : undefined,
+    demoRate,
     benefit,
     goal,
     result,
@@ -289,10 +556,12 @@ const periodNames: Partial<Record<Benefit, string>> = {
 };
 
 function questionText(key: FactKey, result: BenefitResult, session: CaseSession) {
-  const { requestedDays } = session.family.facts;
+  const { requestedDays } = getParentCase(session).facts;
   if (key === "from" && requestedDays !== undefined && session.benefit) {
     return `Sprawdzę ${formatDays(requestedDays)}${periodNames[session.benefit] ?? ""}. Od kiedy chcesz zacząć?`;
   }
+  if (key === "employment" && result.coverageDay)
+    return `Jaka forma pracy dotyczy tego tytułu na ${formatDay(result.coverageDay)}? Potwierdź zakres dla tego dnia.`;
   if (key === "insured" && result.coverageDay) {
     const date = formatDay(result.coverageDay);
     return result.projected || result.coverageDay > session.asOf
@@ -327,7 +596,7 @@ export function appendAssessment(session: CaseSession, showRequestedPeriod = fal
     assessment.question.key !== "through" &&
     assessment.question.key !== "requestedDays"
   ) {
-    const { from, through, requestedDays } = session.family.facts;
+    const { from, through, requestedDays } = getParentCase(session).facts;
     const start = parseDate(from);
     const end =
       parseDate(through) ??
@@ -338,24 +607,50 @@ export function appendAssessment(session: CaseSession, showRequestedPeriod = fal
       assessment.text = `Sprawdzę okres od ${range} (${length}). ${assessment.text}`;
     }
   }
-  return append(session, assessment);
+  const a = session.data.assessments.find((a) => a.id === session.activeAssessmentId);
+  const data =
+    a?.kind === "calculator"
+      ? {
+          ...session.data,
+          assessments: session.data.assessments.map((item) =>
+            item.id === a.id
+              ? {
+                  ...a,
+                  result: {
+                    assessmentId: a.id,
+                    input: structuredClone(getParentCase(session).facts),
+                    result: structuredClone(assessment.result),
+                    dependencies: [],
+                    projectionDependencies: toCaseFacts(session.data, a.id).dependencies,
+                    asOf: a.asOf,
+                    assessedAt: new Date().toISOString(),
+                    engineVersion: "parent-benefit:stage3-v1",
+                    demoRate: session.demoRate,
+                    state: "current" as const,
+                    explanation: assessment.result.reason,
+                  },
+                }
+              : item,
+          ),
+        }
+      : session.data;
+  return append({ ...session, data, cursor: assessment, view: "calculator" }, assessment);
 }
 
 export function askBenefit(session: CaseSession, goal: CaseGoal): CaseSession {
-  return append(session, {
+  const choice: BenefitChoice = {
     kind: "chooseBenefit",
     goal,
     text:
       goal === "application"
         ? "Do którego świadczenia potrzebujesz dokumentów?"
         : "Które świadczenie chcesz sprawdzić?",
-  });
+  };
+  return append({ ...session, view: "choice", cursor: choice }, choice);
 }
 
 export function getBenefitTurn(session: CaseSession): BenefitChoice | AssessmentTurn | undefined {
-  return session.turns.findLast(
-    (turn) => turn.kind === "chooseBenefit" || turn.kind === "assessment",
-  );
+  return session.cursor;
 }
 
 export function continueWithRequest(session: CaseSession, request: CaseRequest, text: string) {
@@ -366,7 +661,7 @@ export function continueWithRequest(session: CaseSession, request: CaseRequest, 
     (current?.kind === "chooseBenefit" || benefit === session.benefit
       ? (current?.goal ?? session.goal)
       : "calculation");
-  const next = saveFacts({ ...selectBenefit(session, benefit), goal }, facts);
+  const next = saveFacts(setCaseGoal(selectBenefit(session, benefit), goal), facts);
   return appendAssessment(
     append(next, { kind: "user", text, local: true }),
     facts.from !== undefined || facts.through !== undefined || facts.requestedDays !== undefined,
@@ -383,10 +678,10 @@ export function continueWithAssessment(
   if (!benefit) return append(session, startingReply);
 
   const goal = choosing && action.goal === "calculation" ? current.goal : action.goal;
-  const next = { ...selectBenefit(session, benefit), goal };
+  const next = setCaseGoal(selectBenefit(session, benefit), goal);
   const facts = Object.fromEntries(
     Object.entries(action.facts).filter(
-      ([key, value]) => next.family.facts[key as FactKey] !== value,
+      ([key, value]) => getParentCase(next).facts[key as FactKey] !== value,
     ),
   );
   if (Object.keys(facts).length) {
@@ -408,6 +703,12 @@ export function continueWithDocument(
   data?: DocumentData,
 ) {
   if (session.turns.at(-1) !== document) return session;
+  if (
+    data &&
+    (data.baseRevision !== session.data.contextRevision ||
+      data.assessmentId !== session.activeAssessmentId)
+  )
+    return session;
   if (data?.benefit && session.benefit && data.benefit !== session.benefit) return session;
 
   const current = getBenefitTurn(session);
@@ -418,10 +719,24 @@ export function continueWithDocument(
       ? { ...session, turns: [...session.turns.slice(0, -2), document] }
       : session;
   const saved = data
-    ? saveFacts({ ...next, benefit: session.benefit ?? data.benefit }, data.facts, data.sources)
+    ? saveFacts(
+        { ...next, benefit: session.benefit ?? data.benefit },
+        data.facts,
+        data.sources,
+        Object.fromEntries(
+          Object.entries(data.sources).map(([key, source]) => [
+            key,
+            {
+              kind: "pdf",
+              documentId: documentIdSchema.parse(document.documentId || "local-document"),
+              page: source?.page ?? 1,
+            },
+          ]),
+        ),
+      )
     : next;
   if (current?.kind === "chooseBenefit" && !data?.benefit) return askBenefit(saved, current.goal);
-  return appendAssessment({ ...saved, goal: current?.goal ?? saved.goal });
+  return appendAssessment(setCaseGoal(saved, current?.goal ?? getCaseContext(saved).goal));
 }
 
 export const toolMessages: Record<CaseTool, string> = {

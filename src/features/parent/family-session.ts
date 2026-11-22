@@ -5,6 +5,7 @@ import type { BenefitResult, DemoRate } from "../../engine/parent-benefit";
 import type { compareParentalPlans, PlanOptions } from "../../engine/parent-plan";
 import type { Profile, HospitalStay } from "../../types/profile";
 import type { ProcedureResult } from "../../types/catalog";
+import type { ProjectionDependency } from "./interview-profile";
 
 export const personIdSchema = z.string().trim().min(1).brand<"PersonId">();
 export const eventIdSchema = z.string().trim().min(1).brand<"EventId">();
@@ -94,6 +95,7 @@ export type PersonRole = "birthing" | "otherParent" | "guardian";
 export type InsuranceTitle = {
   readonly id: TitleId;
   readonly employment?: Fact<NonNullable<CaseFacts["employment"]>>;
+  readonly employmentPeriods?: readonly Fact<NonNullable<CaseFacts["employment"]>>[];
   readonly ended?: Fact<ISODate>;
   readonly employmentPercent?: Fact<number>;
   readonly sicknessCoverage: readonly { readonly id: string; readonly fact: Fact<boolean> }[];
@@ -106,6 +108,7 @@ export type Person = {
   readonly procedureFacts: FactFields<Pick<Profile, "employedSixMonths" | "parentUsesTaxScale">>;
   // A preference for the interview, not a medical or eligibility fact.
   readonly sicknessCheck?: Fact<boolean>;
+  readonly father?: Fact<boolean>;
 };
 export type Family = {
   readonly event: { readonly id: EventId; readonly kind?: Fact<"birth" | "adoption" | "foster"> };
@@ -133,16 +136,12 @@ export type Family = {
     readonly gestationalWeeks?: Fact<number>;
     readonly birthWeightGrams?: Fact<number>;
     readonly hospitalStays?: Fact<readonly HospitalStay[]>;
+    readonly hospitalStayDraft?: {
+      readonly from?: Fact<ISODate>;
+      readonly through?: Fact<ISODate>;
+    };
     readonly facts: FactFields<
-      Pick<
-        Profile,
-        | "hospitalized"
-        | "healthRegistered"
-        | "healthTitle"
-        | "healthRegistrationTrigger"
-        | "zaZyciemCertificate"
-        | "activeDisabilityCertificate"
-      >
+      Pick<Profile, "hospitalized" | "zaZyciemCertificate" | "activeDisabilityCertificate">
     >;
   }[];
   readonly shared: FactFields<
@@ -168,9 +167,9 @@ export const profileOwnership = {
   standardResidence: "procedure",
   birthRegistered: "family",
   birthCardDate: "family",
-  healthRegistered: "child",
-  healthTitle: "child",
-  healthRegistrationTrigger: "child",
+  healthRegistered: "procedure",
+  healthTitle: "procedure",
+  healthRegistrationTrigger: "procedure",
   maternityEnd: "procedure",
   parentalStart: "procedure",
   paternityStart: "procedure",
@@ -300,6 +299,8 @@ export type AssessmentTarget = {
   readonly eventId: EventId;
   readonly subject: Subject;
   readonly relatedPersonId?: PersonId;
+  readonly applicantId?: PersonId;
+  readonly applicantTitleId?: TitleId;
   readonly childIds: readonly ChildId[];
 };
 export type FactRef =
@@ -321,6 +322,9 @@ export type FactRef =
       readonly validTime: ValidTime;
     };
 export type ResultSnapshot<Input, Result> = {
+  readonly assessmentId?: AssessmentId;
+  readonly assessedAt?: string;
+  readonly projectionDependencies?: readonly ProjectionDependency[];
   readonly input: Readonly<Input>;
   readonly result: Readonly<Result>;
   readonly dependencies: readonly { readonly ref: FactRef; readonly revision: number | null }[];
@@ -337,6 +341,7 @@ type AssessmentBase = {
   readonly inputRevision: number;
   readonly goal: "calculation" | "application";
   readonly state: "draft" | "stale";
+  readonly deferredFields?: readonly (keyof Profile)[];
 };
 // Stage 1 represents checks; their creation, projection and execution belong to later stages.
 export type Assessment = AssessmentBase &
@@ -344,6 +349,7 @@ export type Assessment = AssessmentBase &
     | {
         readonly kind: "calculator";
         readonly benefit: Benefit;
+        readonly forecast?: true;
         readonly details: FactFields<Pick<CaseFacts, CalculationDetailKey>>;
         readonly result?: ResultSnapshot<CaseFacts, BenefitResult>;
       }
@@ -356,6 +362,8 @@ export type Assessment = AssessmentBase &
     | {
         readonly kind: "comparison";
         readonly first: AssessmentTarget;
+        readonly firstAssessmentId?: AssessmentId;
+        readonly secondAssessmentId?: AssessmentId;
         readonly second: AssessmentTarget;
         // Financial and insurance facts belong to the selected persons/titles/checks.
         readonly options: FactFields<
@@ -368,6 +376,7 @@ export type Assessment = AssessmentBase &
             | "workPercent"
             | "employmentPercent"
             | "extensionWorkPercent"
+            | "maternity"
           >
         >;
         readonly result?: ResultSnapshot<
@@ -407,6 +416,17 @@ export function isValidTarget(data: FamilyData, target: AssessmentTarget): boole
     (!target.relatedPersonId ||
       (data.persons.some(({ id }) => id === target.relatedPersonId) &&
         (subject.kind !== "person" || target.relatedPersonId !== subject.personId))) &&
+    (!target.applicantId ||
+      (subject.kind === "family" &&
+        data.persons.some(({ id }) => id === target.applicantId) &&
+        target.applicantId !== target.relatedPersonId)) &&
+    (!target.applicantTitleId ||
+      Boolean(
+        target.applicantId &&
+        data.persons
+          .find((p) => p.id === target.applicantId)
+          ?.titles.some((t) => t.id === target.applicantTitleId),
+      )) &&
     new Set(target.childIds).size === target.childIds.length &&
     target.childIds.every((id) => data.family.children.some((child) => child.id === id))
   );

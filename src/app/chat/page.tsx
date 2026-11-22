@@ -38,10 +38,6 @@ export default async function ChatPage({
       initialTopics={initialTopics}
       loginHref={demoSignedIn ? undefined : topicChatHref(initialTopics, "/chat/login")}
       signOutAction={demoSignedIn ? signOut : undefined}
-      uploadAllowed={
-        process.env.MILA_PDF_UPLOAD_ALLOWED === "1" &&
-        Boolean(process.env.AI_GATEWAY_API_KEY?.trim())
-      }
     />
   );
 }
