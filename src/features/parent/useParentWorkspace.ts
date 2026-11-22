@@ -460,11 +460,15 @@ export function useParentWorkspace(uploadAllowed: boolean) {
     pendingRequest.current = controller;
     setThinking(true);
     const request = buildAssistantRequest(session, text);
+    const checkedAssessment =
+      benefitTurn?.kind === "assessment" &&
+      (benefitTurn.result.status === "eligible" || benefitTurn.result.status === "ineligible");
     setSession((previous) => append(previous, { kind: "user", text }));
 
     async function askHelp(question: string) {
       const known = findHelpAnswer(question);
       if (known) return known;
+      if (checkedAssessment) return undefined;
       const last = session.turns.findLast((turn) => turn.kind === "help");
       const response = await fetch("/api/guide-help", {
         method: "POST",
@@ -491,11 +495,15 @@ export function useParentWorkspace(uploadAllowed: boolean) {
     if (action.success && action.data.kind === "help") {
       const help = await askHelp(action.data.question);
       if (controller.signal.aborted) return;
-      update((previous) => append(previous, { kind: "help", answer: help }));
+      update((previous) =>
+        help ? append(previous, { kind: "help", answer: help }) : appendAssessment(previous),
+      );
       return;
     }
     if (action.success && action.data.kind !== "help") {
-      applyAction(action.data);
+      if (checkedAssessment && action.data.kind === "reply")
+        update((previous) => appendAssessment(previous));
+      else applyAction(action.data);
       return;
     }
     const known = findHelpAnswer(text);
