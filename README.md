@@ -29,7 +29,9 @@ Spinacz przy polu wiadomości dodaje PDF do bieżącej sprawy, a menu po lewej p
 
 Po zalogowaniu profilem demo wybierz **Sprawdź sprawę z PDF-u** i otwórz plik z urządzenia. Możesz też wybrać **Wypróbuj przykład → Przykładowy PDF**, aby użyć fikcyjnego dokumentu wbudowanego w aplikację. Mila odczyta strony lokalnie w przeglądarce i zaproponuje dane, które rozpoznała. Przyciski ze stronami otwierają dokument obok rozmowy w prawym panelu **Załączniki**. Na telefonie panel otwiera się po kliknięciu podglądu. Sprawdź dane, odznacz pola wymagające korekty i kliknij **Potwierdź i użyj danych**. Mila zapyta o informacje potrzebne do obliczeń.
 
-Jeśli Mila rozpozna kilka wniosków, wybierz jeden okres. Gdy pola są nieczytelne, użyj **Strony do sprawdzenia ręcznie** i uzupełnij dane z podglądu. Przy pliku powyżej 30 stron aplikacja poprosi o wskazanie zakresu przed skanowaniem. Lokalny odczyt obsługuje pliki do 30 MB i przetwarza do 100 stron naraz. W tym trybie plik pozostaje w przeglądarce. Aplikacja pobiera pliki PDF.js i Tesseract.js z własnego serwera przy pierwszym odczycie. Rozstrzygnięcie ZUS może posłużyć do porównania wyniku dla tego samego świadczenia i okresu; kalkulator nie ustala na jego podstawie prawa do świadczenia.
+Jeśli Mila rozpozna kilka wniosków, wybierz jeden okres. Gdy pola są nieczytelne, użyj **Strony do sprawdzenia ręcznie** i uzupełnij dane z podglądu. Przy pliku powyżej 30 stron aplikacja poprosi o wskazanie zakresu przed skanowaniem. Lokalny odczyt obsługuje pliki do 30 MB i przetwarza do 100 stron naraz. W tym trybie plik pozostaje w przeglądarce. Aplikacja pobiera pliki PDF.js i Tesseract.js z własnego serwera przy pierwszym odczycie.
+
+Czytelne rozstrzygnięcia znajdziesz w sekcji **Rozstrzygnięcia w PDF-ie** z odsyłaczem do strony źródłowej. Porównaj tam wynik dla tego samego świadczenia i okresu. Kalkulator ustala prawo na podstawie danych sprawy potwierdzonych w rozmowie.
 
 ## Opcjonalne klucze
 

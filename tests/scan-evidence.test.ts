@@ -108,3 +108,151 @@ test("brak poświadczenia na właściwy dzień nie zamienia się w odpowiedź o 
     false,
   );
 });
+
+test("data urodzenia wnioskodawcy nie jest datą dziecka, a podpisana data dziecka zostaje", () => {
+  const base = [
+    "ZAO Wniosek o zasiłek macierzyński za okres urlopu ojcowskiego",
+    "Twoje dane",
+    "Data urodzenia: 01.01.2002",
+    "Wnioskowany okres od 02.11.2026 do 08.11.2026",
+  ].join("\n");
+  const proposals = (text: string) =>
+    readScanPages([{ number: 1, text }]).applications[0].read.candidates.filter(
+      ({ key }) => key === "birth",
+    );
+  assert.deepEqual(proposals(base), []);
+  assert.deepEqual(proposals(base + "\nData urodzenia dziecka: 12.08.2026"), [
+    { key: "birth", value: "2026-08-12", page: 1 },
+  ]);
+  const { fallback } = readScanPages([
+    { number: 1, text: "Odpis skrócony aktu urodzenia\nData urodzenia\n12.08.2026" },
+  ]);
+  assert.deepEqual(fallback.candidates, [{ key: "birth", value: "2026-08-12", page: 1 }]);
+});
+
+test("pierwsza strona i zakres tego samego ZUR tworzą jeden wniosek z datami i odsyłaczami", () => {
+  const first = {
+    number: 5,
+    text: "ZUR Wniosek o zasiłek macierzyński za okres urlopu rodzicielskiego\nStrona 1 z 3",
+  };
+  const second = {
+    number: 6,
+    text: "ZUR\nZakres wniosku\nProszę o wypłatę zasiłku macierzyńskiego\n16.12.2024 - 07.02.2027",
+  };
+  const { applications, references } = readScanPages([
+    first,
+    second,
+    { number: 7, text: "ZUR\nNumer i data wniosku\nStrona3z3" },
+  ]);
+  assert.deepEqual(
+    applications.map(({ page }) => page),
+    [6],
+  );
+  assert.deepEqual(applications[0].read.candidates, [
+    { key: "from", value: "2024-12-16", page: 6 },
+    { key: "through", value: "2027-02-07", page: 6 },
+  ]);
+  assert.deepEqual(
+    references.map(({ page }) => page),
+    [5, 6],
+  );
+  assert.deepEqual(
+    readScanPages([first, { ...first, number: 6 }]).applications.map(({ page }) => page),
+    [5, 6],
+  );
+});
+
+test("kontynuacja ZAO bez czytelnych dat nie pojawia się jako drugi wniosek", () => {
+  const { applications } = readScanPages([
+    {
+      number: 1,
+      text: "ZAO Wniosek o zasiłek macierzyński za okres urlopu ojcowskiego\nDane wnioskodawcy",
+    },
+    { number: 2, text: "ZAO\nZakres wniosku\nod [nieczytelne] do [nieczytelne]" },
+  ]);
+  assert.deepEqual(
+    applications.map(({ page }) => page),
+    [2],
+  );
+  assert.equal(applications[0].read.requestedBenefit, "paternity");
+  assert.deepEqual(applications[0].read.candidates, []);
+});
+
+test("notatka o braku zgłoszenia wymaga zgodnego dnia, tytułu i sąsiadującego wniosku o poświadczenie", () => {
+  const request = {
+    number: 3,
+    text: "Wniosek o poświadczenie ubezpieczenia chorobowego\nZ tytułu 0411\nRoszczenie o zasiłek macierzyński za okres: 02.11.2026 – 08.11.2026",
+  };
+  const reply = {
+    number: 4,
+    text: [
+      "Odpowiedź na wniosek o poświadczenie ubezpieczenia chorobowego",
+      "Na datę badania, tj. 2026-11-02: Nie dotyczy",
+      "Notatka UBS",
+      "Brak zgłoszenia do dobrowolnego ubezpieczenia chorobowego",
+    ].join("\n"),
+  };
+  const insured = (question: typeof request, answer: typeof reply) =>
+    readScanPages([application, question, answer]).applications[0].read.candidates.find(
+      ({ key }) => key === "insured",
+    );
+  assert.deepEqual(insured(request, reply), {
+    key: "insured",
+    value: false,
+    page: 4,
+    coverage: { day: "2026-11-02", employment: "contract" },
+  });
+  assert.equal(insured(request, { ...reply, number: 5 }), undefined);
+  assert.equal(
+    insured({ ...request, text: request.text.replace("Roszczenie o", "Wynagrodzenie za") }, reply),
+    undefined,
+  );
+  assert.equal(
+    insured(request, { ...reply, text: reply.text.replace("11-02", "11-03") }),
+    undefined,
+  );
+  assert.equal(
+    insured({ ...request, text: request.text.replace("0411", "0510") }, reply),
+    undefined,
+  );
+  assert.equal(
+    insured(request, { ...reply, text: reply.text.split("\n").slice(0, 2).join("\n") }),
+    undefined,
+  );
+});
+
+test("rozstrzygnięcia z numerem strony służą do porównania bez przenoszenia do kalkulatora", () => {
+  const refusal = {
+    number: 4,
+    text: [
+      "Decyzja",
+      "Zakład Ubezpieczeń Społecznych postanawia:",
+      "- odmówić prawa do zasiłku macierzyńskiego od 25-09-2025",
+      "do dnia 08-10-2025.",
+      "Ustalona podstawa wymiaru zasiłku: 7 000,00 zł.",
+    ].join("\n"),
+  };
+  const { applications, fallback } = readScanPages([
+    application,
+    refusal,
+    { number: 5, text: "W sprawie przyznano zasiłek macierzyński." },
+    { number: 6, text: "Decyzja\nJeżeli przyznano zasiłek, pouczenie obowiązuje." },
+  ]);
+  assert.deepEqual(fallback.decisions, [
+    { status: "refused", page: 4, from: "2025-09-25", through: "2025-10-08" },
+    { status: "granted", page: 5, from: null, through: null },
+  ]);
+  assert.equal(applications.length, 1);
+  assert.ok(
+    applications[0].read.candidates.every(({ key }) => key !== "basis" && key !== "insured"),
+  );
+  assert.equal(readScanPages([refusal]).fallback.kind, "decision");
+});
+
+test("podstawa w złotych i groszach wymaga wyraźnego ustalenia podstawy zasiłku", () => {
+  const { fallback } = readScanPages([
+    { number: 1, text: "Podstawa wymiaru składek wynosi 7 000,00 zł." },
+    { number: 2, text: "Ustalono podstawę wymiaru zasiłku w wysokości 6.000,25 zł." },
+  ]);
+  assert.deepEqual(fallback.candidates, [{ key: "basis", value: 600_025, page: 2 }]);
+});

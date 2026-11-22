@@ -160,6 +160,7 @@ export function DocumentTurn({
   }
 
   const applications = state.kind === "ready" ? state.applications : undefined;
+  const decisions = state.kind === "ready" ? state.read.decisions : [];
   const choosingApplication = Boolean(applications && applications.length > 1);
   const read =
     state.kind !== "ready"
@@ -439,11 +440,11 @@ export function DocumentTurn({
           {cloudError ? <p role="alert">{cloudError}</p> : null}
         </details>
       ) : null}
-      {read?.decisions.length ? (
+      {decisions.length ? (
         <details className={styles.decisions}>
           <summary>Rozstrzygnięcia w PDF-ie</summary>
           <ul>
-            {read.decisions.map(({ status, from, through, page }, index) => (
+            {decisions.map(({ status, from, through, page }, index) => (
               <li key={index}>
                 {{ granted: "Przyznano", refused: "Odmówiono", paid: "Wypłacono" }[status]}
                 {from && through ? ` · ${formatDay(from)} – ${formatDay(through)}` : ""}
