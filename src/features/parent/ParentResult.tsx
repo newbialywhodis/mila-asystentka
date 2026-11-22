@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Button, ButtonLink } from "../../components/ui/Button";
+import { NumericInput } from "../../components/ui/NumericInput";
 import { sources } from "../../data/sources";
 import { formatDay, formatDays, labels, moneyLabel } from "../../engine/parent-case";
 import type { Benefit, CaseFacts, FactKey, FactSource } from "../../engine/parent-case";
@@ -55,14 +56,12 @@ export function ResultCard({
   result,
   insured,
   futureCoverage,
-  showTopUp,
   showReason = true,
 }: {
   benefit: Benefit;
   result: BenefitResult;
   insured?: boolean;
   futureCoverage: boolean;
-  showTopUp?: boolean;
   showReason?: boolean;
 }) {
   const { period, money, documents: steps } = result;
@@ -182,7 +181,6 @@ export function ResultCard({
         </details>
       ) : null}
       {period &&
-      showTopUp &&
       !result.projected &&
       (benefit === "maternity" || benefit === "parental" || benefit === "supplement") ? (
         <TopUp period={period} />
@@ -192,10 +190,10 @@ export function ResultCard({
 }
 
 function TopUp({ period }: { period: NonNullable<BenefitResult["period"]> }) {
+  const id = useId();
   const [month, setMonth] = useState(period.from.slice(0, 7));
-  const [net, setNet] = useState("");
-  const value =
-    net === "" ? undefined : maternityTopUp(period, month, Math.round(Number(net) * 100));
+  const [net, setNet] = useState<number | null>(null);
+  const value = net === null ? undefined : maternityTopUp(period, month, Math.round(net * 100));
   return (
     <details>
       <summary>Sprawdź podwyższenie niskiego zasiłku</summary>
@@ -208,16 +206,18 @@ function TopUp({ period }: { period: NonNullable<BenefitResult["period"]> }) {
           Miesiąc
           <input type="month" value={month} onChange={(event) => setMonth(event.target.value)} />
         </label>
-        <label className={styles.field}>
-          Razem po zaliczce (zł)
-          <input
-            type="number"
-            min="0"
-            step="0.01"
+        <div className={styles.field}>
+          <label htmlFor={id}>Razem po zaliczce (zł)</label>
+          <NumericInput
+            id={id}
+            min={0}
+            decimal
+            placeholder="np. 850,50"
+            help="Wpisz kwotę netto za wybrany miesiąc, czyli tyle, ile otrzymujesz do wypłaty."
             value={net}
-            onChange={(event) => setNet(event.target.value)}
+            onValueChange={setNet}
           />
-        </label>
+        </div>
       </div>
       {value ? (
         <output>

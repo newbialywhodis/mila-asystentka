@@ -1,5 +1,6 @@
 import { Tabs } from "@base-ui/react/tabs";
 import dynamic from "next/dynamic";
+import { LoadingIndicator } from "../../components/ui/LoadingIndicator";
 import type { Profile } from "../../types/profile";
 import type { Answers, Period } from "./flow";
 import { PlanNavigation, planSections } from "./PlanNavigation";
@@ -8,7 +9,11 @@ import { PlanningPlan } from "./PlanningPlan";
 import styles from "./PlanReport.module.css";
 
 const PlanDetails = dynamic(() => import("./PlanDetails").then((module) => module.PlanDetails), {
-  loading: () => <output className={styles.content}>Wczytuję szczegóły planu…</output>,
+  loading: () => (
+    <output className={styles.content}>
+      <LoadingIndicator>Wczytywanie szczegółów planu…</LoadingIndicator>
+    </output>
+  ),
 });
 
 export function PlanReport({

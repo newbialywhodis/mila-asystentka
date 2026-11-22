@@ -1,3 +1,6 @@
+"use client";
+
+import { Accordion } from "@base-ui/react/accordion";
 import sectionStyles from "./LandingSection.module.css";
 import styles from "./LandingFaq.module.css";
 
@@ -18,7 +21,7 @@ const questions = [
   {
     title: "Czy muszę znać wszystkie odpowiedzi?",
     answer: [
-      "Jeśli brakuje Ci informacji, wybierz „Nie wiem”, gdy pojawi się ta opcja. Mila pokaże, jakie dane uzupełnić, aby dokończyć obliczenie.",
+      "Do obliczenia Mila potrzebuje odpowiedzi na pytania kalkulatora. Jeśli brakuje Ci danych, możesz wpisać „Nie wiem”, aby sprawdzić, czego potrzebujesz do dalszych obliczeń.",
       "Dane możesz poprawić w rozmowie lub w podglądzie danych sprawy.",
     ],
   },
@@ -56,21 +59,25 @@ export function LandingFaq() {
         <h2 id="faq-title">Masz pytania?</h2>
         <p>Tutaj znajdziesz najważniejsze odpowiedzi.</p>
       </div>
-      <div className={styles.questions}>
+      <Accordion.Root className={styles.questions} hiddenUntilFound>
         {questions.map((question) => (
-          <details key={question.title} name="mila-faq">
-            <summary>
-              <span>{question.title}</span>
-              <span className={styles.indicator} aria-hidden="true" />
-            </summary>
-            <div className={styles.answer}>
-              {question.answer.map((paragraph) => (
-                <p key={paragraph}>{paragraph}</p>
-              ))}
-            </div>
-          </details>
+          <Accordion.Item key={question.title} value={question.title} className={styles.item}>
+            <Accordion.Header>
+              <Accordion.Trigger className={styles.trigger}>
+                <span>{question.title}</span>
+                <span className={styles.indicator} aria-hidden="true" />
+              </Accordion.Trigger>
+            </Accordion.Header>
+            <Accordion.Panel className={styles.panel}>
+              <div className={styles.answer}>
+                {question.answer.map((paragraph) => (
+                  <p key={paragraph}>{paragraph}</p>
+                ))}
+              </div>
+            </Accordion.Panel>
+          </Accordion.Item>
         ))}
-      </div>
+      </Accordion.Root>
     </section>
   );
 }

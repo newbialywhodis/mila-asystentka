@@ -1,0 +1,25 @@
+.positioner {
+  z-index: 12;
+}
+
+.positioner[data-anchor-hidden] {
+  visibility: hidden;
+}
+
+.popup {
+  inline-size: max-content;
+  max-inline-size: min(19rem, var(--available-width));
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xs);
+  background: var(--surface);
+  box-shadow: var(--shadow-tooltip);
+  color: var(--ink);
+  font-size: 0.875rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.popup p {
+  margin: 0;
+}

@@ -14,12 +14,23 @@
 }
 
 .scrollbar {
+  --scrollbar-size: 12px;
+  --scrollbar-padding: 3px;
   z-index: var(--scrollbar-z-index, 1);
-  inline-size: 12px;
-  padding-inline: 3px;
-  margin-inline-end: env(safe-area-inset-right);
   opacity: var(--scrollbar-opacity, 0);
   pointer-events: var(--scrollbar-pointer-events, none);
+}
+
+.scrollbar[data-orientation="vertical"] {
+  inline-size: var(--scrollbar-size);
+  margin-inline-end: env(safe-area-inset-right);
+  padding-inline: var(--scrollbar-padding);
+}
+
+.scrollbar[data-orientation="horizontal"] {
+  block-size: var(--scrollbar-size);
+  margin-block-end: env(safe-area-inset-bottom);
+  padding-block: var(--scrollbar-padding);
 }
 
 .root:has(> .viewport:focus-visible) > .scrollbar,
@@ -31,6 +42,10 @@
 .thumb {
   border-radius: var(--radius-pill);
   background: var(--scroll-thumb);
+}
+
+.scrollbar[data-orientation="horizontal"] > .thumb {
+  block-size: 100%;
 }
 
 .thumb:is(:hover, :active) {

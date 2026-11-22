@@ -10,6 +10,7 @@ import {
   append,
   appendAssessment,
   appendCareComparison,
+  appendMissingFactReply,
   askBenefit,
   continueWithAssessment,
   continueWithDocument,
@@ -37,6 +38,26 @@ const paternity: CaseFacts = {
   basis: 600_000,
   payer: "zus",
 };
+
+test("brak wymaganej daty końcowej zostawia aktywne pytanie bez powtarzania go", () => {
+  const session = appendAssessment(
+    saveFacts({ ...newSession(), asOf, benefit: "paternity" }, paternity),
+  );
+  const turn = getBenefitTurn(session);
+  assert.equal(turn?.kind, "assessment");
+  assert.equal(turn.question?.key, "through");
+
+  const next = appendMissingFactReply(session, turn.question);
+  const reply = next.turns.at(-1);
+  assert.equal(reply?.kind, "reply");
+  assert.match(reply.text, /Potrzebuję tej informacji/);
+  assert.notEqual(reply.text, turn.text);
+  assert.equal(getBenefitTurn(next), turn);
+  assert.equal(next.family, session.family);
+
+  const answered = saveQuestionAnswer(next, turn.question, { through: "2026-12-13" });
+  assert.equal(getAssessment(answered)?.result.period?.days, 7);
+});
 
 test("odpowiedź o ciąży trafia do kontekstu dopytania bez pytania kalkulatora", () => {
   const session = appendAssessment({ ...newSession(), asOf, benefit: "paternity" });

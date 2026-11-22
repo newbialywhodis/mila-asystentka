@@ -1,6 +1,7 @@
 import { useId, useLayoutEffect, useRef, useState } from "react";
 import { Button } from "../../components/ui/Button";
 import { Icon } from "../../components/ui/Icon";
+import { LoadingIndicator } from "../../components/ui/LoadingIndicator";
 import type { CaseFacts, FactKey } from "../../engine/parent-case";
 import { GuideHelpReply } from "../guide/GuideHelp";
 import { MilaMessage, UserMessage } from "../guide/ThreadMessage";
@@ -123,7 +124,11 @@ export function ParentThread({
           </div>
         );
       })}
-      {thinking ? <output className={styles.thinking}>Mila odpowiada…</output> : null}
+      {thinking ? (
+        <output>
+          <LoadingIndicator>Mila odpowiada…</LoadingIndicator>
+        </output>
+      ) : null}
     </>
   );
 }

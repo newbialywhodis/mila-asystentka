@@ -1,21 +1,53 @@
 import { useId, useState } from "react";
 import type { SubmitEvent } from "react";
 import { Button } from "../../components/ui/Button";
+import { NumericInput } from "../../components/ui/NumericInput";
 import { payrollBasis } from "../../engine/payroll-basis";
 import styles from "./ParentCard.module.css";
 
 const columns = [
-  { key: "basePay", label: "Stałe po składkach (zł)", money: true },
-  { key: "regularVariable", label: "Zmienne do uzupełnienia po składkach (zł)", money: true },
-  { key: "actualVariable", label: "Zmienne w kwocie faktycznej po składkach (zł)", money: true },
-  { key: "workDays", label: "Dni przepracowane", money: false },
-  { key: "requiredDays", label: "Dni do przepracowania", money: false },
+  {
+    key: "basePay",
+    label: "Stałe po składkach (zł)",
+    money: true,
+    placeholder: "np. 5 200,50",
+    help: "Wpisz pełną miesięczną kwotę stałej pensji po odjęciu składek społecznych pracownika.",
+  },
+  {
+    key: "regularVariable",
+    label: "Zmienne do uzupełnienia po składkach (zł)",
+    money: true,
+    placeholder: "np. 450,00",
+    help: "Wpisz zmienne składniki, które kadry przeliczają do pełnego miesiąca. Użyj kwoty z listy płac po składkach.",
+  },
+  {
+    key: "actualVariable",
+    label: "Zmienne w kwocie faktycznej po składkach (zł)",
+    money: true,
+    placeholder: "np. 300,00",
+    help: "Wpisz wypłaconą kwotę po składkach tych zmiennych składników, które kadry uwzględniają w faktycznej wysokości.",
+  },
+  {
+    key: "workDays",
+    label: "Dni przepracowane",
+    money: false,
+    placeholder: "np. 18",
+    help: "Podaj liczbę dni, które faktycznie przepracowałaś w tym miesiącu.",
+  },
+  {
+    key: "requiredDays",
+    label: "Dni do przepracowania",
+    money: false,
+    placeholder: "np. 21",
+    help: "Podaj liczbę dni pracy zaplanowanych w tym miesiącu według Twojego grafiku.",
+  },
 ] as const;
 
 export function PayrollBasisForm({ onUse }: { onUse: (basis: number) => void }) {
   const [count, setCount] = useState(1);
   const [error, setError] = useState(false);
-  const errorId = useId();
+  const id = useId();
+  const errorId = id + "-error";
 
   function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -60,31 +92,53 @@ export function PayrollBasisForm({ onUse }: { onUse: (basis: number) => void }) 
       {Array.from({ length: count }, (_, index) => (
         <fieldset key={index} className={styles.row}>
           <legend>Miesiąc {index + 1}</legend>
-          {columns.map(({ key, label, money }) => (
-            <label className={styles.field} key={key}>
-              {label}
-              <input
+          {columns.map(({ key, label, money, placeholder, help }) => (
+            <div className={styles.field} key={key}>
+              <label htmlFor={`${id}-${key}-${index}`}>{label}</label>
+              <NumericInput
+                id={`${id}-${key}-${index}`}
                 name={key + index}
-                type="number"
                 required
                 min={0}
                 max={money ? 1_000_000 : 31}
-                step={money ? ".01" : "1"}
+                decimal={money}
                 defaultValue={money ? 0 : undefined}
+                placeholder={placeholder}
+                help={help}
               />
-            </label>
+            </div>
           ))}
         </fieldset>
       ))}
       <div className={styles.row}>
-        <label className={styles.field}>
-          Suma uwzględnianych składników z czterech kwartałów po składkach (zł)
-          <input name="quarterly" type="number" min="0" max="1000000" step=".01" defaultValue="0" />
-        </label>
-        <label className={styles.field}>
-          Uwzględniana kwota roczna po składkach (zł)
-          <input name="annual" type="number" min="0" max="1000000" step=".01" defaultValue="0" />
-        </label>
+        <div className={styles.field}>
+          <label htmlFor={id + "-quarterly"}>
+            Suma uwzględnianych składników z czterech kwartałów po składkach (zł)
+          </label>
+          <NumericInput
+            id={id + "-quarterly"}
+            name="quarterly"
+            help="Zsumuj składniki kwartalne uwzględniane w podstawie z czterech kwartałów. Podaj kwotę po składkach społecznych."
+            min={0}
+            max={1_000_000}
+            decimal
+            defaultValue={0}
+            placeholder="np. 2 400,00"
+          />
+        </div>
+        <div className={styles.field}>
+          <label htmlFor={id + "-annual"}>Uwzględniana kwota roczna po składkach (zł)</label>
+          <NumericInput
+            id={id + "-annual"}
+            name="annual"
+            help="Wpisz roczne składniki uwzględniane w podstawie, np. premię roczną, w kwocie po składkach społecznych."
+            min={0}
+            max={1_000_000}
+            decimal
+            defaultValue={0}
+            placeholder="np. 3 000,00"
+          />
+        </div>
       </div>
       {error ? (
         <p id={errorId} role="alert">

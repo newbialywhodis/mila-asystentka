@@ -12,37 +12,34 @@
   margin-inline: auto;
 }
 
-.questions details {
+.item {
   border-block-end: 1px solid var(--line);
 }
 
-.questions summary {
+.trigger {
   display: flex;
+  inline-size: 100%;
   min-block-size: 72px;
   align-items: center;
   justify-content: space-between;
   gap: 20px;
   padding: 22px 8px;
+  border: 0;
+  background: transparent;
   color: var(--landing-ink);
   font-size: 1rem;
   font-weight: 600;
   line-height: 1.5;
   text-align: start;
-  list-style: none;
-  cursor: pointer;
 }
 
-.questions summary::-webkit-details-marker {
-  display: none;
-}
-
-.questions summary:focus-visible {
+.trigger:focus-visible {
   border-radius: var(--radius-xs);
   outline: 2px solid var(--focus);
   outline-offset: 4px;
 }
 
-.questions summary > span:first-child {
+.trigger > span:first-child {
   min-inline-size: 0;
   overflow-wrap: anywhere;
 }
@@ -70,8 +67,19 @@
   transform: rotate(90deg);
 }
 
-.questions details[open] .indicator::after {
+.trigger[aria-expanded="true"] .indicator::after {
   opacity: 0;
+  transform: rotate(0);
+}
+
+.panel {
+  height: var(--accordion-panel-height);
+  overflow: hidden;
+}
+
+.panel[data-starting-style],
+.panel[data-ending-style] {
+  height: 0;
 }
 
 .answer {
@@ -91,7 +99,7 @@
 }
 
 @media (hover: hover) {
-  .questions summary:hover {
+  .trigger:hover {
     color: var(--primary);
     background: var(--control-hover);
   }
@@ -102,7 +110,7 @@
     gap: 28px;
   }
 
-  .questions summary {
+  .trigger {
     gap: 16px;
     padding-block: 20px;
   }
@@ -113,33 +121,19 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .questions summary {
+  .trigger {
     transition:
       color var(--ease),
       background-color var(--ease);
   }
 
-  @supports selector(details::details-content) {
-    .questions details[open]::details-content {
-      animation: reveal-answer 180ms ease-out;
-    }
-  }
-}
-
-@keyframes reveal-answer {
-  from {
-    opacity: 0;
+  .indicator::after {
+    transition:
+      opacity var(--ease),
+      transform var(--ease);
   }
 
-  to {
-    opacity: 1;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .questions summary,
-  .questions details::details-content {
-    animation: none;
-    transition: none;
+  .panel {
+    transition: height 220ms ease-out;
   }
 }

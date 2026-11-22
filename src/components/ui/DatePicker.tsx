@@ -2,11 +2,12 @@ import { Popover } from "@base-ui/react/popover";
 import { DayPicker } from "@daypicker/react";
 import type { ChevronProps } from "@daypicker/react";
 import { pl } from "@daypicker/react/locale/pl";
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import type { ComponentPropsWithRef } from "react";
 import { normalizeNumericDate, parseDate } from "../../engine/dates";
 import { Button, IconButton } from "./Button";
 import { Icon } from "./Icon";
+import { InputHelp } from "./InputHelp";
 import styles from "./DatePicker.module.css";
 
 const inputDateFormat = new Intl.DateTimeFormat("pl-PL", {
@@ -48,6 +49,7 @@ type DatePickerProps = Pick<
   max: string;
   today: string;
   onValueChange?: (text: string) => void;
+  help?: string;
 };
 
 export function DatePicker({
@@ -57,8 +59,11 @@ export function DatePicker({
   max,
   today,
   onValueChange,
+  help,
+  "aria-describedby": describedBy,
   ...inputProps
 }: DatePickerProps) {
+  const helpId = useId();
   const anchor = useRef<HTMLDivElement>(null);
   const inputOpener = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
@@ -85,9 +90,10 @@ export function DatePicker({
         setOpen(next);
       }}
     >
-      <div ref={anchor} className={styles.field}>
+      <div ref={anchor} className={styles.field} data-has-help={Boolean(help) || undefined}>
         <input
           {...inputProps}
+          aria-describedby={help ? [describedBy, helpId].filter(Boolean).join(" ") : describedBy}
           className={styles.input}
           type="text"
           autoComplete="off"
@@ -105,6 +111,7 @@ export function DatePicker({
         <Popover.Trigger
           render={<IconButton icon="calendar" label="Otwórz kalendarz" size="icon" />}
         />
+        {help ? <InputHelp id={helpId} text={help} /> : null}
       </div>
       <Popover.Portal>
         <Popover.Positioner

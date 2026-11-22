@@ -64,14 +64,11 @@ export function BenefitAssessment({
   workspace: ParentWorkspace;
 }) {
   const promptId = useId();
-  const { benefit, result, goal, question, deferred, text } = turn;
+  const { benefit, result, goal, question, text } = turn;
   const documents = !question && goal === "application" && result.documents.length > 0;
-  const pending = question && !deferred;
   const { session } = workspace;
-  const showResult = pending
-    ? active && Boolean(result.period)
-    : !deferred || Boolean(result.period);
-  const hint = pending ? question.hint : undefined;
+  const showResult = !question || (active && Boolean(result.period));
+  const hint = question?.hint;
   const hintId = hint ? promptId + "-hint" : undefined;
   const speechText = hint ? text + "\n\n" + hint : text;
   const copyText =
@@ -93,12 +90,11 @@ export function BenefitAssessment({
               result={result}
               insured={turn.insured}
               futureCoverage={Boolean(result.coverageDay && result.coverageDay > session.asOf)}
-              showTopUp={!deferred}
               showReason={result.reason !== text}
             />
           </div>
         ) : null}
-        {active && pending ? (
+        {active && question ? (
           <FactAnswer
             turn={turn}
             question={question}
@@ -108,13 +104,8 @@ export function BenefitAssessment({
             hintId={hintId}
           />
         ) : null}
-        {active && !pending ? (
+        {active && !question ? (
           <div className={styles.actions}>
-            {deferred ? (
-              <Button size="sm" variant="outline" onClick={workspace.resume}>
-                Uzupełnij odpowiedź
-              </Button>
-            ) : null}
             {goal === "calculation" && result.documents.length > 0 ? (
               <Button size="sm" variant="brand" onClick={() => workspace.changeGoal("application")}>
                 Zobacz dokumenty
@@ -125,25 +116,19 @@ export function BenefitAssessment({
                 Wróć do wyniku
               </Button>
             ) : null}
-            {!deferred && result.status === "eligible" && !result.projected ? (
+            {result.status === "eligible" && !result.projected ? (
               <Button size="sm" variant="outline" onClick={() => workspace.compareCare()}>
                 Co zmieni powrót do pracy?
               </Button>
             ) : null}
-            {!deferred && Object.keys(session.family.facts).length ? (
+            {Object.keys(session.family.facts).length ? (
               <Button size="sm" variant="ghost" onClick={() => workspace.setExpanded("facts")}>
                 Zmień dane
               </Button>
             ) : null}
-            {!deferred ? (
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => workspace.setExpanded("formalities")}
-              >
-                Inne formalności
-              </Button>
-            ) : null}
+            <Button size="sm" variant="ghost" onClick={() => workspace.setExpanded("formalities")}>
+              Inne formalności
+            </Button>
           </div>
         ) : null}
       </div>
@@ -227,7 +212,7 @@ function FactAnswer({
           upcomingStart: key === "from" && facts.requestedDays !== undefined,
         }}
       />
-      {key !== "birthStage" ? (
+      {canUsePayroll || canUseContributions || alternate || simulateService ? (
         <div className={styles.actions}>
           {canUsePayroll ? (
             <Button size="sm" variant="outline" onClick={() => setPayroll(true)}>
@@ -244,9 +229,6 @@ function FactAnswer({
               {useAlternate ? alternate.returnLabel : alternate.label}
             </Button>
           ) : null}
-          <Button size="sm" variant="ghost" onClick={() => workspace.defer(turn)}>
-            Nie wiem
-          </Button>
           {simulateService ? (
             <Button size="sm" variant="ghost" onClick={() => workspace.setExpanded("services")}>
               Wypróbuj dane z eZUS

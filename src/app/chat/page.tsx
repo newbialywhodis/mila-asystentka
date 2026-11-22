@@ -28,7 +28,7 @@ export default async function ChatPage({
       httpOnly: true,
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
-      path: "/chat",
+      path: "/",
     });
   }
 

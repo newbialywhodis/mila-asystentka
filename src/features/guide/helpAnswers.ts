@@ -1,4 +1,6 @@
 import type { QuestionId } from "./flow";
+import { helpGuides } from "./helpGuides";
+import type { HelpGuideId } from "./helpGuides";
 import { normalizeGuideText } from "./textInput";
 
 export const maxHelpQuestionLength = 2_000;
@@ -9,7 +11,41 @@ export type HelpAnswer = {
   text: string;
   sourceIds?: readonly string[];
   speechToken?: string | null;
+  guide?: HelpGuideId;
+  offeredGuide?: HelpGuideId;
 };
+
+export function getHelpGuideAnswer(guide: HelpGuideId): HelpAnswer {
+  const { text, topicSourceId } = helpGuides[guide];
+  return { text, sourceIds: [topicSourceId], guide };
+}
+
+export function getHelpGuideOffer(offeredGuide: HelpGuideId): HelpAnswer {
+  const { overview, topicSourceId } = helpGuides[offeredGuide];
+  return { text: overview, sourceIds: [topicSourceId], offeredGuide };
+}
+
+export function getHelpAnswerText(answer: HelpAnswer): string {
+  if (answer.guide) {
+    const { title, steps } = helpGuides[answer.guide];
+    return [answer.text, title, ...steps.map((step, index) => `${index + 1}. ${step}`)].join("\n");
+  }
+  return answer.offeredGuide
+    ? `${answer.text}\n\n${helpGuides[answer.offeredGuide].offer}`
+    : answer.text;
+}
+
+export function findHelpFollowUp(answer: HelpAnswer, message: string): HelpAnswer | undefined {
+  const normalized = normalizeHelpQuestion(message.replaceAll(",", " "));
+  if (
+    answer.offeredGuide &&
+    /^(?:tak(?: (?:prosze|poprosze|pokaz mi|chetnie))?|poprosze|jasne|chetnie|prosze|pokaz mi)$/.test(
+      normalized,
+    )
+  ) {
+    return getHelpGuideAnswer(answer.offeredGuide);
+  }
+}
 
 const trimesterDefinition = {
   label: "Co to trymestr?",
@@ -23,9 +59,8 @@ const trimesterHelp = {
 
 export const helpTopics = [
   {
-    label: "Gdzie złożyć wniosek o 800+?",
-    text: "Wniosek o 800+ składasz elektronicznie, np. w eZUS lub w aplikacji mZUS. Po narodzinach złóż go w ciągu trzech miesięcy, aby ZUS mógł ustalić prawo do świadczenia od dnia urodzenia.",
-    sourceIds: ["child800"],
+    label: helpGuides.swrEzus.overviewQuestion,
+    ...getHelpGuideOffer("swrEzus"),
   },
   {
     label: "Jak zgłosić dziecko do ubezpieczenia?",
@@ -99,6 +134,7 @@ export const aboutMilaAnswer: HelpAnswer = {
 
 function normalizeHelpQuestion(text: string) {
   return normalizeGuideText(text)
+    .replaceAll("‑", "-")
     .replace(/[?!.]+$/, "")
     .trimEnd();
 }
@@ -118,6 +154,9 @@ const explanationQuestions = new Set([
 const answersByQuestion = new Map<string, HelpAnswer>(
   helpTopics.map((answer) => [normalizeHelpQuestion(answer.label), answer]),
 );
+for (const id of Object.keys(helpGuides) as HelpGuideId[]) {
+  answersByQuestion.set(normalizeHelpQuestion(helpGuides[id].question), getHelpGuideAnswer(id));
+}
 for (const alias of [
   "trymestr",
   "co to jest trymestr",

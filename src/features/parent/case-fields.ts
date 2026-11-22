@@ -8,9 +8,9 @@ type Field = {
   label: string;
   question: string;
   hint?: string;
-  type?: "date" | "money" | "number" | "text";
+  help?: string;
   options?: Choice[];
-};
+} & ({ type: "money" | "number"; placeholder: string } | { type?: "date" | "text" });
 const yesNo = [
   { label: "Tak", value: true },
   { label: "Nie", value: false },
@@ -31,27 +31,33 @@ export const fields: Record<FactKey, Field> = {
     question: "Jaki jest przewidywany termin porodu?",
     hint: "Od tego dnia oszacuję okres zasiłku. Po porodzie możesz wpisać rzeczywistą datę.",
     type: "date",
+    help: "Podaj przewidywaną datę porodu z karty ciąży lub od lekarza.",
   },
   certifiedDueDate: {
     label: "Termin porodu z zaświadczenia",
     question:
       "Jaki przewidywany termin porodu widniał na zaświadczeniu przy wcześniejszym rozpoczęciu macierzyńskiego?",
     type: "date",
+    help: "Przepisz przewidywaną datę porodu z zaświadczenia użytego przy rozpoczęciu macierzyńskiego.",
   },
   childDeath: {
     label: "Data śmierci dziecka",
     question: "Kiedy zmarło dziecko? Przy martwym urodzeniu podaj dzień porodu.",
     type: "date",
+    help: "Podaj datę z dokumentu. Przy martwym urodzeniu wpisz datę porodu.",
   },
   survivingChildren: {
     label: "Dzieci pozostałe przy życiu",
     question: "Ile dzieci z tego porodu pozostało przy życiu?",
     type: "number",
+    placeholder: "np. 1",
+    help: "Policz dzieci z tego porodu, które żyją. Jeśli żadne nie przeżyło, wpisz 0.",
   },
   maternityEnd: {
     label: "Koniec macierzyńskiego",
     question: "Jaki był ostatni dzień macierzyńskiego wraz z ewentualnym uzupełnieniem?",
     type: "date",
+    help: "Podaj ostatni dzień macierzyńskiego. Jeśli korzystasz z dodatkowego urlopu dla rodziców wcześniaków lub noworodków w szpitalu, podaj ostatni dzień tego urlopu.",
   },
   supplementCare: {
     label: "Uzupełniający macierzyński po przyjęciu dziecka",
@@ -77,16 +83,20 @@ export const fields: Record<FactKey, Field> = {
     question:
       "Ile dni zasiłku na warunkach macierzyńskiego już wykorzystano w pieczy na te dzieci?",
     type: "number",
+    placeholder: "np. 14",
+    help: "Zsumuj dni, za które wypłacono już zasiłek na warunkach macierzyńskiego za opiekę nad tymi dziećmi.",
   },
   adoptionFinal: {
     label: "Prawomocność orzeczenia o przysposobieniu",
     question: "Kiedy uprawomocniło się postanowienie o przysposobieniu dziecka?",
     type: "date",
+    help: "Podaj dzień, w którym postanowienie sądu stało się prawomocne. Datę możesz sprawdzić w sądzie.",
   },
   careAccepted: {
     label: "Data przyjęcia na wychowanie",
     question: "Kiedy przyjęto dziecko lub dzieci na wychowanie?",
     type: "date",
+    help: "Podaj dzień, od którego dziecko faktycznie jest pod Twoją opieką.",
   },
   sameCareAgeLimit: {
     label: "Wspólna granica wieku",
@@ -103,6 +113,7 @@ export const fields: Record<FactKey, Field> = {
     label: "Data wniosku do sądu o przysposobienie",
     question: "Kiedy wystąpiono do sądu z wnioskiem o przysposobienie?",
     type: "date",
+    help: "Podaj dzień złożenia wniosku o adopcję w sądzie. Sprawdź potwierdzenie złożenia.",
   },
   schoolDeferral: {
     label: "Odroczenie obowiązku szkolnego",
@@ -125,38 +136,48 @@ export const fields: Record<FactKey, Field> = {
     label: "Wykorzystane dni świadczenia rehabilitacyjnego",
     question: "Ile dni świadczenia rehabilitacyjnego już wykorzystano?",
     type: "number",
+    placeholder: "np. 90",
+    help: "Zsumuj dni pobierania tego świadczenia. Jeśli dotąd go nie pobierasz, wpisz 0.",
   },
   rehabSickBasis: {
     label: "Podstawa poprzedzającego zasiłku chorobowego (zł)",
     question:
       "Jaka była miesięczna podstawa poprzedzającego zasiłku chorobowego? Podaj kwotę przed waloryzacją świadczenia rehabilitacyjnego.",
     type: "money",
+    placeholder: "np. 4 800,50",
+    help: "Przepisz miesięczną podstawę poprzedniego zasiłku chorobowego, w złotych. Użyj kwoty sprzed przeliczenia na potrzeby świadczenia rehabilitacyjnego.",
   },
   rehabStart: {
     label: "Pierwszy dzień przyznanego świadczenia",
     question: "Od którego dnia przyznano pierwszą część tego świadczenia rehabilitacyjnego?",
     type: "date",
+    help: "Sprawdź w decyzji ZUS dzień, od którego przyznano świadczenie po raz pierwszy.",
   },
   birth: {
     label: "Data urodzenia",
     question: "Kiedy urodziło się dziecko?",
     hint: "Ta data pozwala ustalić okres świadczenia i obowiązujące terminy.",
     type: "date",
+    help: "Podaj rzeczywistą datę urodzenia dziecka, np. z aktu urodzenia.",
   },
   from: {
     label: "Pierwszy dzień",
     question: "Od którego dnia ma się zacząć ten okres?",
     type: "date",
+    help: "Podaj pierwszy dzień, który mam uwzględnić w obliczeniu.",
   },
   through: {
     label: "Ostatni dzień",
     question: "Jaki jest ostatni dzień tego okresu?",
     type: "date",
+    help: "Podaj ostatni dzień, który mam uwzględnić w obliczeniu. Ten dzień też się liczy.",
   },
   requestedDays: {
     label: "Planowana liczba dni",
     question: "Ile dni chcesz uwzględnić w tym okresie?",
     type: "number",
+    placeholder: "np. 28",
+    help: "Podaj liczbę dni kalendarzowych, razem z weekendami i świętami. Dwa tygodnie to 14 dni.",
   },
   employment: {
     label: "Tytuł ubezpieczenia",
@@ -188,6 +209,7 @@ export const fields: Record<FactKey, Field> = {
     label: "Ostatni dzień zatrudnienia",
     question: "Jaki był ostatni dzień zatrudnienia?",
     type: "date",
+    help: "Podaj ostatni dzień obowiązywania umowy, np. ze świadectwa pracy.",
   },
   alternativeEmployment: {
     label: "Zapewnienie innego zatrudnienia",
@@ -211,6 +233,8 @@ export const fields: Record<FactKey, Field> = {
     question:
       "Ile dni macierzyńskiego matka wykorzystała przed porodem? Wpisz 0, jeśli zaczęła w dniu porodu.",
     type: "number",
+    placeholder: "np. 14",
+    help: "Policz dni macierzyńskiego do dnia przed porodem włącznie. Jeśli urlop zaczął się w dniu porodu, wpisz 0.",
   },
   motherInsured: {
     label: "Ubezpieczenie chorobowe matki",
@@ -221,16 +245,20 @@ export const fields: Record<FactKey, Field> = {
     label: "Dni macierzyńskiego matki po porodzie",
     question: "Ile dni macierzyńskiego matka wykorzystała po porodzie do dnia przed przejęciem?",
     type: "number",
+    placeholder: "np. 98",
+    help: "Policz dni od dnia porodu do ostatniego dnia macierzyńskiego matki przed przejęciem. Dolicz weekendy i święta.",
   },
   transferEvent: {
     label: "Data zdarzenia dotyczącego matki",
     question: "Kiedy nastąpiło zdarzenie będące powodem przejęcia opieki?",
     type: "date",
+    help: "Podaj dzień zdarzenia, przez które ojciec przejmuje opiekę, np. dzień przyjęcia matki do szpitala.",
   },
   transferThrough: {
     label: "Ostatni dzień hospitalizacji matki",
     question: "Do którego dnia pobyt matki w szpitalu uniemożliwia jej opiekę nad dzieckiem?",
     type: "date",
+    help: "Podaj ostatni dzień pobytu matki w szpitalu, który uniemożliwia jej opiekę.",
   },
   personalCare: {
     label: "Osobista opieka nad dzieckiem",
@@ -242,26 +270,35 @@ export const fields: Record<FactKey, Field> = {
     label: "Wymiar nowego etatu matki (%)",
     question: "Jaki procent pełnego etatu wynosi nowe zatrudnienie matki?",
     type: "number",
+    placeholder: "np. 75",
+    help: "Przelicz wymiar z umowy na procent pełnego etatu. Pełny etat to 100, a trzy czwarte etatu to 75.",
   },
   motherJobEnds: {
     label: "Ostatni dzień nowego zatrudnienia matki",
     question: "Kiedy kończy się nowe zatrudnienie matki, jeśli data jest już znana?",
     type: "date",
+    help: "Podaj ostatni dzień obowiązywania nowej umowy matki, jeśli jest już znany.",
   },
   children: {
     label: "Liczba urodzonych dzieci",
     question: "Ile dzieci urodziło się przy tym porodzie?",
     type: "number",
+    placeholder: "np. 1",
+    help: "Policz dzieci z tego jednego porodu. Dla bliźniąt wpisz 2.",
   },
   basis: {
     label: "Ustalona podstawa (zł)",
     question: "Jaka jest ustalona miesięczna podstawa wymiaru zasiłku?",
     type: "money",
+    placeholder: "np. 5 200,50",
+    help: "Wpisz miesięczną kwotę opisaną jako „podstawa wymiaru zasiłku”. Znajdziesz ją w dokumentach albo uzyskasz w kadrach lub ZUS.",
   },
   fixedSalary: {
     label: "Stałe wynagrodzenie brutto (zł)",
     question: "Ile wynosiło stałe miesięczne wynagrodzenie brutto przez 12 pełnych miesięcy?",
     type: "money",
+    placeholder: "np. 6 500,00",
+    help: "Wpisz jedną miesięczną kwotę brutto przed składkami i podatkiem, jeśli była taka sama przez 12 pełnych miesięcy.",
   },
   payer: {
     label: "Kto wypłaca zasiłek",
@@ -276,32 +313,43 @@ export const fields: Record<FactKey, Field> = {
     question:
       "Ile osób płatnik zgłaszał do chorobowego 30 listopada poprzedniego roku? Jeśli wtedy nikogo nie zgłaszał, podaj stan z pierwszego miesiąca zgłoszeń.",
     type: "number",
+    placeholder: "np. 25",
+    help: "Policz osoby objęte u tego płatnika ubezpieczeniem chorobowym. O liczbę na wskazany dzień możesz zapytać kadry.",
   },
   debt: {
     label: "Zadłużenie w dniu powstania prawa (zł)",
     question:
       "Jakie było zadłużenie w ZUS w dniu powstania prawa? Wpisz 0, jeśli składki były rozliczone.",
     type: "money",
+    placeholder: "np. 0,00",
+    help: "Wpisz kwotę zaległych składek w złotych na dzień, od którego przysługuje świadczenie. Gdy nie ma zaległości, wpisz 0.",
   },
   debtPaid: {
     label: "Data całkowitej spłaty",
     question: "Kiedy spłacono całość zadłużenia?",
     type: "date",
+    help: "Podaj dzień, w którym została uregulowana cała zaległość w ZUS.",
   },
   otherParentDays: {
     label: "Dni rodzicielskiego drugiego rodzica",
     question: "Ile dni rodzicielskiego drugi rodzic wykorzystał lub już zaplanował?",
     type: "number",
+    placeholder: "np. 63",
+    help: "Zsumuj wykorzystane i zaplanowane dni rodzicielskiego drugiego rodzica. Jeśli to 9 tygodni, wpisz 63.",
   },
   usedDays: {
     label: "Twoje dotychczasowe dni rodzicielskiego",
     question: "Ile dni rodzicielskiego masz już za sobą?",
     type: "number",
+    placeholder: "np. 28",
+    help: "Policz wykorzystane już dni urlopu rodzicielskiego, razem z weekendami. Jeśli to 4 tygodnie, wpisz 28.",
   },
   parts: {
-    label: "Wykorzystane części obojga rodziców",
-    question: "Ile części rodzicielskiego wykorzystaliście łącznie?",
+    label: "Łączna liczba części urlopu",
+    question: "Ile razy korzystaliście już z urlopu rodzicielskiego?",
     type: "number",
+    placeholder: "np. 2",
+    help: "Policz osobne wnioski, na podstawie których korzystaliście już z rodzicielskiego. Jeden Twój i jeden drugiego rodzica to 2. Jeśli nie było jeszcze rodzicielskiego, wpisz 0, także po samym macierzyńskim.",
   },
   careCertificate: {
     label: "Zaświadczenie „Za życiem”",
@@ -322,6 +370,7 @@ export const fields: Record<FactKey, Field> = {
     label: "Data wniosku o uśrednioną stawkę",
     question: "Kiedy złożono wniosek o wypłatę w wysokości 81,5%?",
     type: "date",
+    help: "Wpisz dzień złożenia wniosku o wypłatę według stawki 81,5%. Sprawdź potwierdzenie złożenia.",
   },
   parentalInFirstYear: {
     label: "Rodzicielski w pierwszym roku",
@@ -348,18 +397,24 @@ export const fields: Record<FactKey, Field> = {
     question:
       "Na jaką część pełnego etatu wracasz do pracy u tego pracodawcy? Wpisz procent od 0 do 50.",
     type: "number",
+    placeholder: "np. 25",
+    help: "Podaj procent pełnego etatu podczas urlopu. Ćwierć etatu to 25, pół etatu to 50, a bez pracy wpisz 0.",
   },
   employmentPercent: {
     label: "Zwykły wymiar pracy (% etatu)",
     question:
       "Ile procent pełnego etatu wynosi Twój zwykły wymiar pracy? Dla pełnego etatu wpisz 100.",
     type: "number",
+    placeholder: "np. 100",
+    help: "Podaj wymiar pracy z umowy w procentach. Pełny etat to 100, a pół etatu to 50.",
   },
   extensionWorkPercent: {
     label: "Wymiar pracy w wydłużeniu (%)",
     question:
       "Jaki procent pełnego etatu planujesz przepracować w wydłużonej części? Wpisz 0, jeśli cały ten okres będzie bez pracy.",
     type: "number",
+    placeholder: "np. 25",
+    help: "Podaj, ile procent pełnego etatu chcesz pracować w dodatkowym okresie urlopu. Ćwierć etatu to 25. Jeśli wtedy nie pracujesz, wpisz 0.",
   },
   qualifying: {
     label: "Okres wyczekiwania spełniony",
@@ -372,6 +427,8 @@ export const fields: Record<FactKey, Field> = {
     question:
       "Ile dni chorobowego upłynęło przed pierwszym dniem zasiłku? Dolicz poprzednie okresy zaliczane do wyczekiwania.",
     type: "number",
+    placeholder: "np. 30",
+    help: "Podaj liczbę dni, które liczą się do wymaganego stażu w ubezpieczeniu chorobowym. Jeśli masz wcześniejsze okresy zaliczone przez kadry lub ZUS, dodaj je.",
   },
   waitingException: {
     label: "Wyjątek od wyczekiwania",
@@ -383,6 +440,7 @@ export const fields: Record<FactKey, Field> = {
     label: "Pierwszy dzień ciągłej niezdolności",
     question: "Od jakiego dnia trwa nieprzerwana niezdolność do pracy objęta zwolnieniem?",
     type: "date",
+    help: "Jeśli kolejne zwolnienia obejmują dni bez przerwy, podaj pierwszy dzień całego ciągu zwolnień.",
   },
   postInsuranceExcluded: {
     label: "Wyłączenia po ustaniu ubezpieczenia",
@@ -400,6 +458,8 @@ export const fields: Record<FactKey, Field> = {
     question:
       "Ile dni wynagrodzenia chorobowego od pracodawcy pozostało od początku podanego okresu? Roczny limit to zwykle 33 dni, a od roku po 50. urodzinach 14 dni.",
     type: "number",
+    placeholder: "np. 14",
+    help: "Wpisz, ile dni płatnego chorobowego zostało u pracodawcy na początek tego zwolnienia. Stan możesz sprawdzić w kadrach.",
   },
   pregnancyProof: {
     label: "Potwierdzenie ciąży",
@@ -410,6 +470,8 @@ export const fields: Record<FactKey, Field> = {
     label: "Wykorzystane dni okresu zasiłkowego",
     question: "Ile dni okresu zasiłkowego wykorzystano przed tym zwolnieniem?",
     type: "number",
+    placeholder: "np. 60",
+    help: "Podaj liczbę dni wcześniejszych zwolnień, które kadry lub ZUS zaliczają do tego samego okresu zasiłkowego.",
   },
   sickPeriodExhausted: {
     label: "Potwierdzony koniec okresu zasiłkowego",
@@ -427,32 +489,40 @@ export const fields: Record<FactKey, Field> = {
     question:
       "W którym tygodniu ukończono ciążę według zaświadczenia? Podaj liczbę ukończonych tygodni.",
     type: "number",
+    placeholder: "np. 34",
+    help: "Przepisz liczbę pełnych tygodni z zaświadczenia. Jeśli widzisz 34 tygodnie i 3 dni, wpisz 34.",
   },
   birthWeightGrams: {
     label: "Masa urodzeniowa (g)",
     question: "Jaka była masa urodzeniowa w gramach?",
     type: "number",
+    placeholder: "np. 2 200",
+    help: "Wpisz wagę przy urodzeniu z dokumentu ze szpitala. Jeśli widzisz 2,2 kg, wpisz 2200.",
   },
   hospitalFrom: {
     label: "Pierwszy dzień pobytu w szpitalu",
     question: "Kiedy zaczął się pobyt dziecka w szpitalu?",
     type: "date",
+    help: "Sprawdź na wypisie lub zaświadczeniu dzień przyjęcia dziecka do szpitala.",
   },
   hospitalThrough: {
     label: "Ostatni dzień pobytu w szpitalu",
     question: "Kiedy skończył się pobyt dziecka w szpitalu?",
     type: "date",
+    help: "Sprawdź na wypisie lub zaświadczeniu ostatni dzień tego pobytu dziecka.",
   },
   documentDate: {
     label: "Data złożenia wniosku",
     question: "Kiedy złożono wniosek?",
     type: "date",
+    help: "Podaj dzień złożenia wniosku z potwierdzenia od pracodawcy lub w eZUS.",
   },
   hospitalRanges: {
     label: "Okresy hospitalizacji",
     question: "Jakie były kolejne okresy pobytu dziecka w szpitalu?",
     hint: "Wpisz np. 2026-04-01/2026-04-03, 2026-04-12/2026-04-18. Podaj pierwszy i ostatni dzień każdego pobytu.",
     type: "text",
+    help: "Każdy pobyt wpisz jako data przyjęcia/data wypisu w formacie RRRR-MM-DD. Kolejne pobyty oddziel przecinkiem.",
   },
   combinedHospitalEvidence: {
     label: "Dokumenty z porodu mnogiego",
@@ -574,13 +644,6 @@ export function factValue(key: FactKey, value: NonNullable<CaseFacts[FactKey]>) 
   if (field.type === "date") return formatDay(String(value));
   if (field.type === "money") return moneyLabel(Number(value));
   return String(value);
-}
-
-export function factInputValue(key: FactKey, value: CaseFacts[FactKey]) {
-  if (value === undefined) return "";
-  return fields[key].type === "money"
-    ? String(Number(value) / 100).replace(".", ",")
-    : factValue(key, value);
 }
 
 export function readNarrativeFacts(message: string): CaseFacts {

@@ -39,6 +39,7 @@ const paths = {
   ),
   back: <path d="M20 12H5m6-6-6 6 6 6" />,
   chevron: <path d="m9 6 6 6-6 6" />,
+  chevronDown: <path d="m6 9 6 6 6-6" />,
   close: <path d="m6 6 12 12M18 6 6 18" />,
   circlePlus: (
     <>

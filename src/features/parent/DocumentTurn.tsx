@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { SubmitEvent } from "react";
 import { Button } from "../../components/ui/Button";
 import { Icon } from "../../components/ui/Icon";
+import { LoadingIndicator } from "../../components/ui/LoadingIndicator";
 import { formatDay, labels } from "../../engine/parent-case";
 import type { Benefit, FactKey } from "../../engine/parent-case";
 import { MilaMessage } from "../guide/ThreadMessage";
@@ -464,9 +465,9 @@ export function DocumentTurn({
 
   if (!text) return card;
   return (
-    <MilaMessage copyText={active ? text : ""} smartComponents={card}>
+    <MilaMessage copyText={state.kind === "reading" ? "" : text} smartComponents={card}>
       <p ref={prompt} tabIndex={-1} data-chat-focus aria-live={active ? "polite" : undefined}>
-        {text}
+        {state.kind === "reading" ? <LoadingIndicator>{text}</LoadingIndicator> : text}
       </p>
     </MilaMessage>
   );
@@ -480,7 +481,7 @@ function promptText(
   benefit: Benefit | null,
 ) {
   if (state.kind === "reading")
-    return state.cloud ? "Odczytuję PDF z AI…" : "Odczytuję PDF na tym urządzeniu…";
+    return state.cloud ? "Mila odczytuje PDF w chmurze…" : "Mila odczytuje PDF lokalnie…";
   if (state.kind === "scope")
     return `Ten PDF ma ${state.total} stron. Wybierz strony wniosku i załączników, które chcesz odczytać.`;
   if (state.kind === "error") return state.text;

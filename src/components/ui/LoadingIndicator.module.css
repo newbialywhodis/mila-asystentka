@@ -1,0 +1,41 @@
+.indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.dots {
+  display: inline-flex;
+  flex: none;
+  gap: 0.1875rem;
+}
+
+.dots > span {
+  width: 0.25rem;
+  height: 0.25rem;
+  border-radius: 50%;
+  background-color: currentColor;
+  opacity: 0.55;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .dots > span {
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+
+  .dots > span:nth-child(2) {
+    animation-delay: 140ms;
+  }
+
+  .dots > span:nth-child(3) {
+    animation-delay: 280ms;
+  }
+
+  @keyframes pulse {
+    25% {
+      opacity: 1;
+    }
+  }
+}

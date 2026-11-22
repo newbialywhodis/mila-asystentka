@@ -57,6 +57,7 @@ export function MilaGuide({
   return (
     <GuideLayout
       panelsEnabled
+      attachmentsEnabled={Boolean(signOutAction)}
       cases={
         <CaseHistory
           history={history}

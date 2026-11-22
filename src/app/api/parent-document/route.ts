@@ -1,4 +1,6 @@
 import { createGateway, generateText, Output } from "ai";
+import type { NextRequest } from "next/server";
+import { demoProfile, demoProfileCookie } from "../../../features/guide/demo-profile";
 import {
   documentWireSchema,
   normalizeDocumentWire,
@@ -7,7 +9,10 @@ import {
 
 export const maxDuration = 60;
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  if (request.cookies.get(demoProfileCookie)?.value !== demoProfile.id)
+    return Response.json({ error: "Zaloguj się do Mili." }, { status: 401 });
+
   if (
     process.env.MILA_PDF_UPLOAD_ALLOWED !== "1" ||
     request.headers.get("x-mila-pdf-permission") !== "confirmed"

@@ -1,17 +1,29 @@
 import assert from "node:assert/strict";
 import { statSync } from "node:fs";
 import { test } from "node:test";
+import { NextRequest } from "next/server";
 import { POST } from "../src/app/api/guide-help/route";
 import { POST as postSpeech } from "../src/app/api/guide-speech/route";
 import audioManifest from "../src/features/guide/audioManifest.json";
-import { getStaticHelpTexts } from "../src/features/guide/helpAnswers";
+import { demoProfile, demoProfileCookie } from "../src/features/guide/demo-profile";
+import {
+  findHelpAnswer,
+  findHelpFollowUp,
+  getHelpAnswerText,
+  getHelpGuideAnswer,
+  getHelpGuideOffer,
+  getStaticHelpTexts,
+} from "../src/features/guide/helpAnswers";
 import { getHelpKnowledge } from "../src/features/guide/helpKnowledge";
 
 function requestHelp(payload: object) {
   return POST(
-    new Request("http://localhost/api/guide-help", {
+    new NextRequest("http://localhost/api/guide-help", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Cookie: `${demoProfileCookie}=${demoProfile.id}`,
+      },
       body: JSON.stringify(payload),
     }),
   );
@@ -50,6 +62,21 @@ test("wygasła kwota nie trafia do wiedzy modelu ani listy kwot procedury", () =
   ]);
 });
 
+test("krótkie potwierdzenie otwiera dokładnie tę instrukcję, którą zaproponowała Mila", () => {
+  const answer = findHelpAnswer("Gdzie złożyć wniosek o 800+?");
+  assert.ok(answer);
+  assert.match(getHelpAnswerText(answer), /od dnia urodzenia/);
+  assert.match(getHelpAnswerText(answer), /SW‑R w eZUS\?/);
+
+  const accepted = findHelpFollowUp(answer, "Tak, proszę");
+  assert.deepEqual(accepted, getHelpGuideAnswer("swrEzus"));
+  assert.ok(accepted);
+  assert.match(getHelpAnswerText(accepted), /4\. .*Podpisz i wyślij/);
+  assert.equal(findHelpFollowUp(answer, "Tak, ale przez bank"), undefined);
+  assert.equal(findHelpFollowUp({ text: "Podałam termin." }, "Tak, proszę"), undefined);
+  assert.equal(findHelpFollowUp(accepted, "Tak, proszę"), undefined);
+});
+
 test("Mila sprawdza źródła modelu i pozwala odczytać podpisaną odpowiedź", async (t) => {
   const previousKey = process.env.AI_GATEWAY_API_KEY;
   const previousModel = process.env.MILA_AI_MODEL;
@@ -73,6 +100,7 @@ test("Mila sprawdza źródła modelu i pozwala odczytać podpisaną odpowiedź",
     sourceIds: payload.previousSourceIds,
   };
   let aboutMila = false;
+  let guide: { id: "swrEzus"; mode: "offer" | "show" } | null = null;
   let speechAvailable = true;
   const audio = new Uint8Array([73, 68, 51]);
   const provider = t.mock.method(globalThis, "fetch", async (input: RequestInfo | URL) => {
@@ -82,7 +110,7 @@ test("Mila sprawdza źródła modelu i pozwala odczytać podpisaną odpowiedź",
         : Response.json({ detail: "błąd dostawcy" }, { status: 429 });
     }
     return Response.json({
-      content: [{ type: "text", text: JSON.stringify({ aboutMila, ...output }) }],
+      content: [{ type: "text", text: JSON.stringify({ aboutMila, guide, ...output }) }],
       finishReason: { unified: "stop", raw: "stop" },
       usage: { inputTokens: { total: 100 }, outputTokens: { total: 20 } },
       warnings: [],
@@ -161,6 +189,18 @@ test("Mila sprawdza źródła modelu i pozwala odczytać podpisaną odpowiedź",
   assert.deepEqual(await paraphrase.json(), description);
 
   aboutMila = false;
+  guide = { id: "swrEzus", mode: "offer" };
+  output.sourceIds = [];
+  const offer = await requestHelp({ question: "Gdzie wysłać wniosek na 800+?" });
+  assert.equal(offer.status, 200);
+  assert.deepEqual(await offer.json(), getHelpGuideOffer("swrEzus"));
+
+  guide = { id: "swrEzus", mode: "show" };
+  const steps = await requestHelp({ question: "Pokaż mi kroki wypełnienia SW-R na portalu eZUS." });
+  assert.equal(steps.status, 200);
+  assert.deepEqual(await steps.json(), getHelpGuideAnswer("swrEzus"));
+
+  guide = null;
   output.sourceIds = ["toString"];
   const rejected = await requestHelp(payload);
   assert.equal(rejected.status, 503);

@@ -1,11 +1,14 @@
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import type { SubmitEvent } from "react";
 import { Button } from "../../components/ui/Button";
 import { DatePicker } from "../../components/ui/DatePicker";
+import { InputHelp } from "../../components/ui/InputHelp";
+import { NumericInput } from "../../components/ui/NumericInput";
 import { warsawToday } from "../../engine/dates";
+import { caseFactsSchema } from "../../engine/parent-case";
 import type { CaseFacts, FactKey } from "../../engine/parent-case";
 import { SingleChoice } from "../guide/QuestionControls";
-import { factInputValue, fields, readFact, validateFact } from "./case-fields";
+import { factValue, fields, readFact, validateFact } from "./case-fields";
 import styles from "./FactControl.module.css";
 
 type GuidedControl = {
@@ -15,6 +18,8 @@ type GuidedControl = {
   submitLabel?: string;
   upcomingStart?: boolean;
 };
+
+const numberFormat = new Intl.NumberFormat("pl-PL");
 
 export function FactControl({
   fact,
@@ -32,9 +37,23 @@ export function FactControl({
   childrenCount?: number;
 }) {
   const id = useId();
-  const [value, setValue] = useState(() => factInputValue(fact, guided?.initialValue));
-  const [error, setError] = useState("");
+  const helpId = id + "-help";
+  const numberInput = useRef<HTMLInputElement>(null);
   const field = fields[fact];
+  const money = field.type === "money";
+  const scale = money ? 100 : 1;
+  const initialValue = guided?.initialValue;
+  const [value, setValue] = useState(() =>
+    typeof initialValue === "string" ? factValue(fact, initialValue) : "",
+  );
+  const [numericValue, setNumericValue] = useState(() =>
+    typeof initialValue === "number" ? initialValue / scale : null,
+  );
+  const [error, setError] = useState("");
+  const schema = caseFactsSchema.shape[fact];
+  const numeric = money || field.type === "number";
+  const min = "minValue" in schema && schema.minValue != null ? schema.minValue / scale : undefined;
+  const max = "maxValue" in schema && schema.maxValue != null ? schema.maxValue / scale : undefined;
   const describedBy =
     [guided?.hintId, error && id + "-error"].filter(Boolean).join(" ") || undefined;
 
@@ -45,8 +64,23 @@ export function FactControl({
 
   function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
-    const facts = readFact(fact, value, guided?.upcomingStart ? today : undefined);
+    if (numeric && numericValue === null) {
+      setError(money ? "Wpisz kwotę." : "Wpisz liczbę.");
+      return;
+    }
+    const facts =
+      numericValue !== null && numeric
+        ? validateFact(fact, money ? Math.round(numericValue * scale) : numericValue)
+        : readFact(fact, value, guided?.upcomingStart ? today : undefined);
     if (!facts) {
+      if (numeric) {
+        setError(
+          min !== undefined && max !== undefined
+            ? `Podaj ${money ? "kwotę" : "liczbę całkowitą"} od ${numberFormat.format(min)} do ${numberFormat.format(max)}${money ? " zł" : ""}.`
+            : "Sprawdź wpisaną wartość.",
+        );
+        return;
+      }
       setError(
         field.type === "date"
           ? guided?.upcomingStart
@@ -62,7 +96,15 @@ export function FactControl({
     }
     onSave(facts);
     setError("");
-    if (!guided) setValue("");
+    if (!guided) {
+      const input = numberInput.current;
+      const restoreFocus = input && document.activeElement === input;
+      // Commit the draft after an Enter submission so the cleared value is displayed.
+      if (restoreFocus) input.blur();
+      setValue("");
+      setNumericValue(null);
+      if (restoreFocus) input.focus({ preventScroll: true });
+    }
   }
 
   if (fact === "careChildren") {
@@ -162,22 +204,47 @@ export function FactControl({
             today={today}
             aria-invalid={Boolean(error) || undefined}
             aria-describedby={describedBy}
+            help={field.help}
             onValueChange={change}
             required
           />
-        ) : (
-          <input
+        ) : field.type === "number" || field.type === "money" ? (
+          <NumericInput
+            ref={numberInput}
             id={id}
-            className={styles.input}
-            inputMode={
-              field.type === "money" ? "decimal" : field.type === "text" ? "text" : "numeric"
-            }
-            value={value}
-            onChange={(event) => change(event.currentTarget.value)}
+            className={styles.numeric}
+            decimal={money}
+            min={min}
+            max={max}
+            placeholder={field.placeholder}
+            help={field.help}
+            value={numericValue}
+            onValueChange={(next) => {
+              setNumericValue(next);
+              setError("");
+            }}
             aria-invalid={Boolean(error) || undefined}
             aria-describedby={describedBy}
             required
           />
+        ) : (
+          <div className={styles.textControl}>
+            <input
+              id={id}
+              className={styles.input}
+              data-has-help={Boolean(field.help) || undefined}
+              value={value}
+              onChange={(event) => change(event.currentTarget.value)}
+              aria-invalid={Boolean(error) || undefined}
+              aria-describedby={
+                field.help ? [describedBy, helpId].filter(Boolean).join(" ") : describedBy
+              }
+              required
+            />
+            {field.help ? (
+              <InputHelp id={helpId} text={field.help} className={styles.help} />
+            ) : null}
+          </div>
         )}
       </div>
       {error ? (

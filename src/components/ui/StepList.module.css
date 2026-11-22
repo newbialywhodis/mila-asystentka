@@ -1,0 +1,35 @@
+.card {
+  min-width: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.title {
+  margin: 0 0 var(--space-3);
+  font-weight: 650;
+}
+
+.steps {
+  margin: 0;
+  padding-inline-start: 1.5em;
+  line-height: 1.5;
+  list-style: decimal outside;
+}
+
+.steps li {
+  padding-inline-start: var(--space-1);
+}
+
+.steps li + li {
+  margin-block-start: var(--space-3);
+}
+
+.steps li::marker {
+  color: var(--primary);
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}

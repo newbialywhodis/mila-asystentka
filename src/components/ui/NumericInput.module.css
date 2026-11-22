@@ -1,0 +1,41 @@
+.root {
+  position: relative;
+  min-inline-size: 0;
+}
+
+.input {
+  inline-size: 100%;
+  min-block-size: var(--control-touch-size);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-xs);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+.input::placeholder {
+  color: var(--quiet);
+  opacity: 1;
+}
+
+.input[data-has-help] {
+  padding-inline-end: calc(var(--icon-button-size-md) + var(--space-2));
+}
+
+.help {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-end: var(--space-1);
+  translate: 0 -50%;
+}
+
+.input:focus {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.input[aria-invalid="true"] {
+  border-color: var(--danger);
+}

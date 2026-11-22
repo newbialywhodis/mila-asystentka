@@ -9,7 +9,7 @@ function toAssistantMessage(turn: CaseTurn): AssistantRequest["messages"][number
     case "user":
       return turn.local ? undefined : { role: "user", content: turn.text };
     case "help":
-      return { role: "assistant", content: turn.answer.text };
+      return { role: "assistant", content: getHelpAnswerText(turn.answer) };
     case "reply":
       return {
         role: "assistant",
@@ -57,3 +57,4 @@ export function buildAssistantRequest(session: CaseSession, text: string): Assis
     },
   };
 }
+import { getHelpAnswerText } from "../guide/helpAnswers";

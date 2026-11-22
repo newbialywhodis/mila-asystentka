@@ -1,5 +1,6 @@
 import { useId, useLayoutEffect, useRef, useState } from "react";
 import { Button } from "../../components/ui/Button";
+import { NumericInput } from "../../components/ui/NumericInput";
 import { addDays, isoDate, parseDate } from "../../engine/dates";
 import {
   caseFactsSchema,
@@ -104,7 +105,8 @@ function summarizePlan(title: string, plan: ComparedPlan) {
 const assumptions =
   "Potwierdź ubezpieczenie każdego rodzica na dzień rozpoczęcia jego części urlopu w obu porównywanych wariantach.";
 
-function MaternityComparisonFields() {
+function MaternityComparisonFields({ onNumberChange }: { onNumberChange: () => void }) {
+  const id = useId();
   const [active, setActive] = useState(false);
   return (
     <fieldset className={cardStyles.card}>
@@ -124,17 +126,20 @@ function MaternityComparisonFields() {
             W tym porównaniu pierwsza osoba to matka, a druga to ojciec. Opiekę zaczynacie od
             porodu.
           </p>
-          <label className={cardStyles.field}>
-            Tygodnie matki po porodzie
-            <input
+          <div className={cardStyles.field}>
+            <label htmlFor={id + "-weeks"}>Tygodnie matki po porodzie</label>
+            <NumericInput
+              id={id + "-weeks"}
               name="motherMaternityWeeks"
-              type="number"
-              min="14"
-              max="37"
-              defaultValue="14"
+              help="Wpisz liczbę tygodni macierzyńskiego, które mama wykorzysta po porodzie, zanim opiekę przejmie tata."
+              min={14}
+              max={37}
+              defaultValue={14}
+              placeholder="np. 14"
+              onValueChange={onNumberChange}
               required
             />
-          </label>
+          </div>
           {[
             {
               name: "mother",
@@ -158,17 +163,19 @@ function MaternityComparisonFields() {
                   <option value="no">Brak</option>
                 </select>
               </label>
-              <label className={cardStyles.field}>
-                {debt}
-                <input
+              <div className={cardStyles.field}>
+                <label htmlFor={id + "-" + name + "-debt"}>{debt}</label>
+                <NumericInput
+                  id={id + "-" + name + "-debt"}
                   name={name + "MaternityDebt"}
-                  type="number"
-                  min="0"
-                  max="1000000"
-                  step=".01"
-                  placeholder="Przy działalności"
+                  help={fields.debt.help}
+                  min={0}
+                  max={1_000_000}
+                  decimal
+                  placeholder="np. 0,00"
+                  onValueChange={onNumberChange}
                 />
-              </label>
+              </div>
             </div>
           ))}
         </div>
@@ -181,14 +188,7 @@ const questions: Partial<Record<FactKey, string>> = {
   basis: "Z jakiej kwoty liczą Twój zasiłek?",
   insured: "Czy w dniu rozpoczęcia urlopu będziesz mieć ubezpieczenie chorobowe?",
   debt: "Ile zaległych składek będziesz mieć na początku urlopu?",
-  parts: "Ile osobnych okresów tego urlopu wykorzystaliście do tej pory?",
   standardRate: "Czy złożyliście wniosek o stawkę 81,5%?",
-};
-
-const hints: Partial<Record<FactKey, string>> = {
-  basis:
-    "Szukaj w dokumentach kwoty opisanej jako „podstawa wymiaru zasiłku”. Możesz o nią zapytać kadry albo ZUS.",
-  parts: "Jeśli żadne z Was nie korzystało jeszcze z rodzicielskiego, wpisz 0.",
 };
 
 function WorkSelect({
@@ -219,7 +219,6 @@ function WorkSelect({
 export function CareComparison({ turn }: { turn: CareComparisonTurn }) {
   const titleId = useId();
   const promptId = useId();
-  const hintId = promptId + "-hint";
   const [personal, setPersonal] = useState(false);
   const [example, setExample] = useState<PlanOptions>(() => ({
     ...careComparisonExample.options,
@@ -229,10 +228,10 @@ export function CareComparison({ turn }: { turn: CareComparisonTurn }) {
   const [options, setOptions] = useState<PlanOptions>();
   const [useAveragedRate, setUseAveragedRate] = useState(false);
   const prompt = useRef<HTMLParagraphElement>(null);
+  const planForm = useRef<HTMLFormElement>(null);
   const focusNext = useRef(false);
   const missing = missingFact(facts);
   const field = missing === "standardRate" && useAveragedRate ? "averagedRequest" : missing;
-  const hint = field && hints[field];
 
   useLayoutEffect(() => {
     if (focusNext.current) {
@@ -279,6 +278,13 @@ export function CareComparison({ turn }: { turn: CareComparisonTurn }) {
   function selectMode(next: boolean) {
     focusNext.current = true;
     setPersonal(next);
+  }
+
+  function updateAfterNumberChange() {
+    // Base UI commits the numeric value to its form input after the change handler.
+    requestAnimationFrame(() => {
+      if (planForm.current) setOptions(readOptions(planForm.current));
+    });
   }
 
   const card = (
@@ -335,11 +341,6 @@ export function CareComparison({ turn }: { turn: CareComparisonTurn }) {
               <p id={promptId} ref={personal ? prompt : undefined} tabIndex={-1}>
                 {questions[field] ?? fields[field].question}
               </p>
-              {hint ? (
-                <p id={hintId} className={cardStyles.muted}>
-                  {hint}
-                </p>
-              ) : null}
               {field === "standardRate" ? (
                 <div className={cardStyles.actions}>
                   <Button variant="outline" size="sm" onClick={() => save({ standardRate: true })}>
@@ -360,16 +361,10 @@ export function CareComparison({ turn }: { turn: CareComparisonTurn }) {
                 <FactControl
                   key={field}
                   fact={field}
-                  label={
-                    field === "basis"
-                      ? "Kwota z dokumentu (zł)"
-                      : field === "parts"
-                        ? "Liczba okresów"
-                        : undefined
-                  }
+                  label={field === "basis" ? "Kwota z dokumentu (zł)" : undefined}
                   today={turn.asOf}
                   onSave={save}
-                  guided={{ promptId, hintId: hint ? hintId : undefined, submitLabel: "Dalej" }}
+                  guided={{ promptId, submitLabel: "Dalej" }}
                 />
               )}
               {field === "averagedRequest" ? (
@@ -391,6 +386,7 @@ export function CareComparison({ turn }: { turn: CareComparisonTurn }) {
                 Ustalcie, od kiedy i na ile tygodni chcecie wziąć urlop.
               </p>
               <form
+                ref={planForm}
                 className={styles.form}
                 onChange={(event) => setOptions(readOptions(event.currentTarget))}
                 onSubmit={(event) => {
@@ -410,33 +406,50 @@ export function CareComparison({ turn }: { turn: CareComparisonTurn }) {
                       required
                     />
                   </label>
-                  <label className={cardStyles.field}>
-                    Twoje tygodnie
-                    <input name="weeks" type="number" min="1" max="67" defaultValue="10" required />
-                  </label>
-                  <label className={cardStyles.field}>
-                    Tygodnie drugiej osoby
-                    <input
+                  <div className={cardStyles.field}>
+                    <label htmlFor={titleId + "-weeks"}>Twoje tygodnie</label>
+                    <NumericInput
+                      id={titleId + "-weeks"}
+                      name="weeks"
+                      help="Wpisz, ile tygodni urlopu rodzicielskiego planujesz w tym wariancie, np. 10."
+                      min={1}
+                      max={67}
+                      defaultValue={10}
+                      placeholder="np. 10"
+                      onValueChange={updateAfterNumberChange}
+                      required
+                    />
+                  </div>
+                  <div className={cardStyles.field}>
+                    <label htmlFor={titleId + "-other-weeks"}>Tygodnie drugiej osoby</label>
+                    <NumericInput
+                      id={titleId + "-other-weeks"}
                       name="otherWeeks"
-                      type="number"
-                      min="1"
-                      max="67"
-                      defaultValue="9"
+                      help="Wpisz, ile tygodni urlopu rodzicielskiego planuje drugi rodzic, np. 9."
+                      min={1}
+                      max={67}
+                      defaultValue={9}
+                      placeholder="np. 9"
+                      onValueChange={updateAfterNumberChange}
                       required
                     />
-                  </label>
-                  <label className={cardStyles.field}>
-                    Podstawa zasiłku drugiej osoby (zł)
-                    <input
-                      aria-describedby={hintId}
+                  </div>
+                  <div className={cardStyles.field}>
+                    <label htmlFor={titleId + "-other-basis"}>
+                      Podstawa zasiłku drugiej osoby (zł)
+                    </label>
+                    <NumericInput
+                      id={titleId + "-other-basis"}
+                      help="Wpisz miesięczną kwotę drugiego rodzica opisaną jako „podstawa wymiaru zasiłku”. Można ją sprawdzić w dokumentach, kadrach lub ZUS."
                       name="otherBasis"
-                      type="number"
-                      step="0.01"
-                      min="0.01"
-                      max="1000000"
+                      decimal
+                      min={0.01}
+                      max={1_000_000}
+                      placeholder="np. 4 800,50"
+                      onValueChange={updateAfterNumberChange}
                       required
                     />
-                  </label>
+                  </div>
                   <label className={cardStyles.field}>
                     Tytuł ubezpieczenia drugiej osoby
                     <select name="otherEmployment" defaultValue="" required>
@@ -460,32 +473,44 @@ export function CareComparison({ turn }: { turn: CareComparisonTurn }) {
                       <option value="no">Brak</option>
                     </select>
                   </label>
-                  <label className={cardStyles.field}>
-                    Zadłużenie drugiej osoby przy działalności (zł)
-                    <input name="otherDebt" type="number" min="0" max="1000000" step="0.01" />
-                  </label>
-                  <label className={cardStyles.field}>
-                    Twój zwykły wymiar etatu (%)
-                    <input
+                  <div className={cardStyles.field}>
+                    <label htmlFor={titleId + "-other-debt"}>
+                      Zadłużenie drugiej osoby przy działalności (zł)
+                    </label>
+                    <NumericInput
+                      id={titleId + "-other-debt"}
+                      name="otherDebt"
+                      help="Wpisz kwotę zaległych składek drugiego rodzica na początek urlopu. Jeśli nie ma zaległości, wpisz 0."
+                      min={0}
+                      max={1_000_000}
+                      decimal
+                      placeholder="np. 0,00"
+                      onValueChange={updateAfterNumberChange}
+                    />
+                  </div>
+                  <div className={cardStyles.field}>
+                    <label htmlFor={titleId + "-employment-percent"}>
+                      Twój zwykły wymiar etatu (%)
+                    </label>
+                    <NumericInput
+                      id={titleId + "-employment-percent"}
                       name="employmentPercent"
-                      type="number"
-                      min="1"
-                      max="100"
+                      help={fields.employmentPercent.help}
+                      min={1}
+                      max={100}
                       defaultValue={facts.employmentPercent}
                       placeholder="np. 100"
+                      onValueChange={updateAfterNumberChange}
                     />
-                  </label>
+                  </div>
                   <WorkSelect value={example.workPercent} />
                   <WorkSelect name="extensionWork" value={example.extensionWorkPercent ?? 0} />
                 </div>
-                <p id={hintId} className={cardStyles.muted}>
-                  Drugą kwotę też znajdziecie w dokumentach pod nazwą „podstawa wymiaru zasiłku”.
-                </p>
                 <label>
                   <input name="together" type="checkbox" defaultChecked /> Zacznijcie w tym samym
                   dniu
                 </label>
-                <MaternityComparisonFields />
+                <MaternityComparisonFields onNumberChange={updateAfterNumberChange} />
                 <Button type="submit" variant="outline" size="sm">
                   Przelicz warianty
                 </Button>

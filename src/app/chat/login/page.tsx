@@ -29,7 +29,7 @@ export default async function LoginPage({
       httpOnly: true,
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
-      path: "/chat",
+      path: "/",
     });
     redirect(chatHref, RedirectType.replace);
   }
@@ -67,18 +67,6 @@ export default async function LoginPage({
               </span>
             </button>
           </form>
-          <a className={styles.tile} href="https://login.gov.pl/">
-            <span className={styles.tileIcon}>
-              <Icon name="contract" />
-            </span>
-            <span className={styles.tileText}>
-              <strong>Oficjalny serwis login.gov.pl</strong>
-              <span>Przejdź do rządowej strony logowania do e-usług.</span>
-            </span>
-            <span className={styles.tileArrow}>
-              <Icon name="arrowUpRight" />
-            </span>
-          </a>
         </div>
       </section>
       <aside className={styles.banner} aria-labelledby="banner-title">

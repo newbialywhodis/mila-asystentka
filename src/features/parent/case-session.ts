@@ -37,7 +37,6 @@ export type AssessmentTurn = {
   insured?: boolean;
   goal: CaseGoal;
   question?: CaseQuestion;
-  deferred?: true;
   text: string;
 };
 
@@ -358,6 +357,23 @@ export function getBenefitTurn(session: CaseSession): BenefitChoice | Assessment
   );
 }
 
+const missingFactHelp: Partial<Record<FactKey, string>> = {
+  insured: "Sprawdź ubezpieczenie na wskazany dzień w eZUS lub zapytaj płatnika składek.",
+  payer:
+    "Zapytaj pracodawcę lub płatnika składek, kto wypłaca zasiłek. Możesz też podać liczbę osób zgłoszonych do chorobowego na właściwy dzień.",
+};
+
+export function appendMissingFactReply(session: CaseSession, question: CaseQuestion | undefined) {
+  if (!question) return append(session, startingReply);
+  const help = missingFactHelp[question.key] ?? fields[question.key].help;
+  const required = "Potrzebuję tej informacji, żeby przejść dalej w kalkulatorze.";
+  return append(session, {
+    kind: "reply",
+    text: help ? `${required} ${help}` : required,
+    choices: [],
+  });
+}
+
 export function continueWithRequest(session: CaseSession, request: CaseRequest, text: string) {
   const { benefit, facts } = request;
   const current = getBenefitTurn(session);
@@ -411,7 +427,7 @@ export function continueWithDocument(
   if (data?.benefit && session.benefit && data.benefit !== session.benefit) return session;
 
   const current = getBenefitTurn(session);
-  const unanswered = current?.kind === "chooseBenefit" || (current?.question && !current.deferred);
+  const unanswered = current?.kind === "chooseBenefit" || current?.question;
   // Put the new attachment above the pending prompt without repeating the question.
   const next =
     unanswered && session.turns.at(-2) === current

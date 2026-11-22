@@ -2,11 +2,19 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { SubmitEvent } from "react";
 import type { PDFDocumentLoadingTask, PDFDocumentProxy, RenderTask } from "pdfjs-dist";
 import { IconButton } from "../../components/ui/Button";
+import { LoadingIndicator } from "../../components/ui/LoadingIndicator";
+import { ScrollArea } from "../../components/ui/ScrollArea";
+import { Select } from "../../components/ui/Select";
 import { loadBrowserPdf } from "./browser-pdf";
 import type { AttachedDocument } from "./case-session";
 import styles from "./AttachmentPreview.module.css";
 
 export type OpenPdfPreview = (document: AttachedDocument, page?: number) => void;
+
+const pdfZoomOptions = [50, 75, 100, 125, 150, 200].map((value) => ({
+  value,
+  label: `${value}%`,
+}));
 
 export function AttachmentPreview({
   documents,
@@ -66,8 +74,6 @@ function PdfPages({
   const [pageRatios, setPageRatios] = useState<number[]>();
   const [failed, setFailed] = useState(false);
   const visiblePage = pdf ? Math.min(page, pdf.numPages) : page;
-  const canGoBack = visiblePage > 1;
-  const canGoForward = pdf !== undefined && visiblePage < pdf.numPages;
   const { preview } = attachment;
 
   useEffect(() => {
@@ -111,42 +117,13 @@ function PdfPages({
   return (
     <>
       {pdf && pageRatios && !failed ? (
-        <div className={styles.pages}>
-          <PdfViewport
-            pdf={pdf}
-            ratios={pageRatios}
-            page={visiblePage}
-            preview={preview}
-            onPage={onPage}
-          />
-          {pdf.numPages > 1 ? (
-            <div className={styles.controls}>
-              <IconButton
-                icon="back"
-                size="icon-sm"
-                variant="ghost"
-                rounded
-                label="Poprzednia strona"
-                aria-disabled={!canGoBack}
-                onClick={() => {
-                  if (canGoBack) onPage(visiblePage - 1);
-                }}
-              />
-              <PageNumber page={visiblePage} total={pdf.numPages} onPage={onPage} />
-              <IconButton
-                icon="arrow"
-                size="icon-sm"
-                variant="ghost"
-                rounded
-                label="Następna strona"
-                aria-disabled={!canGoForward}
-                onClick={() => {
-                  if (canGoForward) onPage(visiblePage + 1);
-                }}
-              />
-            </div>
-          ) : null}
-        </div>
+        <PdfViewer
+          pdf={pdf}
+          ratios={pageRatios}
+          page={visiblePage}
+          preview={preview}
+          onPage={onPage}
+        />
       ) : failed ? (
         <div className={styles.status}>
           <output>Nie udało się wyświetlić PDF-u.</output>
@@ -155,13 +132,15 @@ function PdfPages({
           </a>
         </div>
       ) : (
-        <output className={styles.status}>Otwieram PDF…</output>
+        <output className={styles.status}>
+          <LoadingIndicator>Otwieranie PDF-u…</LoadingIndicator>
+        </output>
       )}
     </>
   );
 }
 
-function PdfViewport({
+function PdfViewer({
   pdf,
   ratios,
   page,
@@ -175,29 +154,35 @@ function PdfViewport({
   onPage: (page: number) => void;
 }) {
   const viewport = useRef<HTMLElement>(null);
+  const content = useRef<HTMLDivElement>(null);
   const activePage = useRef(0);
   const jumpPosition = useRef<number | null>(null);
+  const zoomPosition = useRef<number | null>(null);
   const [visiblePages, setVisiblePages] = useState<ReadonlySet<number>>(() => new Set());
+  const [zoom, setZoom] = useState(100);
 
   useLayoutEffect(() => {
     const element = viewport.current;
     if (!element) return;
-    const first = element.firstElementChild;
-    const target = element.children[page - 1];
+    const first = content.current?.firstElementChild;
+    const target = content.current?.children[page - 1];
     if (
-      activePage.current === page ||
+      (activePage.current === page && zoomPosition.current === null) ||
       !(first instanceof HTMLElement) ||
       !(target instanceof HTMLElement)
     )
       return;
     activePage.current = page;
-    element.scrollTop = target.offsetTop - first.offsetTop;
+    element.scrollTop =
+      target.offsetTop - first.offsetTop + (zoomPosition.current ?? 0) * target.offsetHeight;
+    zoomPosition.current = null;
     jumpPosition.current = element.scrollTop;
-  }, [page]);
+  }, [page, zoom]);
 
   useEffect(() => {
     const element = viewport.current;
-    if (!element) return;
+    const pages = content.current?.children;
+    if (!element || !pages) return;
     const observer = new IntersectionObserver(
       (entries) => {
         setVisiblePages((previous) => {
@@ -212,13 +197,27 @@ function PdfViewport({
       },
       { root: element, rootMargin: "320px 0px" },
     );
-    for (const child of element.children) observer.observe(child);
+    for (const child of pages) observer.observe(child);
     return () => observer.disconnect();
   }, []);
+
+  function changeZoom(next: number) {
+    if (next === zoom) return;
+    const element = viewport.current;
+    const first = content.current?.firstElementChild;
+    const current = content.current?.children[page - 1];
+    if (element && first instanceof HTMLElement && current instanceof HTMLElement) {
+      const offset = element.scrollTop - current.offsetTop + first.offsetTop;
+      zoomPosition.current = Math.min(1, Math.max(0, offset / Math.max(1, current.offsetHeight)));
+    }
+    setZoom(next);
+  }
 
   function syncPage(element: HTMLElement) {
     // A jump can be clamped near the end of the document. Keep the selected page until the reader scrolls.
     if (element.scrollTop === jumpPosition.current) return;
+    const pages = content.current?.children;
+    if (!pages) return;
     jumpPosition.current = null;
     const readingLine =
       element.getBoundingClientRect().top + Math.min(32, element.clientHeight / 2);
@@ -226,37 +225,74 @@ function PdfViewport({
       element.scrollTop > 0 && element.scrollHeight - element.clientHeight - element.scrollTop <= 1;
     const index = atEnd
       ? ratios.length - 1
-      : Array.from(element.children).findIndex(
-          (child) => child.getBoundingClientRect().bottom > readingLine,
-        );
+      : Array.from(pages).findIndex((child) => child.getBoundingClientRect().bottom > readingLine);
     if (index < 0 || index + 1 === activePage.current) return;
     activePage.current = index + 1;
     onPage(index + 1);
   }
 
   return (
-    <section
-      className={styles.viewport}
-      ref={viewport}
-      aria-label="Strony PDF-u"
-      // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Allow keyboard scrolling of the PDF.
-      tabIndex={0}
-      onScroll={(event) => syncPage(event.currentTarget)}
-    >
-      {ratios.map((ratio, index) => (
-        <div
-          key={index}
-          className={styles.page}
-          data-page-number={index + 1}
-          // oxlint-disable-next-line react/forbid-dom-props -- Reserve the page's measured proportions before rendering.
-          style={{ aspectRatio: ratio }}
-        >
-          {visiblePages.has(index + 1) ? (
-            <PdfPage pdf={pdf} page={index + 1} preview={preview} />
-          ) : null}
-        </div>
-      ))}
-    </section>
+    <div className={styles.pages}>
+      <ScrollArea
+        renderViewport={<section ref={viewport} />}
+        contentClassName={styles.content}
+        contentRef={content}
+        aria-label="Strony PDF-u"
+        horizontal
+        onScroll={(event) => syncPage(event.currentTarget)}
+      >
+        {ratios.map((ratio, index) => (
+          <div
+            key={index}
+            className={styles.page}
+            data-page-number={index + 1}
+            // oxlint-disable-next-line react/forbid-dom-props -- Size the page before rendering.
+            style={{ aspectRatio: ratio, inlineSize: `${zoom}%` }}
+          >
+            {visiblePages.has(index + 1) ? (
+              <PdfPage pdf={pdf} page={index + 1} preview={preview} />
+            ) : null}
+          </div>
+        ))}
+      </ScrollArea>
+      <div className={styles.controls}>
+        {pdf.numPages > 1 ? (
+          <>
+            <IconButton
+              icon="back"
+              size="icon-sm"
+              variant="ghost"
+              rounded
+              label="Poprzednia strona"
+              aria-disabled={page === 1}
+              onClick={() => {
+                if (page > 1) onPage(page - 1);
+              }}
+            />
+            <PageNumber page={page} total={pdf.numPages} onPage={onPage} />
+            <IconButton
+              icon="arrow"
+              size="icon-sm"
+              variant="ghost"
+              rounded
+              label="Następna strona"
+              aria-disabled={page === pdf.numPages}
+              onClick={() => {
+                if (page < pdf.numPages) onPage(page + 1);
+              }}
+            />
+          </>
+        ) : null}
+        <Select
+          label="Powiększenie PDF-u"
+          value={zoom}
+          items={pdfZoomOptions}
+          onValueChange={changeZoom}
+          side="top"
+          className={styles.zoom}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -367,7 +403,11 @@ function PdfPage({ pdf, page, preview }: { pdf: PDFDocumentProxy; page: number; 
           </a>
         </div>
       ) : null}
-      {!done && !failed ? <output className={styles.status}>Wczytuję stronę…</output> : null}
+      {!done && !failed ? (
+        <output className={styles.status}>
+          <LoadingIndicator>Wczytywanie strony…</LoadingIndicator>
+        </output>
+      ) : null}
     </div>
   );
 }

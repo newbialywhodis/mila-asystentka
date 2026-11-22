@@ -15,6 +15,10 @@
   outline-offset: 1px;
 }
 
+.field[data-has-help] {
+  inline-size: 13.5rem;
+}
+
 .field:has(.input[aria-invalid="true"]) {
   border-color: var(--danger);
 }

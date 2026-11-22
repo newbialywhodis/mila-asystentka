@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { Button } from "../../components/ui/Button";
 import { Icon } from "../../components/ui/Icon";
 import { ScrollArea } from "../../components/ui/ScrollArea";
+import { Sheet } from "../../components/ui/Sheet";
 import { labels } from "../../engine/parent-case";
 import { AttachmentPreview } from "../parent/AttachmentPreview";
 import type { AttachedDocument } from "../parent/case-session";
@@ -44,6 +45,9 @@ export function CaseConversation({
   const workspace = useParentWorkspace(uploadAllowed);
   const [startPage, setStartPage] = useState<StartPage>("start");
   const [query, setQuery] = useState("");
+  const [loginReason, setLoginReason] = useState<"message" | "attachment" | null>(null);
+  const loginButton = useRef<HTMLButtonElement>(null);
+  const loginOpener = useRef<HTMLElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const actionGaze = useRef<ActionGaze>({ hovered: null, focused: null });
   const setActionGaze = useCallback(
@@ -140,6 +144,7 @@ export function CaseConversation({
   }, [active, input, turns, workspace.expanded]);
 
   function submitQuery(text: string) {
+    if (requireLogin("message")) return;
     setQuery("");
     void workspace.send(text);
   }
@@ -149,7 +154,16 @@ export function CaseConversation({
     router.push(loginHref);
   }
 
+  function requireLogin(reason: "message" | "attachment") {
+    if (!loginHref) return false;
+    const opener = document.activeElement;
+    loginOpener.current = opener instanceof HTMLElement && opener !== document.body ? opener : null;
+    setLoginReason(reason);
+    return true;
+  }
+
   function choosePdf() {
+    if (requireLogin("attachment")) return;
     fileInput.current?.click();
   }
 
@@ -209,12 +223,35 @@ export function CaseConversation({
               setPage={setStartPage}
               actionGaze={actionGaze}
               onChoosePdf={choosePdf}
+              onDemoPdf={() => {
+                if (!requireLogin("attachment")) workspace.attachDemoDocument();
+              }}
             />
           ) : null}
         </ScrollArea>
         <CaseTools workspace={workspace} active={active} topics={initialTopics} />
       </div>
-      {active ? (
+      {loginHref ? (
+        <Sheet
+          title="Zaloguj się do Mili"
+          description={
+            loginReason === "attachment"
+              ? "Zaloguj się, aby dodać PDF do rozmowy."
+              : "Zaloguj się, aby wysłać wiadomość do Mili."
+          }
+          open={active && loginReason !== null}
+          onOpenChange={(open) => {
+            if (!open) setLoginReason(null);
+          }}
+          initialFocus={loginButton}
+          finalFocus={() => loginOpener.current ?? input.current ?? true}
+        >
+          <Button ref={loginButton} variant="brand" onClick={openLogin}>
+            Przejdź do logowania
+          </Button>
+        </Sheet>
+      ) : null}
+      {active && !loginHref ? (
         <input
           ref={fileInput}
           type="file"

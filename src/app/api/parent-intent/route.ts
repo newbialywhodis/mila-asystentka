@@ -1,5 +1,7 @@
 import { createGateway, generateText, Output } from "ai";
+import type { NextRequest } from "next/server";
 import { warsawToday } from "../../../engine/dates";
+import { demoProfile, demoProfileCookie } from "../../../features/guide/demo-profile";
 import { fields } from "../../../features/parent/case-fields";
 import {
   assistantRequestSchema,
@@ -22,12 +24,14 @@ const instructions = [
   "Gdy po informacji o pilnej pomocy ktoś dopytuje, jak możesz pomóc, użyj reply z pustym choices. Konkretna pomoc to np. ułożenie tego, co powiedzieć przez telefon, z tygodniem ciąży, opisem objawów i ich początkiem, jeśli osoba je zna. Przy prośbie o wyjaśnienie po pytaniu o termin porodu wyjaśnij prosto, o jaką różnicę pytasz. Nie wracaj do informacji medycznej bez nowego powodu.",
   "reply służy powitaniom, podziękowaniom, odpowiedzi na emocje, wyjaśnieniu przebiegu rozmowy i dopytaniu o niejasną prośbę z zakresu Mili. Pisz bezpośrednio, w jednym lub dwóch krótkich zdaniach. Nie zakładaj, kto rodzi ani kto złoży wniosek. Przy samym powitaniu, trudnych emocjach lub prośbie o wyjaśnienie zostaw choices puste. Dodaj maksymalnie dwa przyciski, jeśli bezpośrednio odpowiadają na to, czego osoba teraz potrzebuje. beforeBirth to przygotowania przed porodem, afterBirth to formalności po narodzinach, a benefit to sprawdzenie świadczenia. W reply nie podawaj porad medycznych, kwot, terminów prawnych, kryteriów ani linków.",
   "firstSteps podaje gotowe kroki ze źródłami, gdy osoba pyta co przygotować przed porodem albo co załatwić po narodzinach i etap wynika z rozmowy. timing to beforeBirth albo afterBirth. W intro możesz krótko zareagować na nowinę lub emocje. W innym przypadku zwróć pusty intro. Przy niejasnym etapie dopytaj przez reply.",
+  "Gdy osoba odpowiada krótko, np. „Tak, proszę”, odczytaj ją jako odpowiedź na ostatnie pytanie Mili. Jeśli Mila proponowała instrukcję konkretnego wniosku, użyj help i przepisz propozycję na samodzielne pytanie. Przykład: po ofercie pokazania kroków dla 800+ w eZUS question brzmi „Jak złożyć wniosek SW-R w eZUS?”. firstSteps stosuj wyłącznie do ogólnych przygotowań i formalności, a nie do pojedynczego formularza.",
   "assess służy wyraźnej prośbie o indywidualne sprawdzenie uprawnienia, kwoty lub okresu, pytaniu o dokumenty, załączniki, termin lub adresata wniosku dla wskazanego świadczenia oraz uzupełnieniu lub korekcie danych w aktywnej sprawie. Dla prośby o wniosek lub jego szczegóły użyj goal application. Dla obliczeń użyj calculation, a przy uzupełnianiu danych zachowaj dotychczasowy cel.",
   "W assess benefit null oznacza uzupełnienie aktywnego świadczenia. Wskaż identyfikator, gdy osoba wyraźnie prosi o obliczenie świadczenia lub dokumenty do niego. paternity to osobne ojcowskie, parental to rodzicielski, supplement to uzupełniający macierzyński, careMaternity to adopcja lub piecza, lossMaternity to macierzyński po stracie. Jeśli osoba wprost prosi o sprawdzenie świadczenia albo dokumenty do wniosku i trzeba ustalić, o które świadczenie chodzi, użyj chooseBenefit z odpowiednim goal. Ogólne pytanie o dostępne świadczenia należy do help.",
   "W facts podaj tylko konkretne dane wskazane w rozmowie, których jeszcze nie potwierdzono lub które osoba poprawia. Nie zgaduj ubezpieczenia, decyzji ZUS, kwot ani okoliczności. Gdy dane są niejednoznaczne, dopytaj przez reply. Wartości faktów zapisuj jako tekst: daty w ISO, liczby bez jednostki, wartości logiczne true lub false. Kwoty basis, fixedSalary i debt zapisz w groszach. Zwykła pensja to fixedSalary tylko gdy wyraźnie podano 12 pełnych miesięcy stałej pensji na etacie. Podstawa składek nie jest podstawą zasiłku. birth to faktyczna data urodzenia dziecka, a dueDate to przewidywana data porodu.",
-  "unknownFact oznacza, że osoba nie zna wartości oczekującego pola. compareCare otwiera porównanie podziału opieki lub wpływu pracy w trakcie urlopu rodzicielskiego. Konkretne własne scenariusze kieruj do compareCare. „Co się zmieni, jeśli wrócę na pół etatu podczas rodzicielskiego?” oznacza compareCare z workPercent 50. Użyj null, jeśli osoba nie wskazała wariantu.",
+  "Użyj unknownFact, gdy osoba mówi, że nie zna odpowiedzi na aktywne pytanie kalkulatora. Aplikacja wyjaśni, jak uzupełnić wymagane dane. compareCare otwiera porównanie podziału opieki lub wpływu pracy w trakcie urlopu rodzicielskiego. Konkretne własne scenariusze kieruj do compareCare. „Co się zmieni, jeśli wrócę na pół etatu podczas rodzicielskiego?” oznacza compareCare z workPercent 50. Użyj null, jeśli osoba nie wskazała wariantu.",
   "open z tool documents pokazuje dodawanie PDF-u, który osoba chce przejrzeć. facts otwiera edycję danych, examples przykłady, support pomoc po stracie, services usługi demonstracyjne, formalities listę spraw rodziny, a rules panel reguł na wyraźną prośbę.",
   "help służy pytaniom o pojęcia, ogólne zasady i szczegóły formalności poza kalkulatorem, np. o zgłoszenie dziecka do ubezpieczenia lub 800+. Użyj go także dla ogólnego pytania o zasady pracy na urlopie rodzicielskim, gdy osoba nie opisuje własnego scenariusza porównania. W question rozwiń krótkie dopytanie, nazywając procedurę z poprzednich wiadomości. Pomiń prywatne dane.",
+  "Zachowaj zakres pytania w help. Nie dodawaj kanałów, dokumentów ani wątków, o które osoba nie pytała. Gdy osoba pyta ogólnie, gdzie złożyć lub przesłać wniosek o 800+, wpisz question dokładnie „Gdzie złożyć wniosek o 800+?”. Gdy prosi o kroki wypełnienia tego wniosku w eZUS, wpisz „Jak złożyć wniosek SW-R w eZUS?”. Zachowaj dodatkowe warunki lub osobne pytania, jeśli osoba je podała.",
   "Pola sprawy (klucz, znaczenie, format):",
   ...factDescriptions,
 ].join("\n");
@@ -36,7 +40,10 @@ const intentOutput = Output.object({ schema: modelIntentSchema });
 const defaultModel = "openai/gpt-5-mini";
 const backupModel = "google/gemini-2.5-flash";
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  if (request.cookies.get(demoProfileCookie)?.value !== demoProfile.id)
+    return Response.json({ error: "Zaloguj się do Mili." }, { status: 401 });
+
   const parsed = assistantRequestSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return Response.json(null, { status: 400 });
   const apiKey = process.env.AI_GATEWAY_API_KEY?.trim();

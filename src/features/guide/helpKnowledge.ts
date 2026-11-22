@@ -4,6 +4,7 @@ import { amounts, documents } from "../../data/references";
 import { sources } from "../../data/sources";
 import version from "../../data/version.json";
 import { isCurrent } from "../../engine/dates";
+import { helpGuides } from "./helpGuides";
 
 const sourceIndex = Object.fromEntries(
   Object.entries(sources).map(([id, { authority, title }]) => [id, { authority, title }]),
@@ -26,6 +27,7 @@ export function getHelpKnowledge(asOf: string) {
         amounts: procedure.amounts?.filter((id) => Object.hasOwn(currentAmounts, id)),
       })),
     conditions,
+    guides: helpGuides,
     documents: currentDocuments,
     amounts: currentAmounts,
     sources: sourceIndex,

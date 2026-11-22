@@ -30,6 +30,7 @@ export function StartActions({
   actionGaze,
   setPage,
   onChoosePdf,
+  onDemoPdf,
 }: {
   workspace: ParentWorkspace;
   page: StartPage;
@@ -37,6 +38,7 @@ export function StartActions({
   actionGaze: RefObject<ActionGaze>;
   setPage: (page: StartPage) => void;
   onChoosePdf: () => void;
+  onDemoPdf: () => void;
 }) {
   const previousPage = useRef(page);
   const section = useRef<HTMLElement>(null);
@@ -55,7 +57,7 @@ export function StartActions({
             icon: "answers" as const,
             onClick: () => workspace.load(benefit, facts, label),
           })),
-          { label: "Przykładowy PDF", icon: "contract", onClick: workspace.attachDemoDocument },
+          { label: "Przykładowy PDF", icon: "contract", onClick: onDemoPdf },
           { label: "Symulacje usług", icon: "layers", onClick: () => setPage("services") },
         ]
       : [

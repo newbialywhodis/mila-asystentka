@@ -3,7 +3,7 @@ import { warsawToday } from "../../engine/dates";
 import type { DemoRate } from "../../engine/parent-benefit";
 import { emptyParentCase, labels } from "../../engine/parent-case";
 import type { Benefit, CaseFacts, FactKey, ParentCase } from "../../engine/parent-case";
-import { findHelpAnswer, unavailableHelpAnswer } from "../guide/helpAnswers";
+import { findHelpAnswer, findHelpFollowUp, unavailableHelpAnswer } from "../guide/helpAnswers";
 import type { HelpAnswer } from "../guide/helpAnswers";
 import { normalizeGuideText } from "../guide/textInput";
 import { buildAssistantRequest } from "./case-assistant-context";
@@ -17,12 +17,12 @@ import {
   outOfScopeReply,
   pregnancyConcernReply,
   replyChoiceLabels,
-  startingReply,
 } from "./case-replies";
 import {
   append,
   appendAssessment,
   appendCareComparison,
+  appendMissingFactReply,
   askBenefit,
   continueWithAssessment,
   continueWithDocument,
@@ -55,23 +55,6 @@ const unavailableReply: CaseReply = {
   text: "Nie udało mi się teraz odpowiedzieć. Możesz przejść do kalkulatora i uzupełnić dane krok po kroku.",
   choices: ["benefit"],
 };
-const unknownMessages: Partial<Record<FactKey, string>> = {
-  birth: "Datę urodzenia możesz sprawdzić w akcie urodzenia dziecka.",
-  dueDate: "Przewidywany termin porodu znajdziesz w karcie ciąży lub w zaświadczeniu od lekarza.",
-  basis:
-    "Ustaloną podstawę znajdziesz w dokumentach płacowych. Możesz też użyć stałej pensji z 12 pełnych miesięcy pracy na etacie, jeśli dotyczy Cię ten przypadek.",
-  insured:
-    "Stan ubezpieczenia jest nieustalony. Sprawdź poświadczenie ZUS, dane u płatnika albo konto eZUS na wskazany dzień.",
-  payer:
-    "Zapytaj pracodawcę lub płatnika składek, kto wypłaca zasiłek. Możesz też podać liczbę osób zgłoszonych do chorobowego na właściwy dzień.",
-};
-
-function unknownFactHint(key: FactKey) {
-  return (
-    unknownMessages[key] ?? "Możesz uzupełnić tę odpowiedź później lub na podstawie dokumentu."
-  );
-}
-
 export function isExpanded(tool: CaseTool): tool is ExpandedTool {
   return expandedTools.some((item) => item === tool);
 }
@@ -251,17 +234,6 @@ export function useParentWorkspace(uploadAllowed: boolean) {
     });
   }
 
-  function defer(turn: AssessmentTurn, text = "Nie wiem") {
-    update((previous) => {
-      if (!turn.question || getBenefitTurn(previous) !== turn) return previous;
-      return append(
-        previous,
-        { kind: "user", text, local: true },
-        { ...turn, deferred: true, text: unknownFactHint(turn.question.key) },
-      );
-    });
-  }
-
   function resume() {
     update(appendAssessment);
   }
@@ -360,14 +332,7 @@ export function useParentWorkspace(uploadAllowed: boolean) {
       }
       if (action.kind === "chooseBenefit") return askBenefit(previous, action.goal);
       if (action.kind === "unknownFact") {
-        const current = getBenefitTurn(previous);
-        return current?.kind === "assessment" && current.question
-          ? append(previous, {
-              ...current,
-              deferred: true,
-              text: unknownFactHint(current.question.key),
-            })
-          : append(previous, startingReply);
+        return appendMissingFactReply(previous, question);
       }
       return continueWithAssessment(previous, action);
     });
@@ -385,6 +350,22 @@ export function useParentWorkspace(uploadAllowed: boolean) {
     if (firstSteps) {
       update((previous) =>
         append(previous, { kind: "user", text }, { kind: "help", answer: firstSteps }),
+      );
+      return;
+    }
+    const latest = session.turns.at(-1);
+    const followUp = latest?.kind === "help" ? findHelpFollowUp(latest.answer, text) : undefined;
+    const knownHelp = followUp ?? findHelpAnswer(text);
+    const hasPrivateDocument = session.turns.some(
+      (turn) => turn.kind === "document" && turn.mode !== "demo",
+    );
+    if (knownHelp) {
+      update((previous) =>
+        append(
+          previous,
+          { kind: "user", text, local: hasPrivateDocument },
+          { kind: "help", answer: knownHelp },
+        ),
       );
       return;
     }
@@ -407,6 +388,12 @@ export function useParentWorkspace(uploadAllowed: boolean) {
       return;
     }
     if (benefitTurn?.kind === "assessment" && question) {
+      if (normalized === "nie wiem") {
+        update((previous) =>
+          appendMissingFactReply(append(previous, { kind: "user", text, local: true }), question),
+        );
+        return;
+      }
       const upcoming =
         question.key === "from" && session.family.facts.requestedDays !== undefined
           ? session.asOf
@@ -414,10 +401,6 @@ export function useParentWorkspace(uploadAllowed: boolean) {
       const facts = readFact(question.key, text, upcoming);
       if (facts && (!facts.birth || facts.birth <= session.asOf)) {
         confirm(benefitTurn, facts, { text });
-        return;
-      }
-      if (normalized === "nie wiem" && !benefitTurn.deferred) {
-        defer(benefitTurn, text);
         return;
       }
     }
@@ -447,15 +430,8 @@ export function useParentWorkspace(uploadAllowed: boolean) {
         return;
       }
     }
-    if (session.turns.some((turn) => turn.kind === "document" && turn.mode !== "demo")) {
-      const known = findHelpAnswer(text);
-      update((previous) =>
-        append(
-          previous,
-          { kind: "user", text, local: true },
-          known ? { kind: "help", answer: known } : unavailableReply,
-        ),
-      );
+    if (hasPrivateDocument) {
+      update((previous) => append(previous, { kind: "user", text, local: true }, unavailableReply));
       return;
     }
     const controller = new AbortController();
@@ -508,10 +484,7 @@ export function useParentWorkspace(uploadAllowed: boolean) {
       else applyAction(action.data);
       return;
     }
-    const known = findHelpAnswer(text);
-    update((previous) =>
-      append(previous, known ? { kind: "help", answer: known } : unavailableReply),
-    );
+    update((previous) => append(previous, unavailableReply));
   }
 
   return {
@@ -529,7 +502,6 @@ export function useParentWorkspace(uploadAllowed: boolean) {
     resolveProposal,
     confirm,
     correct,
-    defer,
     resume,
     open,
     load,
