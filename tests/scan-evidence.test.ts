@@ -114,6 +114,7 @@ test("data urodzenia wnioskodawcy nie jest datą dziecka, a podpisana data dziec
     "ZAO Wniosek o zasiłek macierzyński za okres urlopu ojcowskiego",
     "Twoje dane",
     "Data urodzenia: 01.01.2002",
+    "Dołącz odpis skrócony aktu urodzenia",
     "Wnioskowany okres od 02.11.2026 do 08.11.2026",
   ].join("\n");
   const proposals = (text: string) =>
@@ -125,7 +126,7 @@ test("data urodzenia wnioskodawcy nie jest datą dziecka, a podpisana data dziec
     { key: "birth", value: "2026-08-12", page: 1 },
   ]);
   const { fallback } = readScanPages([
-    { number: 1, text: "Odpis skrócony aktu urodzenia\nData urodzenia\n12.08.2026" },
+    { number: 1, text: "| Odpis skrócony aktu urodzenia\nData urodzenia\n12.08.2026" },
   ]);
   assert.deepEqual(fallback.candidates, [{ key: "birth", value: "2026-08-12", page: 1 }]);
 });
@@ -203,6 +204,13 @@ test("notatka o braku zgłoszenia wymaga zgodnego dnia, tytułu i sąsiadująceg
     coverage: { day: "2026-11-02", employment: "contract" },
   });
   assert.equal(insured(request, { ...reply, number: 5 }), undefined);
+  assert.equal(
+    insured(request, {
+      ...reply,
+      text: reply.text + "\nOsoba podlegała ubezpieczeniu chorobowemu w dniu 02.11.2026.",
+    }),
+    undefined,
+  );
   assert.equal(
     insured({ ...request, text: request.text.replace("Roszczenie o", "Wynagrodzenie za") }, reply),
     undefined,

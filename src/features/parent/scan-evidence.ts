@@ -139,7 +139,7 @@ function isContinuation(previous: ScanPage, current: ScanPage) {
 }
 
 export function isBirthRecord(text: string) {
-  return /\bodpis\b[^\n]{0,25}\baktu urodzenia\b/.test(text);
+  return /^[^\p{L}\p{N}\n]*odpis\b[^\n]{0,25}\baktu urodzenia\b/mu.test(text);
 }
 
 function birthOn(text: string, birthRecord = false) {
@@ -228,9 +228,9 @@ function scanReferences(
   });
 }
 
-function insuranceOn(text: string, day: string) {
-  if (!isCoverageReply(text)) return;
-  const statements = text.split("\n").flatMap((line) => {
+function coverageStatementsOn(text: string, day: string): boolean[] {
+  if (!isCoverageReply(text)) return [];
+  return text.split("\n").flatMap((line) => {
     const scope = line.match(/\b(?:w dniu|na dzien)\s+([^\n]+)/)?.[1];
     if (!scope || unique(datesIn(scope)) !== day) return [];
     if (
@@ -247,7 +247,6 @@ function insuranceOn(text: string, day: string) {
       return [true];
     return [];
   });
-  return unique(statements);
 }
 
 function noVoluntaryRegistrationOn(text: string, day: string) {
@@ -395,21 +394,18 @@ export function readScanPages(rawPages: ScanPage[]): {
             ? app.from
             : undefined;
       for (const { number, text } of pages) {
-        const employment = employmentOn(text);
         if (!day) continue;
-        const insured = employment ? insuranceOn(text, day) : undefined;
+        const statedEmployment = employmentOn(text);
         const absentRegistration =
-          (!employment || employment === "contract") &&
+          (!statedEmployment || statedEmployment === "contract") &&
           contractRequests.has(number - 1) &&
           noVoluntaryRegistrationOn(text, day);
-        if (absentRegistration && insured !== true) {
-          candidates.push({
-            key: "insured",
-            value: false,
-            page: number,
-            coverage: { day, employment: "contract" },
-          });
-        } else if (!absentRegistration && employment && insured !== undefined) {
+        const employment = absentRegistration ? "contract" : statedEmployment;
+        if (employment) {
+          const statements = coverageStatementsOn(text, day);
+          if (absentRegistration) statements.push(false);
+          const insured = unique(statements);
+          if (insured === undefined) continue;
           candidates.push({
             key: "insured",
             value: insured,

@@ -31,7 +31,7 @@ Po zalogowaniu profilem demo wybierz **Sprawdź sprawę z PDF-u** i otwórz plik
 
 Jeśli Mila rozpozna kilka wniosków, wybierz jeden okres. Gdy pola są nieczytelne, użyj **Strony do sprawdzenia ręcznie** i uzupełnij dane z podglądu. Przy pliku powyżej 30 stron aplikacja poprosi o wskazanie zakresu przed skanowaniem. Lokalny odczyt obsługuje pliki do 30 MB i przetwarza do 100 stron naraz. W tym trybie plik pozostaje w przeglądarce. Aplikacja pobiera pliki PDF.js i Tesseract.js z własnego serwera przy pierwszym odczycie.
 
-Czytelne rozstrzygnięcia znajdziesz w sekcji **Rozstrzygnięcia w PDF-ie** z odsyłaczem do strony źródłowej. Porównaj tam wynik dla tego samego świadczenia i okresu. Kalkulator ustala prawo na podstawie danych sprawy potwierdzonych w rozmowie.
+Czytelne rozstrzygnięcia znajdziesz w sekcji **Rozstrzygnięcia w PDF-ie** z odsyłaczem do strony źródłowej. Możesz porównać rozstrzygnięcie z wynikiem kalkulatora dla tego samego świadczenia i okresu. Kalkulator ustala prawo na podstawie danych sprawy potwierdzonych w rozmowie.
 
 ## Opcjonalne klucze
 
