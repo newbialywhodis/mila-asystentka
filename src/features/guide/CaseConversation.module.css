@@ -63,12 +63,12 @@
 
 .conversation[data-empty="true"] .scrollContent {
   display: grid;
-  grid-template-rows: minmax(var(--corner-clearance), 1fr) auto minmax(min-content, 1fr);
+  grid-template-rows: minmax(max-content, 1fr) auto minmax(0, 1fr);
+  block-size: 100%;
 }
 
 .conversation[data-empty="true"] .footer {
   position: static;
-  grid-row: 2;
   padding-block: 0;
   margin-block: 0;
   background: none;
@@ -76,6 +76,8 @@
 
 .emptyHeading {
   width: min(100%, calc(var(--guide-width) + 2 * var(--guide-inset)));
+  align-self: end;
+  padding-block-start: var(--corner-clearance);
   padding-inline: var(--guide-inset);
   margin: 0 auto var(--space-4);
   color: var(--ink);
@@ -89,10 +91,6 @@
 
 .conversation[data-empty="true"] .thread {
   display: none;
-}
-
-.conversation[data-empty="true"] .footer + section {
-  grid-row: 3;
 }
 
 .loginAction {

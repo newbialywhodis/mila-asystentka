@@ -201,8 +201,8 @@ export function CaseConversation({
               <ParentThread workspace={workspace} onChoosePdf={choosePdf} onPreview={showPreview} />
             </SetActionGazeContext>
           </div>
+          {isEmpty ? <h1 className={styles.emptyHeading}>Od czego dziś zaczniemy?</h1> : null}
           <footer ref={footer} className={styles.footer}>
-            {isEmpty ? <h1 className={styles.emptyHeading}>Od czego dziś zaczniemy?</h1> : null}
             <div className={styles.dock}>
               <ChatComposer
                 input={input}
