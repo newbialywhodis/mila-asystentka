@@ -155,6 +155,120 @@ test("ojcowski po przysposobieniu respektuje obydwa ograniczenia, a z pieczy mo�
     today,
   );
   assert.equal(adoption.period?.days, 147);
+  assert.equal(adoption.documents.find(({ form }) => form === "leave")?.deadline, "2026-11-08");
+});
+
+test("rehabilitacyjne w ciąży po ustaniu tytułu wymaga potwierdzenia warunków i jest wypłacane przez ZUS", () => {
+  const facts = {
+    ...employment,
+    from: "2026-09-01",
+    through: "2026-09-15",
+    insured: false,
+    employmentEnded: "2026-08-09",
+    sickDaysUsed: 182,
+    rehabMedical: true,
+    rehabUsed: 0,
+    pregnancyProof: true,
+  } satisfies CaseFacts;
+  assert.equal(assessBenefit("rehabilitation", facts, today).missing, "sickPeriodExhausted");
+  const complete = { ...facts, sickPeriodExhausted: true, rehabExcluded: false };
+  const result = assessBenefit("rehabilitation", complete, today);
+  assert.equal(result.status, "eligible");
+  assert.equal(result.payer, "zus");
+  assert.deepEqual(result.money, { basis: 600_000, daily: 20_000, total: 300_000 });
+  assert.ok(result.documents.some(({ title }) => title.startsWith("Z-10")));
+  assert.ok(result.documents.some(({ title }) => title.startsWith("OL-10")));
+  const indexed = assessBenefit(
+    "rehabilitation",
+    { ...complete, basis: undefined, rehabSickBasis: 600_000 },
+    today,
+  );
+  assert.deepEqual(indexed.money, { basis: 654_000, daily: 21_800, total: 327_000 });
+  assert.equal(
+    assessBenefit("rehabilitation", { ...complete, rehabExcluded: true }, today).status,
+    "ineligible",
+  );
+  assert.equal(
+    assessBenefit("rehabilitation", { ...complete, birth: "2026-09-11" }, today).missing,
+    "through",
+  );
+});
+
+test("art. 46 ogranicza podstawę po ustaniu ubezpieczenia osobno przed i po zmianie progu GUS", () => {
+  const facts = {
+    ...employment,
+    basis: 1_000_000,
+    insured: false,
+    employmentEnded: "2026-11-20",
+    illnessStart: "2026-11-18",
+    from: "2026-11-30",
+    through: "2026-12-01",
+    qualifying: true,
+    pregnancyProof: true,
+    postInsuranceExcluded: false,
+    sickDaysUsed: 12,
+  } satisfies CaseFacts;
+  const result = assessBenefit("sickness", facts, today);
+  assert.deepEqual(result.moneyParts, [
+    { from: "2026-11-30", through: "2026-11-30", days: 1, basis: 923_313, daily: 30_777 },
+    { from: "2026-12-01", through: "2026-12-01", days: 1, basis: 931_701, daily: 31_057 },
+  ]);
+  assert.equal(result.money?.total, 61_834);
+});
+
+test("uzupełniający po przyjęciu na wychowanie obejmuje tylko kwalifikujący pobyt po przyjęciu", () => {
+  const facts = {
+    ...employment,
+    ...family,
+    supplementCare: true,
+    careKind: "adoption",
+    careAccepted: "2026-03-12",
+    courtApplication: "2026-03-12",
+    maternityEnd: "2026-07-29",
+    from: "2026-07-30",
+    gestationalWeeks: 35,
+    birthWeightGrams: 2200,
+    hospitalRanges: "2026-03-03/2026-03-10, 2026-03-19/2026-03-26",
+  } satisfies CaseFacts;
+  const result = assessBenefit("supplement", facts, today);
+  assert.deepEqual(result.period, { from: "2026-07-30", through: "2026-08-12", days: 14 });
+  assert.equal(result.money?.total, 280_000);
+  assert.equal(result.documents.find(({ form }) => form === "leave")?.deadline, "2026-07-08");
+  assert.ok(result.documents.some(({ title }) => title.includes("przysposobienie")));
+  assert.equal(
+    assessBenefit("supplement", { ...facts, requestedDays: 7 }, today).missing,
+    "requestedDays",
+  );
+  assert.equal(
+    assessBenefit("supplement", { ...facts, hospitalRanges: "2026-03-03/2026-03-10" }, today)
+      .status,
+    "ineligible",
+  );
+  assert.equal(
+    assessBenefit("supplement", { ...facts, hospitalRanges: "2026-03-03/2026-03-26" }, today)
+      .status,
+    "review",
+  );
+});
+
+test("rodzicielski po pełnym macierzyńskim adopcyjnym ma granicę 14. urodzin pomimo pozostałej puli", () => {
+  const facts = {
+    ...parentalFacts,
+    birth: "2012-12-01",
+    careAccepted: "2026-04-01",
+    courtApplication: "2026-04-01",
+    careKind: "adoption",
+    maternityEnd: "2026-08-18",
+    from: "2026-11-24",
+    requestedDays: 7,
+  } satisfies CaseFacts;
+  const result = assessBenefit("careParental", facts, today);
+  assert.equal(result.period?.days, 7);
+  assert.equal(result.maximumDays, 224);
+  assert.equal(
+    assessBenefit("careParental", { ...facts, requestedDays: 8 }, today).status,
+    "ineligible",
+  );
 });
 
 test("pół etatu także w wydłużeniu daje dodatkowe 70 dni i 70 zł dziennie", () => {

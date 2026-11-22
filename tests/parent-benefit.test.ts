@@ -50,6 +50,7 @@ test("adopcja i piecza używają wieku, minimalnego wymiaru i dokumentu sądu", 
     birth: "2012-11-19",
     from: "2026-11-10",
     careKind: "adoption",
+    careAccepted: "2026-11-10",
     courtApplication: "2026-11-10",
     previousCareBenefit: false,
   };
@@ -96,6 +97,7 @@ test("rehabilitacyjne w ciąży używa ustalonej podstawy i wymaga orzeczenia", 
     sickDaysUsed: 270,
     pregnancyProof: true,
     rehabUsed: 0,
+    rehabExcluded: false,
   };
   assert.equal(assessBenefit("rehabilitation", facts, today).missing, "rehabMedical");
   assert.equal(
@@ -227,6 +229,7 @@ void describe("Ocena świadczenia rodzica", () => {
     const supplement = assessBenefit(
       "supplement",
       {
+        supplementCare: false,
         ...employed,
         from: "2026-04-20",
         gestationalWeeks: 30,

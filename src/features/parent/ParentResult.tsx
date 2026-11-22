@@ -141,7 +141,13 @@ export function ResultCard({
           {result.coverageDay && insured === undefined ? (
             <p>Dzień oceny ubezpieczenia: {formatDay(result.coverageDay)}.</p>
           ) : null}
-          {money && period ? (
+          {result.moneyParts?.map(({ from, through, basis, daily, days }) => (
+            <p key={from}>
+              {formatDay(from)} – {formatDay(through)}. Podstawa {moneyLabel(basis)}. Kwota dzienna{" "}
+              {moneyLabel(daily)} × {formatDays(days)}.
+            </p>
+          ))}
+          {money && period && !result.moneyParts ? (
             <p>
               Podstawa {moneyLabel(money.basis)}. Kwota dzienna {moneyLabel(money.daily)} ×{" "}
               {formatDays(period.days)}.
@@ -331,14 +337,20 @@ export function NextSteps({ benefit, result }: { benefit: Benefit; result: Benef
       ) : (
         <p>Uzupełnij dane świadczenia, żeby zobaczyć właściwe dokumenty.</p>
       )}
-      {steps.length && result.payer ? (
+      {steps.length ? (
         <p className={styles.muted}>
           {steps.some(({ form }) => form === "leave")
             ? "Wniosek o urlop złóż u pracodawcy w formie papierowej lub elektronicznej. "
             : ""}
-          {result.payer === "employer"
+          {steps.some(({ form, recipient }) => form === "benefit" && recipient === "ZUS")
+            ? "Wniosek do ZUS możesz złożyć przez eZUS, w placówce lub pocztą. "
+            : ""}
+          {result.payer === "employer" && benefit !== "rehabilitation"
             ? "Dokumenty do wypłaty złóż u płatnika wskazanego w wyniku."
-            : "Wniosek do ZUS możesz złożyć przez eZUS, w placówce lub pocztą. Zaświadczenie Z-3 albo Z-3a do ZUS przekazuje płatnik składek."}
+            : ""}
+          {benefit === "rehabilitation"
+            ? "ZUS zaleca złożyć wniosek co najmniej 6 tygodni przed końcem zasiłku chorobowego. Po ocenie medycznej ZUS wydaje decyzję i wskazuje płatnika."
+            : ""}
         </p>
       ) : null}
       {draftText ? (

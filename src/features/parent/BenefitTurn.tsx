@@ -271,6 +271,12 @@ function alternateField(key: FactKey, { session }: ParentWorkspace) {
       label: "Podaj liczbę zaliczonych dni",
       returnLabel: "Potwierdź wyczekiwanie ręcznie",
     } as const;
+  if (key === "basis" && session.benefit === "rehabilitation")
+    return {
+      key: "rehabSickBasis",
+      label: "Policz waloryzację z podstawy chorobowego",
+      returnLabel: "Podaj podstawę po waloryzacji",
+    } as const;
   if (
     key === "basis" &&
     session.benefit !== "rehabilitation" &&

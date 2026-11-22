@@ -53,6 +53,11 @@ export const fields: Record<FactKey, Field> = {
     question: "Jaki był ostatni dzień macierzyńskiego wraz z ewentualnym uzupełnieniem?",
     type: "date",
   },
+  supplementCare: {
+    label: "Uzupełniający macierzyński po przyjęciu dziecka",
+    question: "Czy sprawdzasz uzupełniający macierzyński po przyjęciu dziecka na wychowanie?",
+    options: yesNo,
+  },
   careKind: {
     label: "Tryb przyjęcia na wychowanie",
     question: "W jakim trybie dziecko przyjęto na wychowanie?",
@@ -110,10 +115,27 @@ export const fields: Record<FactKey, Field> = {
       "Czy lekarz orzecznik potwierdził dalszą niezdolność do pracy i rokowanie odzyskania zdolności do pracy?",
     options: yesNo,
   },
+  rehabExcluded: {
+    label: "Wyłączenia świadczenia rehabilitacyjnego",
+    question: "Czy dotyczy Cię któreś z wyłączeń świadczenia rehabilitacyjnego?",
+    hint: "Sprawdź emeryturę, rentę, zasiłek dla bezrobotnych, świadczenie lub zasiłek przedemerytalny, rodzicielskie świadczenie uzupełniające, świadczenie nauczycielskie i urlop dla poratowania zdrowia. Po ustaniu ubezpieczenia uwzględnij też wyłączenia z art. 13 ust. 1, np. nowy tytuł do chorobowego lub obowiązkowe ubezpieczenie rolnicze.",
+    options: yesNo,
+  },
   rehabUsed: {
     label: "Wykorzystane dni świadczenia rehabilitacyjnego",
     question: "Ile dni świadczenia rehabilitacyjnego już wykorzystano?",
     type: "number",
+  },
+  rehabSickBasis: {
+    label: "Podstawa poprzedzającego zasiłku chorobowego (zł)",
+    question:
+      "Jaka była miesięczna podstawa poprzedzającego zasiłku chorobowego? Podaj kwotę przed waloryzacją świadczenia rehabilitacyjnego.",
+    type: "money",
+  },
+  rehabStart: {
+    label: "Pierwszy dzień przyznanego świadczenia",
+    question: "Od którego dnia przyznano pierwszą część tego świadczenia rehabilitacyjnego?",
+    type: "date",
   },
   birth: {
     label: "Data urodzenia",
@@ -388,6 +410,12 @@ export const fields: Record<FactKey, Field> = {
     label: "Wykorzystane dni okresu zasiłkowego",
     question: "Ile dni okresu zasiłkowego wykorzystano przed tym zwolnieniem?",
     type: "number",
+  },
+  sickPeriodExhausted: {
+    label: "Potwierdzony koniec okresu zasiłkowego",
+    question:
+      "Czy płatnik lub ZUS potwierdził wyczerpanie przysługującego okresu zasiłkowego przed podanym początkiem?",
+    options: yesNo,
   },
   employerSickPayEnded: {
     label: "Koniec wynagrodzenia chorobowego",

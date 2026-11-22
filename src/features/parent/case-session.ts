@@ -107,6 +107,9 @@ export function selectBenefit(session: CaseSession, benefit: Benefit): CaseSessi
       documentDate: undefined,
       standardRate: undefined,
       averagedRequest: undefined,
+      ...(session.benefit === "rehabilitation" || benefit === "rehabilitation"
+        ? { basis: undefined, rehabSickBasis: undefined, rehabStart: undefined }
+        : {}),
     }),
   };
 }
@@ -132,6 +135,10 @@ export function saveFacts(session: CaseSession, facts: CaseFacts, sources?: Pare
   else if (patch.standardRate === true) patch.averagedRequest = undefined;
   if (patch.through !== undefined) patch.requestedDays = undefined;
   else if (patch.requestedDays !== undefined) patch.through = undefined;
+  if (session.benefit === "rehabilitation") {
+    if (patch.basis !== undefined) patch.rehabSickBasis = undefined;
+    else if (patch.rehabSickBasis !== undefined) patch.basis = undefined;
+  }
 
   const stageChanged =
     stage !== undefined && previousStage !== undefined && stage !== previousStage;
@@ -194,6 +201,8 @@ export function saveFacts(session: CaseSession, facts: CaseFacts, sources?: Pare
       "debtPaid",
       "basis",
       "fixedSalary",
+      "rehabSickBasis",
+      "rehabStart",
     ] as const) {
       if (!(key in patch)) patch[key] = undefined;
     }
@@ -289,6 +298,15 @@ function questionText(key: FactKey, result: BenefitResult, session: CaseSession)
     return result.projected || result.coverageDay > session.asOf
       ? `Czy zakładasz, że ${date} będziesz mieć ubezpieczenie chorobowe?`
       : `Czy ${date} obejmowało Cię ubezpieczenie chorobowe?`;
+  }
+  if (key === "basis" && session.benefit === "rehabilitation") {
+    return "Jaka jest podstawa świadczenia rehabilitacyjnego ustalona przez płatnika, po uwzględnieniu ewentualnej waloryzacji?";
+  }
+  if (key === "employmentEnded" && session.benefit === "rehabilitation") {
+    return "Jaki był ostatni dzień ubezpieczenia chorobowego z tego tytułu?";
+  }
+  if (key === "maternityEnd" && session.benefit === "supplement") {
+    return "Jaki jest ostatni dzień macierzyńskiego albo urlopu na warunkach macierzyńskiego, po którym ma się zacząć uzupełniający?";
   }
   if (result.projected) {
     if (key === "children") return "Ilu dzieci się spodziewasz?";
