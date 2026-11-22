@@ -50,6 +50,7 @@ test("adopcja i piecza używają wieku, minimalnego wymiaru i dokumentu sądu", 
     birth: "2012-11-19",
     from: "2026-11-10",
     careKind: "adoption",
+    careAccepted: "2026-11-10",
     courtApplication: "2026-11-10",
     previousCareBenefit: false,
   };
@@ -75,7 +76,11 @@ test("adopcja i piecza używają wieku, minimalnego wymiaru i dokumentu sądu", 
 });
 
 test("po pojedynczym martwym urodzeniu liczy 56 dni i wskazuje odpowiedni dowód", () => {
-  const result = assessBenefit("lossMaternity", { ...employed, birth: "2026-11-12" }, today);
+  const result = assessBenefit(
+    "lossMaternity",
+    { ...employed, birth: "2026-11-12", childDeath: "2026-11-12" },
+    today,
+  );
   assert.equal(result.period?.days, 56);
   assert.equal(result.rate, 10_000);
   assert.ok(result.documents.some(({ title }) => title.includes("martwe urodzenie")));
@@ -92,6 +97,7 @@ test("rehabilitacyjne w ciąży używa ustalonej podstawy i wymaga orzeczenia", 
     sickDaysUsed: 270,
     pregnancyProof: true,
     rehabUsed: 0,
+    rehabExcluded: false,
   };
   assert.equal(assessBenefit("rehabilitation", facts, today).missing, "rehabMedical");
   assert.equal(
@@ -223,6 +229,7 @@ void describe("Ocena świadczenia rodzica", () => {
     const supplement = assessBenefit(
       "supplement",
       {
+        supplementCare: false,
         ...employed,
         from: "2026-04-20",
         gestationalWeeks: 30,
@@ -291,7 +298,7 @@ void describe("Ocena świadczenia rodzica", () => {
     assert.equal(benefitMoney(600_000, 8150, 10).total, 163_000);
   });
 
-  test("za 35 dni wydłużenia zachowuje stawkę dzienną z okresu pracy na pół etatu", () => {
+  test("za 35 dni wydłużenia bez pracy wypłaca pełną stawkę 70% (komentarz ZUS, pkt 182)", () => {
     const plans = compareParentalPlans(
       { ...employed, ...history },
       {
@@ -299,6 +306,9 @@ void describe("Ocena świadczenia rodzica", () => {
         weeks: 10,
         otherWeeks: 9,
         otherBasis: 450_000,
+        otherEmployment: "employee",
+        otherInsured: true,
+        employmentPercent: 100,
         together: true,
         workPercent: 50,
       },
@@ -310,7 +320,8 @@ void describe("Ocena świadczenia rodzica", () => {
     assert.equal(plans?.adjusted.first.extensionDays, 35);
     assert.equal(plans?.adjusted.second.money?.total, 661_500);
     assert.equal(plans?.adjusted.second.period?.from, "2026-04-20");
-    assert.equal(plans?.adjusted.firstTotal, 735_000);
+    assert.equal(plans?.adjusted.first.extension?.money?.daily, 14_000);
+    assert.equal(plans?.adjusted.firstTotal, 980_000);
   });
 
   test("chorobowe w ciąży wymaga potwierdzenia i respektuje pozostałe dni", () => {

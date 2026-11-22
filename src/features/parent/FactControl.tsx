@@ -18,14 +18,18 @@ type GuidedControl = {
 
 export function FactControl({
   fact,
+  label,
   onSave,
   today = warsawToday(),
   guided,
+  childrenCount,
 }: {
   fact: FactKey;
+  label?: string;
   onSave: (facts: CaseFacts) => void;
   today?: string;
   guided?: GuidedControl;
+  childrenCount?: number;
 }) {
   const id = useId();
   const [value, setValue] = useState(() => factInputValue(fact, guided?.initialValue));
@@ -61,6 +65,54 @@ export function FactControl({
     if (!guided) setValue("");
   }
 
+  if (fact === "careChildren") {
+    const previous = Array.isArray(guided?.initialValue) ? guided.initialValue : [];
+    const count = childrenCount ?? previous.length;
+    if (count < 2) return <p>Najpierw podaj liczbę przyjętych dzieci.</p>;
+    return (
+      <form
+        className={styles.children}
+        onSubmit={(event) => {
+          event.preventDefault();
+          const form = new FormData(event.currentTarget);
+          const children = Array.from({ length: count }, (_, index) => ({
+            birth: form.get("birth" + index),
+            schoolDeferral: form.has("deferral" + index),
+          }));
+          const facts = validateFact("careChildren", children);
+          if (facts) onSave(facts);
+        }}
+      >
+        {Array.from({ length: count }, (_, index) => (
+          <fieldset key={index} className={styles.children}>
+            <legend>Dziecko {index + 1}</legend>
+            <label className={styles.field}>
+              Data urodzenia
+              <input
+                className={styles.input}
+                type="date"
+                required
+                max={today}
+                name={"birth" + index}
+                defaultValue={previous[index]?.birth}
+              />
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                name={"deferral" + index}
+                defaultChecked={previous[index]?.schoolDeferral}
+              />{" "}
+              Ma odroczony obowiązek szkolny
+            </label>
+          </fieldset>
+        ))}
+        <Button type="submit" variant="brand" size="sm">
+          {guided?.submitLabel ?? "Potwierdź daty"}
+        </Button>
+      </form>
+    );
+  }
   if (field.options) {
     function choose(value: string | boolean) {
       const facts = validateFact(fact, value);
@@ -72,7 +124,11 @@ export function FactControl({
         <SingleChoice
           options={field.options}
           labelledBy={guided.promptId}
-          selected={typeof initialValue === "number" ? undefined : initialValue}
+          selected={
+            typeof initialValue === "string" || typeof initialValue === "boolean"
+              ? initialValue
+              : undefined
+          }
           onAnswer={choose}
         />
       );
@@ -96,7 +152,7 @@ export function FactControl({
   return (
     <form onSubmit={submit} className={styles.inline} noValidate>
       <div className={styles.field}>
-        <label htmlFor={id}>{field.label}</label>
+        <label htmlFor={id}>{label ?? field.label}</label>
         {field.type === "date" ? (
           <DatePicker
             id={id}
@@ -113,7 +169,9 @@ export function FactControl({
           <input
             id={id}
             className={styles.input}
-            inputMode={field.type === "money" ? "decimal" : "numeric"}
+            inputMode={
+              field.type === "money" ? "decimal" : field.type === "text" ? "text" : "numeric"
+            }
             value={value}
             onChange={(event) => change(event.currentTarget.value)}
             aria-invalid={Boolean(error) || undefined}

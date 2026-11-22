@@ -8,7 +8,7 @@ type Field = {
   label: string;
   question: string;
   hint?: string;
-  type?: "date" | "money" | "number";
+  type?: "date" | "money" | "number" | "text";
   options?: Choice[];
 };
 const yesNo = [
@@ -23,6 +23,7 @@ export const fields: Record<FactKey, Field> = {
     options: [
       { value: "born", label: "Już się urodziło" },
       { value: "expected", label: "Jeszcze nie" },
+      { value: "expectedEarly", label: "Jeszcze nie, chcę zacząć macierzyński przed porodem" },
     ],
   },
   dueDate: {
@@ -30,6 +31,32 @@ export const fields: Record<FactKey, Field> = {
     question: "Jaki jest przewidywany termin porodu?",
     hint: "Od tego dnia oszacuję okres zasiłku. Po porodzie możesz wpisać rzeczywistą datę.",
     type: "date",
+  },
+  certifiedDueDate: {
+    label: "Termin porodu z zaświadczenia",
+    question:
+      "Jaki przewidywany termin porodu widniał na zaświadczeniu przy wcześniejszym rozpoczęciu macierzyńskiego?",
+    type: "date",
+  },
+  childDeath: {
+    label: "Data śmierci dziecka",
+    question: "Kiedy zmarło dziecko? Przy martwym urodzeniu podaj dzień porodu.",
+    type: "date",
+  },
+  survivingChildren: {
+    label: "Dzieci pozostałe przy życiu",
+    question: "Ile dzieci z tego porodu pozostało przy życiu?",
+    type: "number",
+  },
+  maternityEnd: {
+    label: "Koniec macierzyńskiego",
+    question: "Jaki był ostatni dzień macierzyńskiego wraz z ewentualnym uzupełnieniem?",
+    type: "date",
+  },
+  supplementCare: {
+    label: "Uzupełniający macierzyński po przyjęciu dziecka",
+    question: "Czy sprawdzasz uzupełniający macierzyński po przyjęciu dziecka na wychowanie?",
+    options: yesNo,
   },
   careKind: {
     label: "Tryb przyjęcia na wychowanie",
@@ -44,6 +71,33 @@ export const fields: Record<FactKey, Field> = {
     label: "Zasiłek wykorzystany wcześniej po przyjęciu dziecka",
     question: "Czy wcześniej pobierano już ten zasiłek na dziecko przyjęte na wychowanie?",
     options: yesNo,
+  },
+  previousCareDays: {
+    label: "Dni wykorzystane wcześniej w pieczy",
+    question:
+      "Ile dni zasiłku na warunkach macierzyńskiego już wykorzystano w pieczy na te dzieci?",
+    type: "number",
+  },
+  adoptionFinal: {
+    label: "Prawomocność orzeczenia o przysposobieniu",
+    question: "Kiedy uprawomocniło się postanowienie o przysposobieniu dziecka?",
+    type: "date",
+  },
+  careAccepted: {
+    label: "Data przyjęcia na wychowanie",
+    question: "Kiedy przyjęto dziecko lub dzieci na wychowanie?",
+    type: "date",
+  },
+  sameCareAgeLimit: {
+    label: "Wspólna granica wieku",
+    question:
+      "Czy wszystkie przyjęte dzieci mają tę samą datę urodzenia i ten sam status odroczenia obowiązku szkolnego?",
+    options: yesNo,
+  },
+  careChildren: {
+    label: "Daty urodzenia przyjętych dzieci",
+    question:
+      "Podaj datę urodzenia każdego przyjętego dziecka i zaznacz odroczenie obowiązku szkolnego, jeżeli dotyczy.",
   },
   courtApplication: {
     label: "Data wniosku do sądu o przysposobienie",
@@ -61,10 +115,27 @@ export const fields: Record<FactKey, Field> = {
       "Czy lekarz orzecznik potwierdził dalszą niezdolność do pracy i rokowanie odzyskania zdolności do pracy?",
     options: yesNo,
   },
+  rehabExcluded: {
+    label: "Wyłączenia świadczenia rehabilitacyjnego",
+    question: "Czy dotyczy Cię któreś z wyłączeń świadczenia rehabilitacyjnego?",
+    hint: "Sprawdź emeryturę, rentę, zasiłek dla bezrobotnych, świadczenie lub zasiłek przedemerytalny, rodzicielskie świadczenie uzupełniające, świadczenie nauczycielskie i urlop dla poratowania zdrowia. Po ustaniu ubezpieczenia uwzględnij też wyłączenia z art. 13 ust. 1, np. nowy tytuł do chorobowego lub obowiązkowe ubezpieczenie rolnicze.",
+    options: yesNo,
+  },
   rehabUsed: {
     label: "Wykorzystane dni świadczenia rehabilitacyjnego",
     question: "Ile dni świadczenia rehabilitacyjnego już wykorzystano?",
     type: "number",
+  },
+  rehabSickBasis: {
+    label: "Podstawa poprzedzającego zasiłku chorobowego (zł)",
+    question:
+      "Jaka była miesięczna podstawa poprzedzającego zasiłku chorobowego? Podaj kwotę przed waloryzacją świadczenia rehabilitacyjnego.",
+    type: "money",
+  },
+  rehabStart: {
+    label: "Pierwszy dzień przyznanego świadczenia",
+    question: "Od którego dnia przyznano pierwszą część tego świadczenia rehabilitacyjnego?",
+    type: "date",
   },
   birth: {
     label: "Data urodzenia",
@@ -102,6 +173,80 @@ export const fields: Record<FactKey, Field> = {
     question:
       "Czy umowa skończyła się w związku z likwidacją, upadłością lub śmiercią pracodawcy, przedłużeniem do dnia porodu albo bezprawnym rozwiązaniem?",
     options: yesNo,
+  },
+  termination: {
+    label: "Powód ustania zatrudnienia",
+    question: "Z jakiego powodu ustała umowa o pracę?",
+    options: [
+      { value: "employerClosed", label: "Śmierć, upadłość lub likwidacja pracodawcy" },
+      { value: "unlawful", label: "Naruszenie prawa potwierdzone prawomocnym wyrokiem" },
+      { value: "extended", label: "Umowa przedłużona do dnia porodu" },
+      { value: "ordinary", label: "Inny powód" },
+    ],
+  },
+  employmentEnded: {
+    label: "Ostatni dzień zatrudnienia",
+    question: "Jaki był ostatni dzień zatrudnienia?",
+    type: "date",
+  },
+  alternativeEmployment: {
+    label: "Zapewnienie innego zatrudnienia",
+    question: "Czy zapewniono Ci inne zatrudnienie?",
+    options: yesNo,
+  },
+  transferReason: {
+    label: "Powód przejęcia opieki",
+    question: "Dlaczego ojciec ma przejąć opiekę?",
+    options: [
+      { value: "return", label: "Matka rezygnuje z dalszej części" },
+      { value: "hospital", label: "Pobyt matki w szpitalu uniemożliwiający opiekę" },
+      { value: "incapacity", label: "Orzeczona niezdolność matki do samodzielnej egzystencji" },
+      { value: "death", label: "Śmierć matki" },
+      { value: "abandonment", label: "Porzucenie dziecka przez matkę" },
+      { value: "newEmployment", label: "Matka bez tytułu do ubezpieczenia podejmuje pracę" },
+    ],
+  },
+  motherDaysBeforeBirth: {
+    label: "Dni macierzyńskiego matki przed porodem",
+    question:
+      "Ile dni macierzyńskiego matka wykorzystała przed porodem? Wpisz 0, jeśli zaczęła w dniu porodu.",
+    type: "number",
+  },
+  motherInsured: {
+    label: "Ubezpieczenie chorobowe matki",
+    question: "Czy matka była objęta ubezpieczeniem chorobowym i korzystała z macierzyńskiego?",
+    options: yesNo,
+  },
+  motherDaysAfterBirth: {
+    label: "Dni macierzyńskiego matki po porodzie",
+    question: "Ile dni macierzyńskiego matka wykorzystała po porodzie do dnia przed przejęciem?",
+    type: "number",
+  },
+  transferEvent: {
+    label: "Data zdarzenia dotyczącego matki",
+    question: "Kiedy nastąpiło zdarzenie będące powodem przejęcia opieki?",
+    type: "date",
+  },
+  transferThrough: {
+    label: "Ostatni dzień hospitalizacji matki",
+    question: "Do którego dnia pobyt matki w szpitalu uniemożliwia jej opiekę nad dzieckiem?",
+    type: "date",
+  },
+  personalCare: {
+    label: "Osobista opieka nad dzieckiem",
+    question:
+      "Czy ojciec sprawuje osobistą opiekę w tym okresie i korzysta z urlopu lub przerwał działalność zarobkową?",
+    options: yesNo,
+  },
+  motherJobPercent: {
+    label: "Wymiar nowego etatu matki (%)",
+    question: "Jaki procent pełnego etatu wynosi nowe zatrudnienie matki?",
+    type: "number",
+  },
+  motherJobEnds: {
+    label: "Ostatni dzień nowego zatrudnienia matki",
+    question: "Kiedy kończy się nowe zatrudnienie matki, jeśli data jest już znana?",
+    type: "date",
   },
   children: {
     label: "Liczba urodzonych dzieci",
@@ -178,6 +323,12 @@ export const fields: Record<FactKey, Field> = {
     question: "Kiedy złożono wniosek o wypłatę w wysokości 81,5%?",
     type: "date",
   },
+  parentalInFirstYear: {
+    label: "Rodzicielski w pierwszym roku",
+    question:
+      "Czy w pierwszym roku życia dziecka wykorzystano przynajmniej jeden dzień rodzicielskiego rozliczony po stawce 81,5%?",
+    options: yesNo,
+  },
   standardRate: {
     label: "Stawka podstawowa",
     question: "Czy stosujemy podstawową stawkę, bez wniosku o uśrednienie?",
@@ -204,11 +355,51 @@ export const fields: Record<FactKey, Field> = {
       "Ile procent pełnego etatu wynosi Twój zwykły wymiar pracy? Dla pełnego etatu wpisz 100.",
     type: "number",
   },
+  extensionWorkPercent: {
+    label: "Wymiar pracy w wydłużeniu (%)",
+    question:
+      "Jaki procent pełnego etatu planujesz przepracować w wydłużonej części? Wpisz 0, jeśli cały ten okres będzie bez pracy.",
+    type: "number",
+  },
   qualifying: {
     label: "Okres wyczekiwania spełniony",
     question:
       "Czy upłynął Twój okres wyczekiwania lub masz potwierdzony wyjątek? Zwykle wynosi 30 dni przy obowiązkowym chorobowym i 90 dni przy dobrowolnym.",
     options: yesNo,
+  },
+  qualifyingDays: {
+    label: "Zaliczone dni chorobowego",
+    question:
+      "Ile dni chorobowego upłynęło przed pierwszym dniem zasiłku? Dolicz poprzednie okresy zaliczane do wyczekiwania.",
+    type: "number",
+  },
+  waitingException: {
+    label: "Wyjątek od wyczekiwania",
+    question:
+      "Czy płatnik lub ZUS potwierdził wyjątek dający prawo bez wyczekiwania, np. 10 lat obowiązkowego chorobowego?",
+    options: yesNo,
+  },
+  illnessStart: {
+    label: "Pierwszy dzień ciągłej niezdolności",
+    question: "Od jakiego dnia trwa nieprzerwana niezdolność do pracy objęta zwolnieniem?",
+    type: "date",
+  },
+  postInsuranceExcluded: {
+    label: "Wyłączenia po ustaniu ubezpieczenia",
+    question:
+      "Czy masz emeryturę, rentę, zasiłek dla bezrobotnych lub przedemerytalny, inne prawo do świadczeń chorobowych albo nowy tytuł do chorobowego? Uwzględnij też obowiązkowe ubezpieczenie rolnicze i inne wyłączenia z art. 13.",
+    options: yesNo,
+  },
+  lateOnsetCode: {
+    label: "Kod E na e-ZLA",
+    question: "Czy lekarz oznaczył chorobę o późnym ujawnieniu na e-ZLA kodem E?",
+    options: yesNo,
+  },
+  sickPayDaysRemaining: {
+    label: "Pozostałe dni wynagrodzenia chorobowego",
+    question:
+      "Ile dni wynagrodzenia chorobowego od pracodawcy pozostało od początku podanego okresu? Roczny limit to zwykle 33 dni, a od roku po 50. urodzinach 14 dni.",
+    type: "number",
   },
   pregnancyProof: {
     label: "Potwierdzenie ciąży",
@@ -219,6 +410,12 @@ export const fields: Record<FactKey, Field> = {
     label: "Wykorzystane dni okresu zasiłkowego",
     question: "Ile dni okresu zasiłkowego wykorzystano przed tym zwolnieniem?",
     type: "number",
+  },
+  sickPeriodExhausted: {
+    label: "Potwierdzony koniec okresu zasiłkowego",
+    question:
+      "Czy płatnik lub ZUS potwierdził wyczerpanie przysługującego okresu zasiłkowego przed podanym początkiem?",
+    options: yesNo,
   },
   employerSickPayEnded: {
     label: "Koniec wynagrodzenia chorobowego",
@@ -250,6 +447,18 @@ export const fields: Record<FactKey, Field> = {
     label: "Data złożenia wniosku",
     question: "Kiedy złożono wniosek?",
     type: "date",
+  },
+  hospitalRanges: {
+    label: "Okresy hospitalizacji",
+    question: "Jakie były kolejne okresy pobytu dziecka w szpitalu?",
+    hint: "Wpisz np. 2026-04-01/2026-04-03, 2026-04-12/2026-04-18. Podaj pierwszy i ostatni dzień każdego pobytu.",
+    type: "text",
+  },
+  combinedHospitalEvidence: {
+    label: "Dokumenty z porodu mnogiego",
+    question:
+      "Czy masz zaświadczenia z najniższą masą urodzeniową i pobytami najdłużej hospitalizowanego dziecka?",
+    options: yesNo,
   },
 };
 
@@ -308,6 +517,7 @@ export function readCaseDate(text: string, upcomingFrom?: string) {
 export function readFact(key: FactKey, input: string, upcomingFrom?: string) {
   const field = fields[key];
   const text = normalizeGuideText(input).replace(/[.!]$/, "");
+  if (field.type === "text") return validateFact(key, text);
   if (field.options) {
     const match = field.options.find(({ label }) => normalizeGuideText(label) === text);
     if (match) return validateFact(key, match.value);
@@ -357,6 +567,7 @@ export function readFact(key: FactKey, input: string, upcomingFrom?: string) {
 }
 
 export function factValue(key: FactKey, value: NonNullable<CaseFacts[FactKey]>) {
+  if (Array.isArray(value)) return value.map(({ birth }) => formatDay(birth)).join(", ");
   const field = fields[key];
   if (field.options)
     return field.options.find((option) => option.value === value)?.label ?? String(value);

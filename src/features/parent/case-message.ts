@@ -3,7 +3,7 @@ import { benefits, casePatchSchema } from "../../engine/parent-case";
 import type { Benefit, CaseFacts, FactKey } from "../../engine/parent-case";
 import { normalizeGuideText } from "../guide/textInput";
 import { periodLengthPattern, readCaseDate, readPeriodLength } from "./case-fields";
-import type { CaseGoal } from "./parent-intent";
+import type { CaseAction, CaseGoal } from "./parent-intent";
 
 export type CaseRequest = { benefit: Benefit; goal?: CaseGoal; facts: CaseFacts };
 type CaseContext = { asOf: string; benefit?: Benefit | null; pending?: FactKey };
@@ -20,13 +20,21 @@ const personalQuestionLead =
 const benefitNames: Record<Benefit, RegExp> = {
   maternity: /^macierzynsk(?:i|iego|im|ie)$/,
   paternity: /^ojcowsk(?:i|iego|im|ie)$/,
+  adoptivePaternity: /^ojcowsk(?:i|iego|im|ie) po (?:adopcji|przysposobieniu)$/,
   parental: /^rodzicielsk(?:i|iego|im|ie)$/,
   supplement: /^uzupelniajac(?:y|ego|ym|e) (?:urlop(?:u|ie)? )?macierzynsk(?:i|iego|im|ie)$/,
   sickness: /^(?:chorobow(?:y|ego|ym|e)|l-?4|zwolnieni(?:e|u)(?: lekarski(?:e|m))?) w ciazy$/,
   rehabilitation: /^(?:swiadczeni(?:e|a|u) )?rehabilitacyjn(?:e|ego|ym)(?: w ciazy)?$/,
+  pregnancyAfterEmployment:
+    /^(?:w wysokosci (?:zasilku )?macierzynskiego(?: do porodu)?|macierzynsk(?:i|iego) do porodu|(?:w ciazy )?po (?:utracie|ustaniu) zatrudnienia)$/,
+  maternityTransfer:
+    /^(?:przejeci(?:e|a) macierzynskiego(?: przez ojca)?|macierzynsk(?:i|iego) dla ojca)$/,
   careMaternity:
     /^(?:adopcyjn(?:y|ego|ym|e)|(?:macierzynsk(?:i|iego|im|ie) )?po (?:adopcji|przysposobieniu|przyjeciu dziecka na wychowanie))$/,
-  lossMaternity: /^(?:macierzynsk(?:i|iego|im|ie) )?po martwym urodzeniu$/,
+  careParental:
+    /^rodzicielsk(?:i|iego|im|ie) po (?:adopcji|przysposobieniu|przyjeciu dziecka na wychowanie)$/,
+  lossMaternity:
+    /^(?:macierzynsk(?:i|iego|im|ie) )?po (?:martwym urodzeniu|stracie dziecka|smierci dziecka)$/,
 };
 
 const dateLiteral =
@@ -36,7 +44,34 @@ const lengthAtStart = new RegExp(
   "^(?:za |na |o |przez )?(?:kolejny |kolejne )?(" + periodLengthPattern + ")(?: |$)",
 );
 const lengthAtEnd = new RegExp("(?:^| )(?:na |przez |za )?(" + periodLengthPattern + ")$");
-const needsPeriod = new Set<Benefit>(["paternity", "parental", "sickness", "rehabilitation"]);
+const needsPeriod = new Set<Benefit>([
+  "paternity",
+  "adoptivePaternity",
+  "parental",
+  "careParental",
+  "sickness",
+  "rehabilitation",
+]);
+
+export const careComparisonLabel = "Praca na urlopie rodzicielskim";
+
+export function readCareComparison(
+  input: string,
+): Extract<CaseAction, { kind: "compareCare" }> | undefined {
+  const text = normalizeGuideText(input).replace(/[.!?]+$/, "");
+  if (
+    text === normalizeGuideText(careComparisonLabel) ||
+    text === "porownaj warianty opieki" ||
+    /^jak (?:(?:mamy|mozemy) )?podzielic (?:urlop )?rodzicielski$/.test(text)
+  )
+    return { kind: "compareCare", workPercent: null };
+
+  const work = text.match(
+    /^(?:(?:co sie zmieni|co bedzie|jak zmieni sie (?:zasilek|urlop))[,]? )?(?:(?:a )?jesli |gdy )?(?:wroce|pracuje|bede pracowac) na (pol|cwierc|1\/2|1\/4|½|¼) etatu (?:w trakcie|podczas|na) (?:urlopu? )?rodzicielsk(?:iego|im)$/,
+  );
+  if (work)
+    return { kind: "compareCare", workPercent: ["pol", "1/2", "½"].includes(work[1]) ? 50 : 25 };
+}
 
 export function readCaseRequest(input: string, context: CaseContext): CaseRequest | undefined {
   const text = normalizeGuideText(input)

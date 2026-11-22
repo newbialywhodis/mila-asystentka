@@ -7,7 +7,9 @@ import { MilaMessage } from "../guide/ThreadMessage";
 import { fields } from "./case-fields";
 import type { AssessmentTurn, BenefitChoice, CaseQuestion } from "./case-session";
 import { FactControl } from "./FactControl";
-import { NextSteps, ResultCard } from "./ParentResult";
+import { ContributionBasisForm } from "./ContributionBasisForm";
+import { PayrollBasisForm } from "./PayrollBasisForm";
+import { assessmentCopyText, NextSteps, ResultCard } from "./ParentResult";
 import type { ParentWorkspace } from "./useParentWorkspace";
 import styles from "./ParentCard.module.css";
 
@@ -71,6 +73,11 @@ export function BenefitAssessment({
     : !deferred || Boolean(result.period);
   const hint = pending ? question.hint : undefined;
   const hintId = hint ? promptId + "-hint" : undefined;
+  const speechText = hint ? text + "\n\n" + hint : text;
+  const copyText =
+    documents || showResult
+      ? assessmentCopyText(speechText, benefit, result, documents)
+      : speechText;
 
   const smartComponents =
     active || documents || showResult ? (
@@ -119,8 +126,8 @@ export function BenefitAssessment({
               </Button>
             ) : null}
             {!deferred && result.status === "eligible" && !result.projected ? (
-              <Button size="sm" variant="outline" onClick={() => workspace.setExpanded("plan")}>
-                Porównaj warianty opieki
+              <Button size="sm" variant="outline" onClick={() => workspace.compareCare()}>
+                Co zmieni powrót do pracy?
               </Button>
             ) : null}
             {!deferred && Object.keys(session.family.facts).length ? (
@@ -143,7 +150,7 @@ export function BenefitAssessment({
     ) : null;
 
   return (
-    <MilaMessage copyText={hint ? text + "\n\n" + hint : text} smartComponents={smartComponents}>
+    <MilaMessage copyText={copyText} speechText={speechText} smartComponents={smartComponents}>
       <p id={promptId} tabIndex={-1} data-chat-focus aria-describedby={hintId}>
         {text}
       </p>
@@ -176,6 +183,29 @@ function FactAnswer({
   const [useAlternate, setUseAlternate] = useState(
     () => alternate && facts[alternate.key] !== undefined && facts[key] === undefined,
   );
+  const [payroll, setPayroll] = useState(false);
+  const canUsePayroll =
+    key === "basis" && facts.employment === "employee" && session.benefit !== "rehabilitation";
+  const canUseContributions =
+    key === "basis" &&
+    facts.employment !== undefined &&
+    facts.employment !== "employee" &&
+    session.benefit !== "rehabilitation";
+  if (payroll && (canUsePayroll || canUseContributions)) {
+    const onUse = (basis: number) => workspace.confirm(turn, { basis });
+    return (
+      <>
+        {canUsePayroll ? (
+          <PayrollBasisForm onUse={onUse} />
+        ) : (
+          <ContributionBasisForm allowsDeclared={facts.employment !== "contract"} onUse={onUse} />
+        )}
+        <Button size="sm" variant="ghost" onClick={() => setPayroll(false)}>
+          Wróć do wpisania kwoty
+        </Button>
+      </>
+    );
+  }
   const field = useAlternate && alternate ? alternate.key : key;
   const alternateId = field !== key ? promptId + "-alternate" : undefined;
   const simulateService =
@@ -187,6 +217,7 @@ function FactAnswer({
       <FactControl
         key={field}
         fact={field}
+        childrenCount={facts.children}
         today={session.asOf}
         onSave={(facts) => workspace.confirm(turn, facts)}
         guided={{
@@ -198,6 +229,16 @@ function FactAnswer({
       />
       {key !== "birthStage" ? (
         <div className={styles.actions}>
+          {canUsePayroll ? (
+            <Button size="sm" variant="outline" onClick={() => setPayroll(true)}>
+              Policz z listy płac
+            </Button>
+          ) : null}
+          {canUseContributions ? (
+            <Button size="sm" variant="outline" onClick={() => setPayroll(true)}>
+              Policz z danych o składkach
+            </Button>
+          ) : null}
           {alternate ? (
             <Button size="sm" variant="outline" onClick={() => setUseAlternate(!useAlternate)}>
               {useAlternate ? alternate.returnLabel : alternate.label}
@@ -218,6 +259,24 @@ function FactAnswer({
 }
 
 function alternateField(key: FactKey, { session }: ParentWorkspace) {
+  if (key === "hospitalFrom" && session.benefit === "supplement")
+    return {
+      key: "hospitalRanges",
+      label: "Podaj kilka okresów pobytu",
+      returnLabel: "Podaj jeden okres",
+    } as const;
+  if (key === "qualifying")
+    return {
+      key: "qualifyingDays",
+      label: "Podaj liczbę zaliczonych dni",
+      returnLabel: "Potwierdź wyczekiwanie ręcznie",
+    } as const;
+  if (key === "basis" && session.benefit === "rehabilitation")
+    return {
+      key: "rehabSickBasis",
+      label: "Policz waloryzację z podstawy chorobowego",
+      returnLabel: "Podaj podstawę po waloryzacji",
+    } as const;
   if (
     key === "basis" &&
     session.benefit !== "rehabilitation" &&

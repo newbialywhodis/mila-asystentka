@@ -7,7 +7,7 @@ import { parseStartTopics, topicChatHref } from "../../features/guide/startTopic
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Rozmowa z Milą — Twój plan",
+  title: "Rozmowa z Milą - Twój plan",
   description: "Odpowiedz na krótkie pytania i ułóż plan świadczeń, terminów i formalności.",
 };
 

@@ -7,10 +7,20 @@ import type { HelpAnswer } from "../guide/helpAnswers";
 import type { DocumentData } from "./case-documents";
 import { fields } from "./case-fields";
 import type { CaseRequest } from "./case-message";
-import type { CaseGoal, CaseTool } from "./parent-intent";
+import { startingReply } from "./case-replies";
+import type { PregnancyConcernTurn } from "./case-replies";
+import type { CaseAction, CaseGoal, CaseReply, CaseTool } from "./parent-intent";
 
 export type CaseQuestion = { key: FactKey; text: string; hint?: string };
 export type CaseAnswer = { question: CaseQuestion; field: FactKey };
+export type CareComparisonTurn = {
+  kind: "compareCare";
+  text: string;
+  facts: CaseFacts;
+  asOf: string;
+  demoRate?: DemoRate;
+  workPercent: Extract<CaseAction, { kind: "compareCare" }>["workPercent"];
+};
 
 export type AttachedDocument = {
   kind: "document";
@@ -34,9 +44,12 @@ export type AssessmentTurn = {
 export type CaseTurn =
   | { kind: "user"; text: string; local?: boolean; answer?: CaseAnswer }
   | { kind: "note"; text: string }
+  | CaseReply
+  | PregnancyConcernTurn
   | { kind: "help"; answer: HelpAnswer }
   | { kind: "tool"; tool: CaseTool; text: string }
   | { kind: "propose"; benefit: Benefit; goal: CaseGoal; facts: CaseFacts; text: string }
+  | CareComparisonTurn
   | AttachedDocument
   | BenefitChoice
   | AssessmentTurn;
@@ -66,6 +79,20 @@ export function append(session: CaseSession, ...turns: CaseTurn[]): CaseSession 
   return { ...session, turns: [...session.turns, ...turns] };
 }
 
+export function appendCareComparison(
+  session: CaseSession,
+  workPercent: CareComparisonTurn["workPercent"],
+): CaseSession {
+  return append(session, {
+    kind: "compareCare",
+    text: "Porównajmy, jak podział rodzicielskiego i powrót do pracy wpłyną na zasiłek i datę końca urlopu.",
+    facts: { ...session.family.facts, insured: undefined, debt: undefined, debtPaid: undefined },
+    asOf: session.asOf,
+    demoRate: session.demoRate,
+    workPercent,
+  });
+}
+
 export function selectBenefit(session: CaseSession, benefit: Benefit): CaseSession {
   if (!session.benefit || session.benefit === benefit) return { ...session, benefit };
   return {
@@ -80,6 +107,9 @@ export function selectBenefit(session: CaseSession, benefit: Benefit): CaseSessi
       documentDate: undefined,
       standardRate: undefined,
       averagedRequest: undefined,
+      ...(session.benefit === "rehabilitation" || benefit === "rehabilitation"
+        ? { basis: undefined, rehabSickBasis: undefined, rehabStart: undefined }
+        : {}),
     }),
   };
 }
@@ -89,7 +119,13 @@ export function saveFacts(session: CaseSession, facts: CaseFacts, sources?: Pare
   const patch = { ...facts };
   const previousStage =
     previous.birthStage ?? (previous.birth ? "born" : previous.dueDate ? "expected" : undefined);
-  const stage = patch.birth ? "born" : patch.dueDate ? "expected" : patch.birthStage;
+  const stage = patch.birth
+    ? "born"
+    : patch.dueDate
+      ? previous.birthStage === "expectedEarly"
+        ? "expectedEarly"
+        : "expected"
+      : patch.birthStage;
   if (stage) {
     patch.birthStage = stage;
     if (stage === "born") patch.dueDate = undefined;
@@ -99,6 +135,10 @@ export function saveFacts(session: CaseSession, facts: CaseFacts, sources?: Pare
   else if (patch.standardRate === true) patch.averagedRequest = undefined;
   if (patch.through !== undefined) patch.requestedDays = undefined;
   else if (patch.requestedDays !== undefined) patch.through = undefined;
+  if (session.benefit === "rehabilitation") {
+    if (patch.basis !== undefined) patch.rehabSickBasis = undefined;
+    else if (patch.rehabSickBasis !== undefined) patch.basis = undefined;
+  }
 
   const stageChanged =
     stage !== undefined && previousStage !== undefined && stage !== previousStage;
@@ -127,8 +167,21 @@ export function saveFacts(session: CaseSession, facts: CaseFacts, sources?: Pare
   const coverageChanged =
     session.benefit === "maternity" || session.benefit === "lossMaternity"
       ? ("birth" in patch && patch.birth !== previous.birth) ||
-        ("dueDate" in patch && patch.dueDate !== previous.dueDate)
-      : "from" in facts && facts.from !== previous.from;
+        ("dueDate" in patch && patch.dueDate !== previous.dueDate) ||
+        ("from" in patch && patch.from !== previous.from)
+      : session.benefit === "pregnancyAfterEmployment"
+        ? "employmentEnded" in patch && patch.employmentEnded !== previous.employmentEnded
+        : session.benefit === "maternityTransfer"
+          ? (
+              [
+                "birth",
+                "transferReason",
+                "transferEvent",
+                "motherDaysAfterBirth",
+                "motherInsured",
+              ] as const
+            ).some((key) => key in patch && patch[key] !== previous[key])
+          : "from" in facts && facts.from !== previous.from;
   if ((employmentChanged || coverageChanged) && !("insured" in patch)) patch.insured = undefined;
   if (
     session.benefit === "maternity" &&
@@ -148,6 +201,8 @@ export function saveFacts(session: CaseSession, facts: CaseFacts, sources?: Pare
       "debtPaid",
       "basis",
       "fixedSalary",
+      "rehabSickBasis",
+      "rehabStart",
     ] as const) {
       if (!(key in patch)) patch[key] = undefined;
     }
@@ -174,6 +229,8 @@ export function saveQuestionAnswer(
     else if (patch.basis !== undefined) patch.fixedSalary = undefined;
   }
   if (question.key === "payer" && patch.insuredHeadcount !== undefined) patch.payer = undefined;
+  if (question.key === "qualifying" && patch.qualifyingDays !== undefined)
+    patch.qualifying = undefined;
   const next = saveFacts(session, patch, sources);
   const field = Object.keys(facts)[0] as FactKey | undefined;
   if (!field || getAssessment(next)?.question?.key === question.key) return next;
@@ -242,6 +299,15 @@ function questionText(key: FactKey, result: BenefitResult, session: CaseSession)
       ? `Czy zakładasz, że ${date} będziesz mieć ubezpieczenie chorobowe?`
       : `Czy ${date} obejmowało Cię ubezpieczenie chorobowe?`;
   }
+  if (key === "basis" && session.benefit === "rehabilitation") {
+    return "Jaka jest podstawa świadczenia rehabilitacyjnego ustalona przez płatnika, po uwzględnieniu ewentualnej waloryzacji?";
+  }
+  if (key === "employmentEnded" && session.benefit === "rehabilitation") {
+    return "Jaki był ostatni dzień ubezpieczenia chorobowego z tego tytułu?";
+  }
+  if (key === "maternityEnd" && session.benefit === "supplement") {
+    return "Jaki jest ostatni dzień macierzyńskiego albo urlopu na warunkach macierzyńskiego, po którym ma się zacząć uzupełniający?";
+  }
   if (result.projected) {
     if (key === "children") return "Ilu dzieci się spodziewasz?";
     if (key === "basis") return "Jaką podstawę wymiaru zasiłku przyjąć do prognozy?";
@@ -307,6 +373,35 @@ export function continueWithRequest(session: CaseSession, request: CaseRequest, 
   );
 }
 
+export function continueWithAssessment(
+  session: CaseSession,
+  action: Extract<CaseAction, { kind: "assess" }>,
+): CaseSession {
+  const current = getBenefitTurn(session);
+  const choosing = current?.kind === "chooseBenefit";
+  const benefit = action.benefit ?? (choosing ? null : session.benefit);
+  if (!benefit) return append(session, startingReply);
+
+  const goal = choosing && action.goal === "calculation" ? current.goal : action.goal;
+  const next = { ...selectBenefit(session, benefit), goal };
+  const facts = Object.fromEntries(
+    Object.entries(action.facts).filter(
+      ([key, value]) => next.family.facts[key as FactKey] !== value,
+    ),
+  );
+  if (Object.keys(facts).length) {
+    return append(session, {
+      kind: "propose",
+      benefit,
+      goal,
+      facts,
+      text: "Czy dobrze zrozumiałam? Potwierdź dane, żebym mogła sprawdzić świadczenie.",
+    });
+  }
+  if (action.benefit === null && goal === session.goal) return append(session, startingReply);
+  return appendAssessment(next);
+}
+
 export function continueWithDocument(
   session: CaseSession,
   document: AttachedDocument,
@@ -332,7 +427,6 @@ export function continueWithDocument(
 export const toolMessages: Record<CaseTool, string> = {
   documents:
     "Dodaj wypełniony wniosek lub zaświadczenie w PDF. Możesz wykorzystać dane z pliku w tej rozmowie.",
-  plan: "Porównajmy podział opieki i powrót do pracy dla tej samej rodziny.",
   facts: "Tu możesz sprawdzić i poprawić dane, z których korzystam.",
   examples: "Wybierz fikcyjną sprawę, żeby zobaczyć obliczenie i kolejne kroki.",
   support: "Możesz sprawdzić formalności lub zobaczyć, kto oferuje wsparcie.",

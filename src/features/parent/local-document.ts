@@ -103,7 +103,8 @@ export async function scanLocalDocument(
         );
         const result = await untilAborted(worker.recognize(image), pageSignal);
         text = result.data.text;
-        if (isBirthRecord(text.split("\n").map(normalizeGuideText).join("\n"))) {
+        const normalized = text.split("\n").map(normalizeGuideText).join("\n");
+        if (isBirthRecord(normalized) || /\b(?:zao|zur|zam)\b/.test(normalized.slice(0, 300))) {
           const { PSM } = await import("tesseract.js");
           await untilAborted(
             worker.setParameters({ tessedit_pageseg_mode: PSM.SPARSE_TEXT }),

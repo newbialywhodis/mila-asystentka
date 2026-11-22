@@ -6,7 +6,7 @@ import type { PlanSection } from "../guide/PlanNavigation";
 import { PlanReport } from "../guide/PlanReport";
 import { preferredPlanSection, suggestedPlanInterests } from "../guide/startTopics";
 import type { StartTopic } from "../guide/startTopics";
-import { AdminCard, FamilyPlanner, SimulationCard } from "./ParentExtras";
+import { AdminCard, SimulationCard } from "./ParentExtras";
 import { CaseFactsList } from "./ParentResult";
 import type { ParentWorkspace } from "./useParentWorkspace";
 import styles from "./ParentCard.module.css";
@@ -27,20 +27,6 @@ export function CaseTools({
 
   return (
     <>
-      <Sheet
-        title="Porównaj warianty opieki"
-        open={active && expanded === "plan"}
-        onOpenChange={close}
-        wide
-        keepMounted
-      >
-        <FamilyPlanner
-          facts={session.family.facts}
-          asOf={session.asOf}
-          demoRate={session.demoRate}
-          onFacts={workspace.save}
-        />
-      </Sheet>
       <Sheet
         title="Plan formalności"
         open={active && expanded === "formalities"}

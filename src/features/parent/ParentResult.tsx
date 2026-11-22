@@ -9,6 +9,47 @@ import { factValue, fields } from "./case-fields";
 import { FactControl } from "./FactControl";
 import styles from "./ParentCard.module.css";
 
+function resultHeadline(result: BenefitResult) {
+  return {
+    eligible: result.projected ? "Prawo do zasiłku w prognozie" : "Warunki spełnione",
+    missing: "Uzupełnij dane",
+    ineligible: result.projected
+      ? "Warunki niespełnione w prognozie"
+      : "Brak prawa w podanej sytuacji",
+    review: "Sprawdź tę sytuację z ZUS",
+  }[result.status];
+}
+
+function documentLine(step: BenefitResult["documents"][number]) {
+  return [step.title, step.recipient, step.deadline && "do " + formatDay(step.deadline)]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+export function assessmentCopyText(
+  message: string,
+  benefit: Benefit,
+  result: BenefitResult,
+  showDocuments: boolean,
+) {
+  const { period, money, documents } = result;
+  const nextStep = documents[0];
+  return [
+    message,
+    [labels[benefit], resultHeadline(result)].join(" · "),
+    result.status !== "missing" && result.reason !== message && result.reason,
+    period &&
+      `${result.projected ? "Przewidywany okres" : "Okres wypłaty"} ${formatDay(period.from)} – ${formatDay(period.through)} (${formatDays(period.days)}).`,
+    money &&
+      `${result.projected ? "Szacunkowa kwota brutto" : "Łączna kwota brutto"} ${moneyLabel(money.total + (result.extension?.money?.total ?? 0))}.`,
+    showDocuments
+      ? documents.map(documentLine).join("\n")
+      : nextStep && "Następny krok: " + documentLine(nextStep),
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
 export function ResultCard({
   benefit,
   result,
@@ -25,18 +66,14 @@ export function ResultCard({
   showReason?: boolean;
 }) {
   const { period, money, documents: steps } = result;
-  const headline = {
-    eligible: result.projected ? "Prawo do zasiłku w prognozie" : "Warunki spełnione",
-    missing: "Uzupełnij dane",
-    ineligible: result.projected
-      ? "Warunki niespełnione w prognozie"
-      : "Brak prawa w podanej sytuacji",
-    review: "Sprawdź tę sytuację z ZUS",
-  }[result.status];
+  const total = money && money.total + (result.extension?.money?.total ?? 0);
   return (
     <section className={styles.result} aria-label="Wynik sprawdzenia">
-      <h3 className={styles.resultHeadline}>{headline}</h3>
+      <h3 className={styles.resultHeadline}>{resultHeadline(result)}</h3>
       {showReason && result.status !== "missing" ? <p>{result.reason}</p> : null}
+      {result.demoParametersApplied ? (
+        <p className={styles.muted}>Wynik uwzględnia parametry demonstracyjne.</p>
+      ) : null}
       {insured !== undefined && result.coverageDay ? (
         <p>
           Na {formatDay(result.coverageDay)}{" "}
@@ -52,9 +89,9 @@ export function ResultCard({
           z podanego tytułu.
         </p>
       ) : null}
-      {result.projected && period ? (
+      {result.projected && period && benefit === "maternity" ? (
         <p className={styles.muted}>
-          Prognoza zakłada początek zasiłku w dniu porodu i podstawową stawkę 100%.
+          Prognoza opiera się na przewidywanej dacie porodu i podstawowej stawce 100%.
         </p>
       ) : null}
       {period ? (
@@ -71,8 +108,8 @@ export function ResultCard({
           <div>
             <dt>{result.projected ? "Szacunkowa kwota brutto" : "Łączna kwota brutto"}</dt>
             <dd>
-              {money ? (
-                <strong>{moneyLabel(money.total)}</strong>
+              {total !== undefined ? (
+                <strong>{moneyLabel(total)}</strong>
               ) : (
                 "Do obliczenia po podaniu podstawy"
               )}
@@ -85,9 +122,12 @@ export function ResultCard({
           </div>
         </dl>
       ) : null}
-      {result.extensionDays !== undefined ? (
+      {result.extension && result.extensionDays ? (
         <p>
-          Wydłużenie o {result.extensionDays} pełnych dni przy wykorzystaniu wydłużenia bez pracy.
+          Wydłużenie o {formatDays(result.extensionDays)} do {formatDay(result.extension.through)}.{" "}
+          {result.extension.workPercent
+            ? `Praca na ${result.extension.workPercent}% etatu.`
+            : "Bez pracy w tym okresie."}
         </p>
       ) : null}
       {result.payer ? (
@@ -101,14 +141,43 @@ export function ResultCard({
           {result.coverageDay && insured === undefined ? (
             <p>Dzień oceny ubezpieczenia: {formatDay(result.coverageDay)}.</p>
           ) : null}
-          {money && period ? (
+          {result.moneyParts?.map(({ from, through, basis, daily, days }) => (
+            <p key={from}>
+              {formatDay(from)} – {formatDay(through)}. Podstawa {moneyLabel(basis)}. Kwota dzienna{" "}
+              {moneyLabel(daily)} × {formatDays(days)}.
+            </p>
+          ))}
+          {money && period && !result.moneyParts ? (
             <p>
               Podstawa {moneyLabel(money.basis)}. Kwota dzienna {moneyLabel(money.daily)} ×{" "}
               {formatDays(period.days)}.
             </p>
           ) : null}
+          {result.extension?.money && result.extensionDays ? (
+            <p>
+              Wydłużenie: {moneyLabel(result.extension.money.daily)} ×{" "}
+              {formatDays(result.extensionDays)}.
+            </p>
+          ) : null}
           <a href={sources[result.source]?.url} target="_blank" rel="noreferrer">
             Podstawa i zasady ZUS
+          </a>
+        </details>
+      ) : null}
+      {result.coverageDay ? (
+        <details>
+          <summary>Co może zmienić prawo lub kwotę</summary>
+          <p>
+            Ustanie umowy, zlecenia lub działalności może zakończyć ubezpieczenie chorobowe. Zmiana
+            etatu albo składników pensji może zmienić podstawę zasiłku.
+          </p>
+          <p>
+            ZUS może sprawdzić, czy zatrudnienie lub działalność rzeczywiście były wykonywane. Może
+            też ustalić inną podstawę, jeśli zakwestionuje zmianę wynagrodzenia. Przy sporze poproś
+            ZUS o ustalenie prawa i podstawy dla Twojej sprawy.
+          </p>
+          <a href={sources.pregnancy?.url} target="_blank" rel="noreferrer">
+            Ochrona zatrudnienia w PIP
           </a>
         </details>
       ) : null}
@@ -203,7 +272,12 @@ export function CaseFactsList({
       ) : (
         <p className={styles.muted}>Czeka na uzupełnienie.</p>
       )}
-      <FactControl key={selected} fact={selected} onSave={onChange} />
+      <FactControl
+        key={selected}
+        fact={selected}
+        childrenCount={facts.children}
+        onSave={onChange}
+      />
       {facts[selected] !== undefined ? (
         <Button variant="ghost" size="sm" onClick={() => onChange({ [selected]: undefined })}>
           Usuń tę daną
@@ -215,22 +289,33 @@ export function CaseFactsList({
 
 export function NextSteps({ benefit, result }: { benefit: Benefit; result: BenefitResult }) {
   const [draft, setDraft] = useState(false);
+  const [formIndex, setFormIndex] = useState(0);
+  const [applicant, setApplicant] = useState("");
+  const [child, setChild] = useState("");
+  const [notes, setNotes] = useState("");
   const period = result.period;
   const steps = result.documents;
-  const first = steps[0];
+  const forms = steps.filter(({ form }) => form);
+  const first = forms[formIndex] ?? forms[0];
+  const action = first?.form === "leave" ? "udzielenie urlopu" : "wypłatę świadczenia";
+  const lastDay = result.extension?.through ?? period?.through;
   const draftText =
-    period && first && !result.projected
-      ? "Szkic demonstracyjny\n\nAdresat: " +
-        first.recipient +
-        "\nDotyczy: " +
-        labels[benefit] +
-        "\n\nWnoszę o " +
-        (first.title.startsWith("Wniosek o urlop") ? "udzielenie urlopu" : "wypłatę świadczenia") +
-        " za okres od " +
-        formatDay(period.from) +
-        " do " +
-        formatDay(period.through) +
-        "."
+    period && first && lastDay && !result.projected
+      ? [
+          "Szkic demonstracyjny",
+          first.title,
+          "Adresat: " + first.recipient,
+          "Wnioskodawca: " + applicant.trim(),
+          child.trim() && "Dziecko: " + child.trim(),
+          "Dotyczy: " + labels[benefit],
+          `Wnoszę o ${action} za okres od ${formatDay(period.from)} do ${formatDay(lastDay)}.`,
+          notes.trim() && "Oświadczenia lub informacje dodatkowe: " + notes.trim(),
+          ...steps
+            .filter((step) => !step.form && step.recipient === first.recipient)
+            .map(({ title }) => "Do przygotowania: " + title),
+        ]
+          .filter(Boolean)
+          .join("\n")
       : undefined;
   return (
     <section className={styles.result} aria-label="Dokumenty i dalsze kroki">
@@ -252,6 +337,22 @@ export function NextSteps({ benefit, result }: { benefit: Benefit; result: Benef
       ) : (
         <p>Uzupełnij dane świadczenia, żeby zobaczyć właściwe dokumenty.</p>
       )}
+      {steps.length ? (
+        <p className={styles.muted}>
+          {steps.some(({ form }) => form === "leave")
+            ? "Wniosek o urlop złóż u pracodawcy w formie papierowej lub elektronicznej. "
+            : ""}
+          {steps.some(({ form, recipient }) => form === "benefit" && recipient === "ZUS")
+            ? "Wniosek do ZUS możesz złożyć przez eZUS, w placówce lub pocztą. "
+            : ""}
+          {result.payer === "employer" && benefit !== "rehabilitation"
+            ? "Dokumenty do wypłaty złóż u płatnika wskazanego w wyniku."
+            : ""}
+          {benefit === "rehabilitation"
+            ? "ZUS zaleca złożyć wniosek co najmniej 6 tygodni przed końcem zasiłku chorobowego. Po ocenie medycznej ZUS wydaje decyzję i wskazuje płatnika."
+            : ""}
+        </p>
+      ) : null}
       {draftText ? (
         <Button size="sm" variant="outline" onClick={() => setDraft(!draft)}>
           {draft ? "Ukryj szkic" : "Przygotuj szkic wniosku"}
@@ -259,11 +360,54 @@ export function NextSteps({ benefit, result }: { benefit: Benefit; result: Benef
       ) : null}
       {draft && draftText && first ? (
         <div className={styles.card}>
-          <h3>Szkic demonstracyjny</h3>
+          <h3>Wypełnij wniosek demonstracyjny</h3>
+          <label className={styles.field}>
+            Rodzaj wniosku
+            <select
+              value={formIndex}
+              onChange={(event) => setFormIndex(Number(event.currentTarget.value))}
+            >
+              {forms.map(({ title }, index) => (
+                <option key={title} value={index}>
+                  {title}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className={styles.row}>
+            <label className={styles.field}>
+              Imię i nazwisko wnioskodawcy
+              <input
+                value={applicant}
+                onChange={(event) => setApplicant(event.currentTarget.value)}
+                maxLength={100}
+              />
+            </label>
+            <label className={styles.field}>
+              Imię i nazwisko dziecka, jeśli dotyczy
+              <input
+                value={child}
+                onChange={(event) => setChild(event.currentTarget.value)}
+                maxLength={100}
+              />
+            </label>
+          </div>
+          <label className={styles.field}>
+            Oświadczenia lub informacje dodatkowe
+            <input
+              value={notes}
+              onChange={(event) => setNotes(event.currentTarget.value)}
+              maxLength={400}
+            />
+          </label>
           <p>
             Adresat: {first.recipient}. Dotyczy: {labels[benefit]}.
           </p>
-          <p>{draftText.split("\n\n").at(-1)}</p>
+          {period && lastDay ? (
+            <p>
+              Okres od {formatDay(period.from)} do {formatDay(lastDay)}.
+            </p>
+          ) : null}
           <ButtonLink
             href={first.href ?? sources[first.source]?.url ?? "https://www.zus.pl"}
             target="_blank"
@@ -272,12 +416,16 @@ export function NextSteps({ benefit, result }: { benefit: Benefit; result: Benef
           >
             Otwórz oficjalną instrukcję
           </ButtonLink>
-          <a
-            href={"data:text/plain;charset=utf-8," + encodeURIComponent(draftText)}
-            download="mila-szkic-wniosku.txt"
-          >
-            Pobierz szkic
-          </a>
+          {applicant.trim() ? (
+            <a
+              href={"data:text/plain;charset=utf-8," + encodeURIComponent(draftText)}
+              download="mila-szkic-wniosku.txt"
+            >
+              Pobierz szkic
+            </a>
+          ) : (
+            <p className={styles.muted}>Wpisz imię i nazwisko wnioskodawcy, żeby pobrać szkic.</p>
+          )}
         </div>
       ) : null}
     </section>

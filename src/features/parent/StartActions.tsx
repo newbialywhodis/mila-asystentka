@@ -7,6 +7,7 @@ import { warsawToday } from "../../engine/dates";
 import type { ActionGaze } from "../guide/ActionGaze";
 import { StartTopicContext } from "../guide/StartTopicContext";
 import type { StartTopic } from "../guide/startTopics";
+import { careComparisonLabel } from "./case-message";
 import { AdminCard, SimulationCard } from "./ParentExtras";
 import { caseExamples } from "./parent-examples";
 import type { ParentWorkspace } from "./useParentWorkspace";
@@ -62,6 +63,11 @@ export function StartActions({
             label: "Sprawdź świadczenie",
             icon: "tasks",
             onClick: workspace.requestBenefit,
+          },
+          {
+            label: careComparisonLabel,
+            icon: "work",
+            onClick: () => workspace.compareCare(),
           },
           ...(topics.length
             ? [
